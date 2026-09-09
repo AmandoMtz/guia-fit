@@ -406,7 +406,7 @@ function createApp({
         throw fail(403, "forbidden", "Solo puedes consultar tu perfil.");
       if (table === "app_roles")
         return res.json({
-          data:
+          data: //
             req.user.role === "admin"
               ? [{ user_id: req.user.id, role: "admin" }]
               : [],

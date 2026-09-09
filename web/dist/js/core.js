@@ -22,16 +22,16 @@
     )
       errors.full_name =
         "Escribe tu nombre completo (entre 2 y 100 caracteres).";
-    if (["login", "register", "reset"].includes(mode) && !values.password)
-      errors.password = "Escribe tu contraseña.";
     if (["register", "reset"].includes(mode)) {
-      if (String(values.password || "").length < 8)
-        errors.password = "Usa al menos 8 caracteres.";
-      if (String(values.password || "").length > 128)
-        errors.password = "Usa como máximo 128 caracteres.";
-      if (values.password !== values.confirm)
-        errors.confirm = "Las contraseñas no coinciden.";
-    }
+  const pw = String(values.password || "");
+  if (pw.length < 8) errors.password = "Usa al menos 8 caracteres.";
+  else if (pw.length > 128) errors.password = "Usa como máximo 128 caracteres.";
+  else if (!/[A-Za-z]/.test(pw)) errors.password = "Incluye al menos una letra.";
+  else if (!/[0-9]/.test(pw)) errors.password = "Incluye al menos un número.";
+  else if (!/[^A-Za-z0-9]/.test(pw)) errors.password = "Incluye al menos un carácter especial.";
+  if (values.password !== values.confirm)
+    errors.confirm = "Las contraseñas no coinciden.";
+}
     return errors;
   }
   function findRoute(

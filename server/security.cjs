@@ -31,7 +31,14 @@ async function verifyPassword(password, encoded) {
   return expected.length === key.length && timingSafeEqual(key, expected);
 }
 function passwordValid(value) {
-  return typeof value === "string" && value.length >= 12 && value.length <= 128;
+  return (
+    typeof value === "string" &&
+    value.length >= 8 &&
+    value.length <= 128 &&
+    /[a-zA-Z]/.test(value) &&      // al menos una letra
+    /[0-9]/.test(value) &&         // al menos un número
+    /[^a-zA-Z0-9]/.test(value)     // al menos un carácter especial
+  );
 }
 function emailValid(value) {
   return (

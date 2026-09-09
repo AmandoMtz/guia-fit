@@ -110,7 +110,7 @@
       ],
       reset: [
         "Nueva contraseña",
-        "Elige una contraseña de al menos 12 caracteres.",
+        "Elige una contraseña de al menos 8 caracteres.",
       ],
       verify: [
         "Revisa tu correo",

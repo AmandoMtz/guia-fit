@@ -25,8 +25,8 @@
     if (["login", "register", "reset"].includes(mode) && !values.password)
       errors.password = "Escribe tu contraseña.";
     if (["register", "reset"].includes(mode)) {
-      if (String(values.password || "").length < 12)
-        errors.password = "Usa al menos 12 caracteres.";
+      if (String(values.password || "").length < 8)
+        errors.password = "Usa al menos 8 caracteres.";
       if (String(values.password || "").length > 128)
         errors.password = "Usa como máximo 128 caracteres.";
       if (values.password !== values.confirm)

@@ -37,7 +37,7 @@ function passwordValid(value) {
     value.length <= 128 &&
     /[a-zA-Z]/.test(value) &&      // al menos una letra
     /[0-9]/.test(value) &&         // al menos un número
-    /[^a-zA-Z0-9]/.test(value)     // al menos un carácter especial
+    /[^a-zA-Z0-9]/.test(value)
   );
 }
 function emailValid(value) {

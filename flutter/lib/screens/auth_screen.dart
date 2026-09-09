@@ -192,7 +192,7 @@ class _AuthScreenState extends State<AuthScreen> {
       ],
       AuthMode.reset: [
         'Nueva contraseña',
-        'Usa una frase de al menos 12 caracteres.',
+        'Mínimo 8 caracteres, con letras, números y un carácter especial.',
         'Guardar contraseña',
       ],
     }[_mode]!;

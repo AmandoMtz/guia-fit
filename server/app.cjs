@@ -149,14 +149,17 @@ function createApp({
     const token = S.randomToken(),
       hash = S.hashToken(token),
       hours = purpose === "confirm" ? 24 : 1;
-    await db.query(
-      "insert into auth_tokens(token_hash,user_id,purpose,expires_at) values($1,$2,$3,$4)",
-      [hash, user.id, purpose, new Date(Date.now() + hours * 3600000)],
-    );
     try {
+      await db.query(
+        "insert into auth_tokens(token_hash,user_id,purpose,expires_at) values($1,$2,$3,$4)",
+        [hash, user.id, purpose, new Date(Date.now() + hours * 3600000)],
+      );
       await sendMail({ email: user.email, purpose, token, siteUrl });
-    } catch {
-      await db.query("delete from auth_tokens where token_hash=$1", [hash]);
+    } catch (error) {
+      console.error("emailToken failed:", error);
+      await db
+        .query("delete from auth_tokens where token_hash=$1", [hash])
+        .catch(() => {});
       throw fail(
         503,
         "mail_unavailable",
@@ -624,6 +627,7 @@ function createApp({
     }),
   );
   app.use((error, req, res, next) => {
+    if (!error.status) console.error("Unhandled error:", error);
     const sqlError = [
       "23514",
       "23502",

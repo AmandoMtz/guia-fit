@@ -110,7 +110,19 @@ String? validateEmail(String? value) =>
     RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch((value ?? '').trim())
     ? null
     : 'Escribe un correo válido.';
-String? validatePassword(String? value) =>
-    (value ?? '').length < 12 || (value ?? '').length > 128
-    ? 'Usa entre 12 y 128 caracteres.'
-    : null;
+String? validatePassword(String? value) {
+  final v = value ?? '';
+  if (v.length < 8 || v.length > 128) {
+    return 'Usa entre 8 y 128 caracteres.';
+  }
+  if (!RegExp(r'[A-Za-z]').hasMatch(v)) {
+    return 'Incluye al menos una letra.';
+  }
+  if (!RegExp(r'[0-9]').hasMatch(v)) {
+    return 'Incluye al menos un número.';
+  }
+  if (!RegExp(r'[^A-Za-z0-9]').hasMatch(v)) {
+    return 'Incluye al menos un carácter especial.';
+  }
+  return null;
+}

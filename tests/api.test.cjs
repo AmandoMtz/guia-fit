@@ -30,7 +30,7 @@ test("API Render/Aiven: autenticación real, permisos y verificación", async (t
     production: true,
   });
   const api = request(app),
-    password = "Mi frase larga de prueba";
+    password = "Mi frase larga de prueba1!";
   let a, b, admin, tokenA, tokenB, tokenAdmin;
   const post = (url, body) =>
     api.post(url).set("X-FIT-Client", "mobile").send(body);
@@ -201,7 +201,7 @@ test("API Render/Aiven: autenticación real, permisos y verificación", async (t
       const msg = emails.find(
         (x) => x.email === "b@example.test" && x.purpose === "recovery",
       );
-      const next = "Nueva frase muy larga";
+      const next = "Nueva frase muy larga2!";
       await post("/api/auth/reset", {
         token: msg.token,
         password: next,

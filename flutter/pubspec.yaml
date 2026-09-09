@@ -1,12 +1,19 @@
 name: guia_fit
 description: Guía de espacios de la Facultad de Ingeniería Tampico.
 publish_to: none
-version: 1.0.0+1
+version: 2.0.0+2
 environment:
   sdk: '>=3.8.0 <4.0.0'
 dependencies:
   flutter:
     sdk: flutter
+  cupertino_icons: 1.0.8
+  google_mlkit_text_recognition: 0.15.0
+  file_picker: 10.3.3
+  pdfrx: 1.3.5
+  path_provider: ^2.1.5
+  idb_shim: ^2.6.5
+  http_parser: ^4.1.2
   http: ^1.6.0
   flutter_secure_storage: ^9.2.4
   app_links: ^6.4.1
@@ -17,6 +24,7 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
+    - assets/food-example.jpg
     - assets/logos.png
     - assets/croquis.png
     - assets/catalog.json

@@ -1,4 +1,7 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'food_screen.dart';
+import 'schedule_screen.dart';
 import '../models/campus.dart';
 import '../services/app_controller.dart';
 import '../widgets/common.dart';
@@ -10,19 +13,83 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
+  final _scaffold = GlobalKey<ScaffoldState>();
+  Timer? _notificationTimer;
+  int _unread = 0;
+  bool _polling = false;
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _pollNotifications();
+    if (c.user != null) {
+      _notificationTimer = Timer.periodic(
+        const Duration(seconds: 30),
+        (_) => _pollNotifications(),
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _notificationTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _pollNotifications();
+  }
+
+  Future<void> _pollNotifications() async {
+    if (c.demo ||
+        c.user == null ||
+        _polling ||
+        (WidgetsBinding.instance.lifecycleState != null &&
+            WidgetsBinding.instance.lifecycleState !=
+                AppLifecycleState.resumed)) {
+      return;
+    }
+    _polling = true;
+    final id = c.user!.id;
+    try {
+      final data = await c.client!.request("/api/food/notifications");
+      if (mounted && c.user?.id == id) {
+        setState(() => _unread = data["unread_count"] as int);
+      }
+    } catch (_) {
+    } finally {
+      _polling = false;
+    }
+  }
+
   int _tab = 0, _step = 0;
   String _query = '', _category = '', _building = '';
   String? _origin, _destination, _routeMessage;
   bool _accessible = false, _routeDemo = false, _arrived = false;
   List<RouteEdge>? _route;
   AppController get c => widget.controller;
-  static const _labels = ['Directorio', 'Mapa', 'Cómo llegar', 'Mi cuenta'];
+  static const _labels = [
+    'Directorio',
+    'Mapa',
+    'Cómo llegar',
+    'Comidas',
+    'Mi horario',
+    'Mi cuenta',
+    'Mis avisos',
+    'Vendedores',
+  ];
   static const _icons = [
     Icons.grid_view_outlined,
     Icons.map_outlined,
     Icons.route_outlined,
+    Icons.restaurant_outlined,
+    Icons.calendar_month_outlined,
     Icons.person_outline,
+    Icons.notifications_outlined,
+    Icons.storefront_outlined,
   ];
   Future<void> _logout() async {
     try {
@@ -51,13 +118,21 @@ class _HomeScreenState extends State<HomeScreen> {
       'Directorio de espacios',
       'Mapa del campus',
       'Cómo llegar',
+      'Comidas',
+      'Mi horario',
       'Mi cuenta',
+      'Mis avisos',
+      'Revisar vendedores',
     ];
     final subtitles = [
       'Busca tu salón y consulta cómo identificarlo.',
       'Ubica los espacios en el croquis de referencia.',
       'Elige tu punto de partida y tu destino.',
+      'Una pausa entre clases, con el sabor de tu comunidad.',
+      'Tu semana, tus materias y tu próximo salón.',
       'Consulta tus datos y tu verificación.',
+      'Novedades de tus pedidos y de tu puesto.',
+      'Valida los puestos de la comunidad FIT.',
     ];
     final body = ListView(
       padding: EdgeInsets.all(wide ? 32 : 20),
@@ -88,11 +163,67 @@ class _HomeScreenState extends State<HomeScreen> {
           0 => _directory(),
           1 => _map(),
           2 => _directions(),
+          3 => FoodScreen(
+            key: const ValueKey("food"),
+            controller: c,
+            onChanged: _pollNotifications,
+          ),
+          4 => ScheduleScreen(
+            key: ValueKey(c.user?.id),
+            controller: c,
+            onPlace: (id) {
+              final place = c.places.where((p) => p.id == id).firstOrNull;
+              if (place != null) {
+                _toPlace(place);
+              } else {
+                message(context, "Este espacio ya no está en el directorio.");
+              }
+            },
+          ),
+          6 => FoodScreen(
+            key: const ValueKey("notifications"),
+            controller: c,
+            mode: "notifications",
+            onChanged: _pollNotifications,
+          ),
+          7 => FoodScreen(
+            key: const ValueKey("food-admin"),
+            controller: c,
+            mode: "admin",
+            onChanged: _pollNotifications,
+          ),
           _ => ProfileScreen(controller: c),
         },
       ],
     );
     return Scaffold(
+      key: _scaffold,
+      drawer: wide
+          ? null
+          : Drawer(
+              child: SafeArea(
+                child: ListView(
+                  children: [
+                    const Padding(
+                      padding: EdgeInsets.all(20),
+                      child: BrandHeader(compact: true),
+                    ),
+                    ...List.generate(
+                      c.admin ? 8 : 7,
+                      (i) => ListTile(
+                        leading: Icon(_icons[i]),
+                        title: Text(_labels[i]),
+                        selected: _tab == i,
+                        onTap: () {
+                          Navigator.pop(context);
+                          setState(() => _tab = i);
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
       appBar: AppBar(
         toolbarHeight: 82,
         title: wide
@@ -102,6 +233,16 @@ class _HomeScreenState extends State<HomeScreen> {
                 style: TextStyle(fontWeight: FontWeight.w700),
               ),
         actions: [
+          if (c.user != null)
+            IconButton(
+              tooltip: "Mis avisos",
+              onPressed: () => setState(() => _tab = 6),
+              icon: Badge(
+                isLabelVisible: _unread > 0,
+                label: Text(_unread > 99 ? "99+" : "$_unread"),
+                child: const Icon(Icons.notifications_outlined),
+              ),
+            ),
           TextButton.icon(
             onPressed: _logout,
             icon: const Icon(Icons.logout, size: 18),
@@ -120,7 +261,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 labelType: NavigationRailLabelType.all,
                 onDestinationSelected: (i) => setState(() => _tab = i),
                 destinations: List.generate(
-                  4,
+                  c.admin ? 8 : 7,
                   (i) => NavigationRailDestination(
                     icon: Icon(_icons[i]),
                     label: Text(_labels[i]),
@@ -134,15 +275,35 @@ class _HomeScreenState extends State<HomeScreen> {
       bottomNavigationBar: wide
           ? null
           : NavigationBar(
-              selectedIndex: _tab,
-              onDestinationSelected: (i) => setState(() => _tab = i),
-              destinations: List.generate(
-                4,
-                (i) => NavigationDestination(
-                  icon: Icon(_icons[i]),
-                  label: _labels[i],
+              selectedIndex: _tab == 0
+                  ? 0
+                  : _tab == 3
+                  ? 1
+                  : _tab == 4
+                  ? 2
+                  : 3,
+              onDestinationSelected: (i) {
+                if (i == 3) {
+                  _scaffold.currentState?.openDrawer();
+                } else {
+                  setState(() => _tab = [0, 3, 4][i]);
+                }
+              },
+              destinations: const [
+                NavigationDestination(
+                  icon: Icon(Icons.grid_view_outlined),
+                  label: 'Directorio',
                 ),
-              ),
+                NavigationDestination(
+                  icon: Icon(Icons.restaurant_outlined),
+                  label: 'Comidas',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.calendar_month_outlined),
+                  label: 'Mi horario',
+                ),
+                NavigationDestination(icon: Icon(Icons.menu), label: 'Más'),
+              ],
             ),
     );
   }

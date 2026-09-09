@@ -18,6 +18,9 @@
     seed = window.FIT_CATALOG,
     config = window.FIT_CONFIG;
   const paths = {
+    food: "M4 3v7m3-7v7m3-7v7M4 7h6m-3 3v11M17 3c-3 4-3 9 1 9h2V3h-3zm3 9v9",
+    calendar: "M4 5h16v16H4z M4 10h16M8 3v4m8-4v4M8 14h2m4 0h2m-8 3h2",
+    bell: "M5 16h14l-2-3V8a5 5 0 00-10 0v5l-2 3zm5 4h4",
     map: "M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3V6zm6-3v15m6-12v15",
     pin: "M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 1116 0z M15 10a3 3 0 11-6 0 3 3 0 016 0",
     arrow: "M4 12h16m-6-6 6 6-6 6",
@@ -116,7 +119,7 @@
     };
     const [title, sub] = titles[mode];
     $("#app").innerHTML =
-      `<header class="topbar">${brand()}<span class="top-label">GUÍA DEL CAMPUS</span></header><div class="auth-layout"><aside class="auth-aside"><div class="eyebrow">${icon("pin")} FACULTAD DE INGENIERÍA TAMPICO</div><h1>Tu campus.<br>Tu camino.<br><span class="accent">A un paso.</span></h1><p class="intro">Salones, salas y espacios de la facultad en una sola guía.</p><div class="campus-teaser"><img src="assets/croquis.png" alt="Croquis de la Facultad de Ingeniería Tampico proporcionado como referencia"><span class="teaser-label">Explora los espacios de la FIT</span></div><div class="aside-bottom">Universidad Autónoma de Tamaulipas · Tampico</div></aside><main class="auth-main" id="main"><div class="auth-card"><div class="icon-circle">${icon(mode === "login" ? "lock" : "user")}</div><h2>${title}</h2><p class="muted">${sub}</p>${["login", "register"].includes(mode) ? `<div class="auth-tabs" aria-label="Opciones de acceso"><button class="${mode === "login" ? "active" : ""}" data-mode="login">Iniciar sesión</button><button class="${mode === "register" ? "active" : ""}" data-mode="register">Crear cuenta</button></div>` : ""}${!client ? '<div class="notice">El registro todavía no está habilitado. Puedes explorar la demostración.</div>' : ""}<div id="form-message" role="alert">${state.notice ? `<div class="notice ${state.authError ? "error" : "success"}">${esc(state.notice)}</div>` : ""}</div><form id="auth-form" novalidate>${mode === "register" ? field("full_name", "Nombre completo", "text", "name") : ""}${mode !== "reset" ? field("email", "Correo electrónico", "email", "email") : ""}${["login", "register", "reset"].includes(mode) ? field("password", mode === "reset" ? "Nueva contraseña" : "Contraseña", "password", mode === "login" ? "current-password" : "new-password", mode !== "login" ? "Usa al menos 12 caracteres. Puedes utilizar una frase." : "") : ""}${["register", "reset"].includes(mode) ? field("confirm", "Confirmar contraseña", "password", "new-password") : ""}${mode === "login" ? '<div class="auth-links"><button class="text-button" type="button" data-mode="recover">Olvidé mi contraseña</button></div>' : ""}<button class="btn full" type="submit">${{ login: "Iniciar sesión", register: "Crear cuenta", recover: "Enviar enlace", reset: "Guardar contraseña", verify: "Reenviar verificación" }[mode]} ${icon("arrow")}</button></form>${mode === "login" ? '<button class="text-button" data-mode="verify">Reenviar correo de verificación</button>' : ""}${!["login", "register"].includes(mode) ? '<button class="text-button" data-mode="login">Volver al inicio de sesión</button>' : ""}<div class="or">Explora el proyecto</div><button class="btn secondary full" id="demo-button">${icon("map")} Explorar demostración</button><p class="auth-foot">La verificación del correo y la validación institucional se realizan por separado.</p></div></main></div>`;
+      `<header class="topbar">${brand()}<span class="top-label">GUÍA DEL CAMPUS</span></header><div class="auth-layout"><aside class="auth-aside"><div class="eyebrow">${icon("pin")} FACULTAD DE INGENIERÍA TAMPICO</div><h1>Tu campus.<br>Tu camino.<br><span class="accent">A un paso.</span></h1><p class="intro">Encuentra tu salón, organiza tus clases y descubre qué comer en la facultad.</p><div class="campus-teaser"><img src="assets/croquis.png" alt="Croquis de la Facultad de Ingeniería Tampico proporcionado como referencia"><span class="teaser-label">Explora los espacios de la FIT</span></div><div class="aside-bottom">Universidad Autónoma de Tamaulipas · Tampico</div></aside><main class="auth-main" id="main"><div class="auth-card"><div class="icon-circle">${icon(mode === "login" ? "lock" : "user")}</div><h2>${title}</h2><p class="muted">${sub}</p>${["login", "register"].includes(mode) ? `<div class="auth-tabs" aria-label="Opciones de acceso"><button class="${mode === "login" ? "active" : ""}" data-mode="login">Iniciar sesión</button><button class="${mode === "register" ? "active" : ""}" data-mode="register">Crear cuenta</button></div>` : ""}${!client ? '<div class="notice">El registro todavía no está habilitado. Puedes explorar la demostración.</div>' : ""}<div id="form-message" role="alert">${state.notice ? `<div class="notice ${state.authError ? "error" : "success"}">${esc(state.notice)}</div>` : ""}</div><form id="auth-form" novalidate>${mode === "register" ? field("full_name", "Nombre completo", "text", "name") : ""}${mode !== "reset" ? field("email", "Correo electrónico", "email", "email") : ""}${["login", "register", "reset"].includes(mode) ? field("password", mode === "reset" ? "Nueva contraseña" : "Contraseña", "password", mode === "login" ? "current-password" : "new-password", mode !== "login" ? "Usa al menos 12 caracteres. Puedes utilizar una frase." : "") : ""}${["register", "reset"].includes(mode) ? field("confirm", "Confirmar contraseña", "password", "new-password") : ""}${mode === "register" ? '<label class="seller-option"><input type="checkbox" name="seller"><span><strong>Quiero vender comida</strong><small>Después podrás solicitar tu puesto en la facultad.</small></span></label>' : ""}${mode === "login" ? '<div class="auth-links"><button class="text-button" type="button" data-mode="recover">Olvidé mi contraseña</button></div>' : ""}<button class="btn full" type="submit">${{ login: "Iniciar sesión", register: "Crear cuenta", recover: "Enviar enlace", reset: "Guardar contraseña", verify: "Reenviar verificación" }[mode]} ${icon("arrow")}</button></form>${mode === "login" ? '<button class="text-button" data-mode="verify">Reenviar correo de verificación</button>' : ""}${!["login", "register"].includes(mode) ? '<button class="text-button" data-mode="login">Volver al inicio de sesión</button>' : ""}<div class="or">Explora el proyecto</div><button class="btn secondary full" id="demo-button">${icon("map")} Explorar demostración</button><p class="auth-foot">La verificación del correo y la validación institucional se realizan por separado.</p></div></main></div>`;
     $('[data-mode="' + mode + '"]')?.setAttribute("aria-current", "page");
     document.querySelectorAll("[data-mode]").forEach(
       (b) =>
@@ -183,7 +186,8 @@
       errors = C.validate(values, mode);
     for (const input of form.querySelectorAll("input")) {
       const msg = errors[input.name] || "";
-      $("#" + input.name + "-error").textContent = msg;
+      const errorEl = $("#" + input.name + "-error");
+      if (errorEl) errorEl.textContent = msg;
       input.setAttribute("aria-invalid", String(!!msg));
     }
     if (Object.keys(errors).length) {
@@ -219,7 +223,10 @@
           email,
           password: values.password,
           options: {
-            data: { full_name: values.full_name.trim() },
+            data: {
+              full_name: values.full_name.trim(),
+              account_type: values.seller ? "seller" : "buyer",
+            },
             emailRedirectTo: redirect("confirm"),
           },
         });
@@ -305,6 +312,16 @@
   }
   function shell() {
     const names = {
+      food: [
+        "Comidas",
+        "Una pausa entre clases, con el sabor de tu comunidad.",
+      ],
+      schedule: ["Mi horario", "Tu semana, tus materias y tu próximo salón."],
+      notifications: ["Mis avisos", "Novedades de tus pedidos y de tu puesto."],
+      "food-admin": [
+        "Revisar vendedores",
+        "Valida los puestos de la comunidad FIT.",
+      ],
       directory: [
         "Directorio de espacios",
         "Busca tu salón y consulta cómo identificarlo.",
@@ -324,15 +341,21 @@
       ["directory", "grid", "Directorio"],
       ["map", "map", "Mapa del campus"],
       ["route", "route", "Cómo llegar"],
+      ["food", "food", "Comidas"],
+      ["schedule", "calendar", "Mi horario"],
       ["profile", "user", "Mi cuenta"],
     ];
-    if (state.admin) menu.push(["admin", "edit", "Administrar"]);
+    if (state.admin)
+      menu.push(
+        ["admin", "edit", "Administrar"],
+        ["food-admin", "food", "Vendedores"],
+      );
     const current = names[state.view],
       initial = (state.profile?.full_name || state.user?.email || "D")
         .charAt(0)
         .toUpperCase();
     $("#app").innerHTML =
-      `<div class="shell"><header class="topbar app-top">${brand()}<div class="top-actions"><span class="app-title">Guía FIT</span><span class="avatar" aria-hidden="true">${esc(initial)}</span><button class="btn ghost small" id="logout">${icon("exit")}${state.demo ? "Salir de demo" : "Cerrar sesión"}</button></div></header><div class="workspace"><nav class="sidebar" aria-label="Navegación principal"><div class="eyebrow">EXPLORA LA FIT</div>${menu.map(([id, i, label]) => `<button class="nav-item ${state.view === id ? "active" : ""}" data-view="${id}" ${state.view === id ? 'aria-current="page"' : ""}>${icon(i)}${label}</button>`).join("")}<p class="sidebar-note">Facultad de Ingeniería Tampico<br>Universidad Autónoma de Tamaulipas</p></nav><main class="content" id="main"><div class="page-head"><div><span class="eyebrow muted">GUÍA DEL CAMPUS</span><h1>${current[0]}</h1><p>${current[1]}</p></div>${state.demo ? '<span class="badge pending">Modo demostración</span>' : badge(state.verification?.status === "verified")}</div>${state.demo ? '<div class="notice">Demostración: no has iniciado sesión. Los lugares proceden del croquis; sus recorridos todavía deben verificarse.</div>' : ""}${state.dataError ? `<div class="notice error" role="alert">${esc(state.dataError)} <button id="retry-data" class="text-button">Reintentar</button></div>` : ""}<div id="view"></div></main></div></div>`;
+      `<div class="shell"><header class="topbar app-top">${brand()}<div class="top-actions"><span class="app-title">Guía FIT</span>${state.user ? `<button class="notification-bell" data-view="notifications" aria-label="Mis avisos">${icon("bell")}<span id="notification-count" hidden></span></button>` : ""}<span class="avatar" aria-hidden="true">${esc(initial)}</span><button class="btn ghost small" id="logout">${icon("exit")}${state.demo ? "Salir de demo" : "Cerrar sesión"}</button></div></header><div class="workspace"><nav class="sidebar" aria-label="Navegación principal"><div class="eyebrow">EXPLORA LA FIT</div>${menu.map(([id, i, label]) => `<button class="nav-item ${state.view === id ? "active" : ""}" data-view="${id}" ${state.view === id ? 'aria-current="page"' : ""}>${icon(i)}${label}</button>`).join("")}<p class="sidebar-note">Facultad de Ingeniería Tampico<br>Universidad Autónoma de Tamaulipas</p></nav><main class="content" id="main"><div class="page-head"><div><span class="eyebrow muted">GUÍA DEL CAMPUS</span><h1>${current[0]}</h1><p>${current[1]}</p></div>${state.demo ? '<span class="badge pending">Modo demostración</span>' : badge(state.verification?.status === "verified")}</div>${state.demo ? '<div class="notice">Demostración: no has iniciado sesión. Los lugares proceden del croquis; sus recorridos todavía deben verificarse.</div>' : ""}${state.dataError ? `<div class="notice error" role="alert">${esc(state.dataError)} <button id="retry-data" class="text-button">Reintentar</button></div>` : ""}<div id="view"></div></main></div></div>`;
     document.querySelectorAll("[data-view]").forEach(
       (b) =>
         (b.onclick = () => {
@@ -341,6 +364,7 @@
         }),
     );
     $("#logout").onclick = signOut;
+    pollNotifications();
     if ($("#retry-data"))
       $("#retry-data").onclick = async () => {
         await loadData();
@@ -352,6 +376,10 @@
       route: routeView,
       profile: profileView,
       admin: adminView,
+      food: () => window.FIT_FOOD.render(moduleContext()),
+      "food-admin": () => window.FIT_FOOD.render(moduleContext()),
+      notifications: () => window.FIT_FOOD.render(moduleContext()),
+      schedule: () => window.FIT_SCHEDULE.render(moduleContext()),
     })[state.view]();
     document.querySelectorAll(".place-image img").forEach(
       (img) =>
@@ -361,6 +389,52 @@
         }),
     );
   }
+  function moduleContext() {
+    return {
+      state,
+      client,
+      $,
+      esc,
+      icon,
+      toast,
+      dialog,
+      render,
+      signOut,
+      poll: pollNotifications,
+      navigate: (view, placeId) => {
+        state.view = view;
+        if (placeId) {
+          state.destination = placeId;
+          state.route = null;
+          state.routeDemo = false;
+        }
+        render();
+      },
+    };
+  }
+  let polling = false;
+  async function pollNotifications() {
+    if (polling || !state.user || state.demo || document.hidden || !client)
+      return;
+    polling = true;
+    const userId = state.user.id;
+    try {
+      const result = await client.request("/api/food/notifications");
+      if (state.user?.id !== userId) return;
+      const count = result.data?.unread_count;
+      const el = $("#notification-count");
+      if (el && count !== undefined) {
+        el.textContent = count > 99 ? "99+" : String(count);
+        el.hidden = count === 0;
+      }
+    } finally {
+      polling = false;
+    }
+  }
+  setInterval(pollNotifications, 30000);
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) pollNotifications();
+  });
   async function signOut() {
     try {
       if (client && !state.demo) {
@@ -446,7 +520,11 @@
   }
   function dialog(html) {
     const el = document.createElement("dialog");
-    el.innerHTML = html;
+    el.innerHTML =
+      (html.includes("data-close")
+        ? ""
+        : `<div class="module-dialog-close"><button class="close" data-close aria-label="Cerrar">${icon("close")}</button></div>`) +
+      html;
     document.body.append(el);
     el.showModal();
     el.addEventListener("close", () => el.remove());

@@ -10,7 +10,7 @@ class AppController extends ChangeNotifier {
   final FitApiClient? client;
   AppController(this.client);
   FitUser? user;
-  bool demo = false, recovery = false, loading = false;
+  bool demo = false, recovery = false, loading = false, admin = false;
   String? dataError, authNotice;
   Map<String, dynamic>? profile, verification;
   List<Place> places = [], referencePlaces = [], demoPlaces = [];
@@ -98,7 +98,9 @@ class AppController extends ChangeNotifier {
         client!.request('/api/data/institutional_verifications'),
         client!.request('/api/data/places'),
         client!.request('/api/data/route_edges'),
+        client!.request('/api/data/app_roles'),
       ]);
+      admin = (data[4] as List).any((x) => x['role'] == 'admin');
       profile = Map<String, dynamic>.from((data[0] as List).first);
       verification = (data[1] as List).isEmpty
           ? null
@@ -132,7 +134,12 @@ class AppController extends ChangeNotifier {
     }
   }
 
-  Future<void> register(String name, String email, String password) async {
+  Future<void> register(
+    String name,
+    String email,
+    String password, {
+    bool seller = false,
+  }) async {
     await client!.request(
       '/api/auth/register',
       method: 'POST',
@@ -140,6 +147,7 @@ class AppController extends ChangeNotifier {
         'email': email.trim(),
         'password': password,
         'full_name': name.trim(),
+        'account_type': seller ? 'seller' : 'buyer',
       },
     );
   }
@@ -189,6 +197,7 @@ class AppController extends ChangeNotifier {
     recovery = false;
     profile = null;
     verification = null;
+    admin = false;
     dataError = null;
     notifyListeners();
   }

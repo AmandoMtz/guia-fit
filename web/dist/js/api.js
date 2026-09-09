@@ -68,6 +68,7 @@
             email,
             password,
             full_name: options.data.full_name,
+            account_type: options.data.account_type || "buyer",
           }),
         resetPasswordForEmail: (email) =>
           this.request("/api/auth/recover", "POST", { email }),

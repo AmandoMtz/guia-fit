@@ -25,6 +25,7 @@ class _AuthScreenState extends State<AuthScreen> {
       _confirm = TextEditingController();
   late AuthMode _mode;
   bool _busy = false, _obscure = true, _obscureConfirm = true, _error = false;
+  bool _seller = false;
   String? _notice;
   @override
   void initState() {
@@ -72,7 +73,12 @@ class _AuthScreenState extends State<AuthScreen> {
           await c.signIn(_email.text, _password.text);
           break;
         case AuthMode.register:
-          await c.register(_name.text, _email.text, _password.text);
+          await c.register(
+            _name.text,
+            _email.text,
+            _password.text,
+            seller: _seller,
+          );
           if (mounted) {
             setState(() {
               _mode = AuthMode.verify;
@@ -340,6 +346,19 @@ class _AuthScreenState extends State<AuthScreen> {
                             : () => _switch(AuthMode.recover),
                         child: const Text('Olvidé mi contraseña'),
                       ),
+                    ),
+                  if (_mode == AuthMode.register)
+                    CheckboxListTile(
+                      contentPadding: EdgeInsets.zero,
+                      value: _seller,
+                      onChanged: _busy
+                          ? null
+                          : (v) => setState(() => _seller = v ?? false),
+                      title: const Text("Quiero vender comida"),
+                      subtitle: const Text(
+                        "Después podrás solicitar tu puesto en la facultad.",
+                      ),
+                      controlAffinity: ListTileControlAffinity.leading,
                     ),
                   FilledButton(
                     onPressed: _busy ? null : _submit,

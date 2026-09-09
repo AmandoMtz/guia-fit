@@ -45,12 +45,12 @@ Sustituye la URL por la de tu repositorio y autentícate con tu método habitual
 2. Selecciona el repositorio y la rama `main`. Render leerá `render.yaml` desde la raíz.
 3. Completa estas variables privadas cuando las solicite:
 
-| Variable | Contenido |
-|---|---|
-| `DATABASE_URL` | Service URI PostgreSQL de Aiven |
-| `AIVEN_CA_CERT` | Certificado CA completo, incluyendo BEGIN/END CERTIFICATE |
-| `RESEND_API_KEY` | Clave de envío de correo |
-| `MAIL_FROM` | Remitente autorizado |
+| Variable         | Contenido                                                 |
+| ---------------- | --------------------------------------------------------- |
+| `DATABASE_URL`   | Service URI PostgreSQL de Aiven                           |
+| `AIVEN_CA_CERT`  | Certificado CA completo, incluyendo BEGIN/END CERTIFICATE |
+| `RESEND_API_KEY` | Clave de envío de correo                                  |
+| `MAIL_FROM`      | Remitente autorizado                                      |
 
 `AIVEN_CA_CERT` admite saltos de línea reales o la secuencia literal `\n`. No pegues comillas adicionales. Como alternativa, usa un Secret File de Render y define `AIVEN_CA_PATH` con su ruta absoluta, por ejemplo `/etc/secrets/ca.pem`.
 
@@ -81,21 +81,21 @@ Para validar pertenencia institucional: solicita al usuario su identificador de 
 En `flutter/config.local.json`, coloca solo:
 
 ```json
-{"API_BASE_URL":"https://TU-SERVICIO.onrender.com"}
+{ "API_BASE_URL": "https://TU-SERVICIO.onrender.com" }
 ```
 
 La app no recibe credenciales PostgreSQL ni claves de correo. Ejecuta los pasos de `FLUTTER.md`. Las cuentas, verificaciones, fotos y rutas serán las mismas en la web y el teléfono.
 
 ## Si algo falla
 
-| Síntoma | Revisión |
-|---|---|
-| No inicia el servicio | URI, puerto Aiven, certificado CA y permisos de migración |
-| Correo no llega | Remitente/dominio verificado, restricciones de destinatarios, clave y panel del proveedor |
-| Dice que el registro no está habilitado | Configuración de base y de correo; reinicia el servicio tras modificar variables |
-| Perfil sin rutas | Registra y verifica puntos y tramos; el catálogo inicial no inventa recorridos |
-| Flutter no conecta | URL HTTPS sin `/api` al final; arranque del servicio tras inactividad |
-| Error de origen en web | `SITE_URL` debe coincidir con el dominio que abres |
+| Síntoma                                 | Revisión                                                                                  |
+| --------------------------------------- | ----------------------------------------------------------------------------------------- |
+| No inicia el servicio                   | URI, puerto Aiven, certificado CA y permisos de migración                                 |
+| Correo no llega                         | Remitente/dominio verificado, restricciones de destinatarios, clave y panel del proveedor |
+| Dice que el registro no está habilitado | Configuración de base y de correo; reinicia el servicio tras modificar variables          |
+| Perfil sin rutas                        | Registra y verifica puntos y tramos; el catálogo inicial no inventa recorridos            |
+| Flutter no conecta                      | URL HTTPS sin `/api` al final; arranque del servicio tras inactividad                     |
+| Error de origen en web                  | `SITE_URL` debe coincidir con el dominio que abres                                        |
 
 ## Referencias oficiales
 

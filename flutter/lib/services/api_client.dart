@@ -1,4 +1,6 @@
 import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'http_client_native.dart' if (dart.library.html) 'http_client_web.dart';
@@ -14,10 +16,12 @@ class ApiError implements Exception {
 class FitUser {
   final String id, email;
   final String? emailConfirmedAt;
+  final bool sellerIntent;
   FitUser.fromJson(Map<String, dynamic> json)
     : id = json['id'] as String,
       email = json['email'] as String,
-      emailConfirmedAt = json['email_confirmed_at'] as String?;
+      emailConfirmedAt = json['email_confirmed_at'] as String?,
+      sellerIntent = json['food_seller_intent'] == true;
 }
 
 class FitApiClient {
@@ -51,6 +55,7 @@ class FitApiClient {
           headers: headers,
           body: jsonEncode(body ?? {}),
         ),
+        'DELETE' => _http.delete(uri, headers: headers),
         'PATCH' => _http.patch(
           uri,
           headers: headers,
@@ -117,6 +122,65 @@ class FitApiClient {
     }
     _sessionToken = null;
     if (!kIsWeb) await _storage.delete(key: 'fit_session');
+  }
+
+  Future<Map<String, dynamic>> uploadFoodPhoto(
+    Uint8List bytes,
+    String name,
+  ) async {
+    final ext = name.split('.').last.toLowerCase();
+    final mime = {
+      'jpg': 'jpeg',
+      'jpeg': 'jpeg',
+      'png': 'png',
+      'webp': 'webp',
+    }[ext];
+    if (mime == null || bytes.length > 5242880) {
+      throw const ApiError(
+        'validation_error',
+        'Usa una imagen JPG, PNG o WebP de hasta 5 MB.',
+        400,
+      );
+    }
+    try {
+      final req = http.MultipartRequest(
+        'POST',
+        Uri.parse('$base/api/food/photos'),
+      );
+      req.headers.addAll({
+        'X-FIT-Client': kIsWeb ? 'web' : 'mobile',
+        if (!kIsWeb && _sessionToken != null)
+          'Authorization': 'Bearer $_sessionToken',
+      });
+      req.files.add(
+        http.MultipartFile.fromBytes(
+          'file',
+          bytes,
+          filename: name,
+          contentType: MediaType('image', mime),
+        ),
+      );
+      final response = await http.Response.fromStream(
+        await _http.send(req),
+      ).timeout(const Duration(seconds: 40));
+      final result = jsonDecode(response.body) as Map<String, dynamic>;
+      if (response.statusCode >= 400) {
+        throw ApiError(
+          'upload_error',
+          result['error']?['message'] ?? 'No se pudo subir la foto.',
+          response.statusCode,
+        );
+      }
+      return Map<String, dynamic>.from(result['data']);
+    } on ApiError {
+      rethrow;
+    } catch (_) {
+      throw const ApiError(
+        'network_error',
+        'No se pudo subir la foto. Revisa tu conexión.',
+        0,
+      );
+    }
   }
 
   void dispose() => _http.close();

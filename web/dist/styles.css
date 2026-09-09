@@ -1337,3 +1337,1139 @@ dialog::backdrop {
     transition: none;
   }
 }
+/* Comunidad FIT · Comidas y horario */
+[hidden] {
+  display: none !important;
+}
+.content {
+  min-width: 0;
+}
+.seller-option {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 16px;
+  border: 1px solid #ead8ca;
+  border-radius: 12px;
+  background: #fff8f2;
+  margin: 4px 0 22px;
+  cursor: pointer;
+}
+.seller-option input,
+.check input {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  accent-color: #c54a0b;
+}
+.seller-option span {
+  display: grid;
+  gap: 4px;
+}
+.seller-option small {
+  color: #65747d;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.notification-bell {
+  position: relative;
+  border: 1px solid #d9e1e5;
+  background: white;
+  color: #173743;
+  border-radius: 50%;
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+.notification-bell svg {
+  width: 20px;
+}
+.notification-bell span {
+  position: absolute;
+  right: -4px;
+  top: -5px;
+  background: #c54a0b;
+  color: white;
+  border: 2px solid white;
+  border-radius: 20px;
+  min-width: 20px;
+  padding: 1px 4px;
+  font-size: 10px;
+}
+.module-tabs {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  border-bottom: 1px solid #dce3e6;
+  margin: 26px 0 24px;
+  padding-bottom: 10px;
+}
+.module-tabs button {
+  border: 0;
+  background: transparent;
+  color: #576c79;
+  font: inherit;
+  font-weight: 600;
+  padding: 11px 18px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+.module-tabs button.active {
+  background: #183743;
+  color: white;
+}
+.module-tabs button:focus-visible {
+  outline: 3px solid #cb4b0b;
+  outline-offset: 2px;
+}
+.food-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 26px;
+  background: #173b45;
+  color: #fff;
+  border-radius: 22px;
+  padding: 34px 40px;
+  overflow: hidden;
+  position: relative;
+}
+.food-banner:after {
+  content: "";
+  position: absolute;
+  width: 280px;
+  height: 280px;
+  border: 1px solid #ffffff18;
+  border-radius: 50%;
+  right: 100px;
+  top: -125px;
+  pointer-events: none;
+}
+.food-banner .eyebrow {
+  color: #ebbb95;
+}
+.food-banner h2 {
+  font-size: clamp(28px, 3vw, 42px);
+  letter-spacing: -1.2px;
+  line-height: 1.13;
+  margin: 12px 0;
+}
+.food-banner p {
+  color: #d0dfe0;
+  margin: 0;
+}
+.food-stats {
+  display: grid;
+  grid-template-columns: auto auto;
+  gap: 4px 14px;
+  align-items: center;
+}
+.food-stats strong {
+  font-size: 34px;
+  font-weight: 650;
+}
+.food-stats span {
+  color: #cbdcde;
+  font-size: 13px;
+}
+.food-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr));
+  gap: 22px;
+  margin: 24px 0;
+}
+.food-card {
+  border-radius: 18px;
+  overflow: hidden;
+  background: white;
+  border: 1px solid #e0e6e9;
+  box-shadow: 0 5px 18px #173b4505;
+  display: flex;
+  flex-direction: column;
+  transition:
+    transform 0.18s,
+    box-shadow 0.18s;
+}
+.food-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 24px #173b450d;
+}
+.food-photo {
+  height: 205px;
+  background: #f4eee6;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: #a5917a;
+}
+.food-photo svg {
+  width: 40px;
+  height: 40px;
+}
+.food-photo span {
+  font-size: 12px;
+}
+.food-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.food-card-body {
+  padding: 23px;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+}
+.food-card-body .eyebrow {
+  color: #bf4a10;
+  font-size: 10px;
+  letter-spacing: 1.7px;
+}
+.food-card-body h3 {
+  font-size: 21px;
+  letter-spacing: -0.4px;
+  margin: 10px 0;
+}
+.food-card-body p {
+  color: #61747d;
+  font-size: 13px;
+  line-height: 1.65;
+  margin: 0 0 16px;
+  overflow-wrap: anywhere;
+}
+.pickup {
+  display: flex;
+  gap: 7px;
+  align-items: flex-start;
+  font-size: 13px;
+  line-height: 1.65;
+  color: #63767f;
+}
+.pickup svg {
+  width: 16px;
+  height: 19px;
+  flex-shrink: 0;
+}
+.price-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding-top: 18px;
+  border-top: 1px solid #edf0f1;
+  margin-top: auto;
+}
+.price-row strong {
+  display: block;
+  font-size: 24px;
+  color: #173743;
+  letter-spacing: -0.5px;
+}
+.price-row small {
+  color: #61747d;
+  font-size: 11px;
+}
+.section-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+.section-heading h2,
+.section-heading h3 {
+  margin: 8px 0;
+}
+.button-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.button-row .btn,
+.section-heading .btn {
+  width: auto;
+}
+.order-list,
+.notification-list,
+.product-manage {
+  display: grid;
+  gap: 16px;
+}
+.order-card {
+  margin: 0;
+}
+.order-card h3 {
+  margin: 0 0 8px;
+  font-size: 20px;
+}
+.order-card p {
+  margin: 8px 0;
+  overflow-wrap: anywhere;
+}
+.order-card .button-row {
+  margin-top: 18px;
+}
+.order-note {
+  background: #f5f7f8;
+  border-left: 3px solid #d4e0e4;
+  border-radius: 0 8px 8px 0;
+  padding: 12px;
+}
+.order-total {
+  font-size: 22px;
+  font-weight: 700;
+  color: #173743;
+}
+.danger {
+  color: #ad3134 !important;
+}
+.vendor-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(320px, 100%), 1fr));
+  gap: 20px;
+}
+.vendor-card {
+  margin: 0;
+}
+.vendor-card h2 {
+  font-size: 24px;
+}
+.vendor-mark {
+  width: 54px;
+  height: 54px;
+  background: #fbeee2;
+  border-radius: 16px;
+  display: grid;
+  place-items: center;
+  color: #bf4a10;
+  font-size: 26px;
+  font-weight: 650;
+  margin-bottom: 16px;
+}
+.vendor-review {
+  margin-top: 18px;
+}
+.seller-intro {
+  max-width: 800px;
+  padding: 38px;
+}
+.seller-intro p,
+.seller-intro li {
+  line-height: 1.85;
+  color: #5e727e;
+}
+.steps {
+  padding-left: 23px;
+  margin: 25px 0;
+}
+.steps li {
+  padding: 4px;
+}
+.module-empty {
+  grid-column: 1/-1;
+  border: 1px dashed #ccd6dc;
+  border-radius: 18px;
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  text-align: center;
+  padding: 54px 22px;
+  background: #fff;
+}
+.module-empty > svg {
+  width: 38px;
+  height: 38px;
+  color: #b9653b;
+  margin-bottom: 10px;
+}
+.module-empty h2 {
+  font-size: 23px;
+  margin: 12px 0;
+}
+.module-empty p {
+  max-width: 530px;
+  color: #667b88;
+  line-height: 1.8;
+  margin: 0;
+}
+.food-hero {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 32px;
+  align-items: center;
+  margin-bottom: 24px;
+  padding: 32px;
+  border-radius: 22px;
+  background: #fff1e5;
+}
+.food-hero h2 {
+  font-size: clamp(30px, 4vw, 50px);
+  line-height: 1.05;
+  letter-spacing: -1.5px;
+  margin: 20px 0;
+}
+.food-hero p {
+  color: #66747b;
+  line-height: 1.8;
+}
+.food-hero figure {
+  margin: 0;
+}
+.food-hero img {
+  width: 100%;
+  height: 280px;
+  object-fit: cover;
+  border-radius: 16px;
+}
+.food-hero figcaption {
+  font-size: 10px;
+  line-height: 1.8;
+  margin-top: 8px;
+  color: #676563;
+}
+.food-hero figcaption a {
+  color: inherit;
+}
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr));
+  gap: 16px;
+}
+.check {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  line-height: 1.7;
+  font-size: 13px;
+  margin: 14px 0 22px;
+}
+.check input {
+  margin-top: 3px;
+}
+.product-preview {
+  width: 100%;
+  height: 190px;
+  object-fit: contain;
+  background: #f2f5f5;
+  border-radius: 12px;
+}
+.module-dialog-close {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 4px;
+}
+.dialog-content h2 {
+  font-size: 26px;
+  margin: 10px 0 14px;
+  letter-spacing: -0.6px;
+}
+.dialog-content > p {
+  color: #687983;
+  line-height: 1.75;
+}
+.dialog-content form {
+  margin-top: 22px;
+}
+.dialog-content .field textarea {
+  min-height: 85px;
+}
+.notification {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 0;
+}
+.notification.unread {
+  border-left: 4px solid #c65019;
+  background: #fffaf5;
+}
+.notification h3 {
+  margin: 9px 0;
+  font-size: 18px;
+}
+.notification p {
+  margin: 8px 0;
+  overflow-wrap: anywhere;
+}
+.notification .eyebrow {
+  font-size: 10px;
+  color: #a65228;
+}
+.schedule-welcome {
+  position: relative;
+  overflow: hidden;
+  padding: 48px;
+  max-width: 1100px;
+  background: linear-gradient(120deg, #fff 50%, #edf4f1);
+}
+.schedule-welcome h2 {
+  font-size: clamp(32px, 4.2vw, 55px);
+  letter-spacing: -1.8px;
+  line-height: 1.12;
+  margin: 20px 0;
+}
+.schedule-welcome p {
+  max-width: 570px;
+  line-height: 1.8;
+  color: #61757e;
+}
+.schedule-welcome .eyebrow {
+  color: #b34c18;
+}
+.calendar-art {
+  position: absolute;
+  right: 7%;
+  top: 22%;
+  width: 170px;
+  height: 180px;
+  border: 1px solid #d8e7e2;
+  border-radius: 26px;
+  background: #fff;
+  transform: rotate(8deg);
+  box-shadow: 0 18px 40px #1c464514;
+  display: grid;
+  place-items: center;
+}
+.calendar-art svg {
+  width: 100px;
+  height: 100px;
+  color: #2d665e;
+}
+.schedule-welcome > p,
+.schedule-welcome > h2,
+.schedule-welcome > .button-row,
+.schedule-welcome > .eyebrow {
+  position: relative;
+  z-index: 1;
+  max-width: 65%;
+}
+.schedule-steps {
+  display: flex;
+  gap: 30px;
+  flex-wrap: wrap;
+  border-top: 1px solid #dfe8e4;
+  padding-top: 25px;
+  margin-top: 36px;
+  color: #5d7275;
+  font-size: 12px;
+}
+.schedule-steps b {
+  display: inline-block;
+  color: #c45018;
+  margin-right: 7px;
+  font-size: 16px;
+}
+.schedule-header {
+  border-radius: 20px;
+  background: #173b45;
+  color: #fff;
+  padding: 30px 34px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+.schedule-header .eyebrow {
+  color: #afcdc5;
+  letter-spacing: 1.8px;
+  font-size: 11px;
+}
+.schedule-header h2 {
+  font-size: clamp(23px, 2.7vw, 32px);
+  letter-spacing: -0.7px;
+  margin: 12px 0;
+  overflow-wrap: anywhere;
+}
+.schedule-header p {
+  font-size: 12px;
+  color: #c1d2d6;
+  line-height: 1.7;
+  margin: 0;
+}
+.schedule-numbers {
+  display: flex;
+  gap: 25px;
+  text-align: center;
+  flex-shrink: 0;
+}
+.schedule-numbers b {
+  display: block;
+  font-size: 32px;
+}
+.schedule-numbers span {
+  display: block;
+  font-size: 10px;
+  color: #c1d2d6;
+  white-space: nowrap;
+}
+.schedule-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  flex-wrap: wrap;
+  margin: 25px 0;
+}
+.schedule-toolbar strong {
+  font-size: 14px;
+}
+.week-calendar {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 8px;
+  background: white;
+  padding: 10px;
+  border: 1px solid #dfe7e9;
+  border-radius: 18px;
+  align-items: start;
+}
+.calendar-day > header {
+  text-align: center;
+  padding: 15px 5px;
+  border-bottom: 1px solid #eaf0f2;
+  margin-bottom: 12px;
+  display: grid;
+  gap: 5px;
+}
+.calendar-day > header span {
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-size: 10px;
+  color: #627984;
+}
+.calendar-day > header b {
+  font-size: 23px;
+  font-weight: 600;
+}
+.calendar-day.today > header {
+  background: #173b45;
+  color: #fff;
+  border-radius: 12px;
+}
+.calendar-day.today > header span {
+  color: #cbddd9;
+}
+.calendar-sessions {
+  display: grid;
+  gap: 10px;
+}
+.class-card {
+  padding: 15px 11px;
+  border-radius: 10px;
+  border: 1px solid #e8d5be;
+  background: #fff5e6;
+  color: #705020;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.class-card.color-1 {
+  background: #edf5f1;
+  border-color: #d2e5db;
+  color: #2b5d4d;
+}
+.class-card.color-2 {
+  background: #eff2fa;
+  border-color: #dee2f0;
+  color: #425a88;
+}
+.class-card.color-3 {
+  background: #fbefec;
+  border-color: #f0dcd4;
+  color: #855248;
+}
+.class-card time {
+  font-size: 10px;
+  font-weight: 700;
+  display: block;
+}
+.class-card h3 {
+  font-size: 12px;
+  line-height: 1.5;
+  margin: 10px 0 8px;
+}
+.class-card p {
+  font-size: 10px;
+  line-height: 1.6;
+  margin: 7px 0;
+}
+.class-room {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.6;
+}
+.class-room svg {
+  width: 13px;
+  height: 14px;
+  flex-shrink: 0;
+}
+.class-card .text-button {
+  font-size: 10px;
+  margin: 10px 0 0;
+  gap: 3px;
+}
+.class-card .text-button svg {
+  width: 13px;
+  height: 13px;
+}
+.day-free {
+  text-align: center;
+  font-size: 10px;
+  color: #a4b0b7;
+  padding: 24px 0;
+}
+.conflict-label {
+  font-size: 10px;
+  color: #a93131;
+  display: block;
+  margin-top: 8px;
+}
+.review-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 15px;
+  border: 1px solid #e0e6e8;
+  padding: 15px;
+  border-radius: 12px;
+  margin-bottom: 10px;
+}
+.review-row > div:first-child {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.review-row span {
+  font-size: 12px;
+  color: #5a727f;
+}
+.review-row small {
+  font-size: 11px;
+  color: #6b7f88;
+}
+.review-check {
+  padding-top: 16px;
+  border-top: 1px solid #e1e7e9;
+}
+.pdf-text {
+  font-size: 12px;
+  margin: 20px 0;
+}
+.pdf-text summary {
+  cursor: pointer;
+  color: #8a501f;
+}
+.pdf-text pre {
+  white-space: pre-wrap;
+  max-height: 220px;
+  overflow: auto;
+  background: #f3f5f6;
+  padding: 15px;
+  border-radius: 10px;
+}
+.pdf-canvas-wrap {
+  max-height: 65vh;
+  overflow: auto;
+  margin-top: 20px;
+  background: #e6ebed;
+}
+.pdf-canvas-wrap canvas {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+.pdf-dialog {
+  min-width: 0;
+}
+dialog:has(.schedule-review),
+dialog:has(.pdf-dialog) {
+  max-width: 900px;
+  width: calc(100% - 32px);
+}
+dialog:has(.dialog-content) {
+  max-height: 90dvh;
+  overflow: auto;
+}
+.field input[type="file"] {
+  font-size: 12px;
+  padding: 12px;
+}
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+@media (min-width: 1600px) {
+  .class-card {
+    padding: 18px 13px;
+  }
+  .class-card h3 {
+    font-size: 14px;
+  }
+  .class-card time {
+    font-size: 11px;
+  }
+  .class-card p {
+    font-size: 12px;
+  }
+}
+@media (max-width: 1150px) {
+  .week-calendar {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  .calendar-art {
+    width: 135px;
+    height: 150px;
+    right: 5%;
+  }
+  .calendar-art svg {
+    width: 80px;
+  }
+  .schedule-header {
+    flex-wrap: wrap;
+  }
+  .schedule-numbers {
+    text-align: left;
+  }
+  .food-banner {
+    padding: 30px;
+  }
+  .class-card h3 {
+    font-size: 14px;
+  }
+  .class-card p {
+    font-size: 12px;
+  }
+  .class-card time {
+    font-size: 12px;
+  }
+}
+@media (max-width: 760px) {
+  .food-hero {
+    grid-template-columns: 1fr;
+    padding: 24px;
+  }
+  .food-hero img {
+    height: 220px;
+  }
+  .food-banner {
+    padding: 25px;
+    align-items: flex-start;
+    gap: 20px;
+  }
+  .food-banner h2 {
+    font-size: 28px;
+  }
+  .food-stats {
+    grid-template-columns: 1fr;
+    gap: 3px;
+  }
+  .food-stats strong {
+    font-size: 24px;
+  }
+  .food-stats span {
+    font-size: 10px;
+    max-width: 95px;
+  }
+  .module-tabs {
+    gap: 4px;
+  }
+  .module-tabs button {
+    font-size: 12px;
+    padding: 10px 13px;
+  }
+  .schedule-welcome {
+    padding: 28px;
+  }
+  .calendar-art {
+    right: -22px;
+    top: 15%;
+    width: 100px;
+    height: 120px;
+    opacity: 0.45;
+  }
+  .calendar-art svg {
+    width: 60px;
+  }
+  .schedule-welcome > p,
+  .schedule-welcome > h2,
+  .schedule-welcome > .button-row,
+  .schedule-welcome > .eyebrow {
+    max-width: 100%;
+  }
+  .schedule-steps {
+    gap: 15px;
+  }
+  .schedule-header {
+    padding: 25px;
+  }
+  .week-calendar {
+    display: block;
+    padding: 15px;
+  }
+  .calendar-day {
+    display: grid;
+    grid-template-columns: 48px minmax(0, 1fr);
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .calendar-day > header {
+    height: 75px;
+    border-bottom: 0;
+    padding: 10px 3px;
+    position: sticky;
+    top: 10px;
+  }
+  .calendar-sessions {
+    gap: 8px;
+  }
+  .class-card {
+    padding: 17px;
+  }
+  .class-card h3 {
+    font-size: 16px;
+    margin: 7px 0;
+  }
+  .class-card p {
+    font-size: 12px;
+  }
+  .class-card .text-button {
+    font-size: 12px;
+  }
+  .class-room {
+    font-size: 12px;
+  }
+  .day-free {
+    text-align: left;
+    padding: 25px 12px;
+  }
+  .review-row,
+  .notification {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .notification .btn {
+    width: auto;
+  }
+  .section-heading {
+    align-items: flex-start;
+  }
+  .top-actions {
+    gap: 9px;
+  }
+  .notification-bell {
+    width: 36px;
+    height: 36px;
+    flex-shrink: 0;
+  }
+  .top-actions .avatar {
+    display: none;
+  }
+  .food-card-body {
+    padding: 20px;
+  }
+  .order-card .btn {
+    font-size: 12px;
+  }
+  .seller-intro {
+    padding: 25px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .food-card {
+    transition: none;
+  }
+  .food-card:hover {
+    transform: none;
+  }
+}
+/* Tabla del alumno: el documento original es una referencia opcional. */
+.timetable-scroll {
+  overflow: auto;
+  border: 1px solid #dce5e6;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 8px 24px #173b4505;
+}
+.schedule-table {
+  width: 100%;
+  min-width: 840px;
+  border-collapse: separate;
+  border-spacing: 0;
+  table-layout: fixed;
+}
+.schedule-table th,
+.schedule-table td {
+  border-bottom: 1px solid #e7edef;
+  border-right: 1px solid #eef2f3;
+  padding: 10px;
+  vertical-align: top;
+}
+.schedule-table thead th {
+  background: #f0f5f3;
+  color: #405e64;
+  text-align: center;
+  padding: 18px 8px;
+  border-bottom: 1px solid #d7e2e1;
+}
+.schedule-table thead th span {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  display: block;
+}
+.schedule-table thead th b {
+  font-size: 24px;
+  display: block;
+  margin-top: 7px;
+  font-weight: 600;
+}
+.schedule-table thead th.is-today {
+  background: #173b45;
+  color: white;
+}
+.schedule-table .time-column {
+  position: sticky;
+  left: 0;
+  width: 86px;
+  z-index: 1;
+  background: #f8fafb;
+  text-align: center;
+  vertical-align: middle;
+  border-right: 1px solid #dce5e8;
+}
+.schedule-table thead .time-column {
+  font-size: 10px;
+  letter-spacing: 1px;
+  color: #657e88;
+  background: #eef3f4;
+}
+.schedule-table tbody .time-column time {
+  display: block;
+  color: #304f5e;
+  font-size: 13px;
+  font-weight: 650;
+}
+.schedule-table tbody .time-column > span {
+  display: block;
+  color: #91a2aa;
+  font-size: 10px;
+  margin: 5px 0;
+}
+.schedule-table tbody td {
+  height: 116px;
+}
+.schedule-table tr:last-child > th,
+.schedule-table tr:last-child > td {
+  border-bottom: 0;
+}
+.schedule-table td:last-child,
+.schedule-table th:last-child {
+  border-right: 0;
+}
+.schedule-table .class-card {
+  margin: 0 0 8px;
+  padding: 15px 12px;
+  border-left-width: 3px;
+}
+.schedule-table .class-card:last-child {
+  margin-bottom: 0;
+}
+.schedule-table .class-card h3 {
+  font-size: 13px;
+  margin: 0 0 8px;
+}
+.schedule-table .class-card p {
+  font-size: 11px;
+  margin: 6px 0 12px;
+}
+.table-class-meta {
+  display: flex;
+  gap: 7px;
+  flex-wrap: wrap;
+  font-size: 10px;
+  line-height: 1.6;
+}
+.table-class-meta span {
+  background: #ffffff80;
+  padding: 3px 6px;
+  border-radius: 5px;
+}
+.table-class-meta b {
+  font-weight: 650;
+}
+.table-class-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.table-class-actions .text-button {
+  font-size: 10px;
+  margin-top: 8px;
+}
+.empty-cell {
+  display: flex;
+  min-height: 98px;
+  align-items: center;
+  justify-content: center;
+  color: #d5dfe3;
+  font-size: 18px;
+}
+.table-mobile-hint {
+  display: none;
+  font-size: 11px;
+  color: #6b808a;
+}
+.schedule-header .student-line {
+  color: #fff;
+  margin-bottom: 10px;
+  font-size: 13px;
+}
+.schedule-original-image {
+  width: 100%;
+  height: auto;
+  display: block;
+  max-height: 70dvh;
+  object-fit: contain;
+  background: #edf0f2;
+}
+.timetable-scroll:focus-visible {
+  outline: 3px solid #bf501d;
+  outline-offset: 3px;
+}
+@media (max-width: 1100px) {
+  .table-mobile-hint {
+    display: block;
+  }
+}
+@media (max-width: 760px) {
+  .schedule-table {
+    min-width: 860px;
+  }
+  .schedule-table .time-column {
+    width: 70px;
+  }
+  .schedule-table th,
+  .schedule-table td {
+    padding: 8px;
+  }
+  .schedule-table .class-card {
+    padding: 12px 10px;
+  }
+  .schedule-table .class-card h3 {
+    font-size: 13px;
+  }
+  .schedule-table .class-card p {
+    font-size: 11px;
+  }
+}

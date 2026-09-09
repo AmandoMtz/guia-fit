@@ -6,6 +6,7 @@ const multer = require("multer");
 const path = require("node:path");
 const { transaction } = require("./db.cjs");
 const S = require("./security.cjs");
+const { createFoodRouter } = require("./food.cjs");
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const generic =
   "Si corresponde a una cuenta válida, recibirás un correo con los siguientes pasos.";
@@ -29,10 +30,11 @@ function createApp({
       contentSecurityPolicy: {
         directives: {
           defaultSrc: ["'self'"],
-          scriptSrc: ["'self'"],
+          scriptSrc: ["'self'", "'wasm-unsafe-eval'"],
           styleSrc: ["'self'", "'unsafe-inline'"],
           imgSrc: ["'self'", "https:", "data:"],
           connectSrc: ["'self'"],
+          workerSrc: ["'self'", "blob:"],
           objectSrc: ["'none'"],
           baseUri: ["'self'"],
           frameAncestors: ["'none'"],
@@ -119,7 +121,7 @@ function createApp({
     if (!token || token.length > 256)
       throw fail(401, "session_expired", "Inicia sesión para continuar.");
     const { rows } = await db.query(
-      "select u.id,u.email,u.role,u.email_confirmed_at from sessions s join users u on u.id=s.user_id where s.token_hash=$1 and s.expires_at>now()",
+      "select u.id,u.email,u.role,u.email_confirmed_at,u.food_seller_intent from sessions s join users u on u.id=s.user_id where s.token_hash=$1 and s.expires_at>now()",
       [S.hashToken(token)],
     );
     if (!rows[0])
@@ -163,7 +165,18 @@ function createApp({
     }
   }
   app.post("/api/auth/register", async (req, res) => {
-    const { email, password, full_name } = req.body || {};
+    const {
+      email,
+      password,
+      full_name,
+      account_type = "buyer",
+    } = req.body || {};
+    if (!["buyer", "seller"].includes(account_type))
+      throw fail(
+        400,
+        "validation_error",
+        "Selecciona un tipo de cuenta válido.",
+      );
     if (
       !S.emailValid(email) ||
       !S.nameValid(full_name) ||
@@ -184,8 +197,8 @@ function createApp({
       passwordHash = await S.hashPassword(password);
     const user = await transaction(db, async (client) => {
       const { rows } = await client.query(
-        "insert into users(email,password_hash) values($1,$2) on conflict(email) do nothing returning id,email",
-        [normalized, passwordHash],
+        "insert into users(email,password_hash,food_seller_intent) values($1,$2,$3) on conflict(email) do nothing returning id,email",
+        [normalized, passwordHash, account_type === "seller"],
       );
       if (!rows[0]) return null;
       await client.query("insert into profiles(id,full_name) values($1,$2)", [
@@ -245,6 +258,7 @@ function createApp({
         id: user.id,
         email: user.email,
         email_confirmed_at: user.email_confirmed_at,
+        food_seller_intent: user.food_seller_intent,
       },
     };
     if (req.get("X-FIT-Client") === "mobile") payload.sessionToken = token;
@@ -591,6 +605,11 @@ function createApp({
         .status(201)
         .json({ data: { url: origin + "/api/photos/" + rows[0].id } });
     },
+  );
+  app.use(
+    "/api/food",
+    authenticate,
+    createFoodRouter({ db, siteUrl, administrator, limit }),
   );
   app.use("/api", (req, res, next) =>
     next(fail(404, "not_found", "Recurso no encontrado.")),

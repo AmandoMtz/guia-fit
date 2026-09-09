@@ -185,7 +185,7 @@ function createApp({
       throw fail(
         400,
         "validation_error",
-        "Revisa el nombre, el correo y la contraseña de al menos 12 caracteres.",
+        "La contraseña debe tener al menos 8 caracteres, con letras, números y un carácter especial.",
       );
     if (!sendMail)
       throw fail(

@@ -1,4 +1,42 @@
 (function (root) {
+  function renderSubjects(c, saved) {
+    const S = root.FIT_SCHEDULE_CORE,
+      rows = new Map();
+    for (const x of saved.classes) {
+      const key = JSON.stringify([
+        x.group || "",
+        x.subject,
+        x.classroom,
+        x.teacher,
+      ]);
+      if (!rows.has(key))
+        rows.set(key, { ...x, days: Array.from({ length: 7 }, () => []) });
+      if (x.day >= 1 && x.day <= 7)
+        rows.get(key).days[x.day - 1].push(x.start + "–" + x.end);
+    }
+    return `<div class="timetable-scroll" role="region" aria-label="Materias en once columnas" tabindex="0"><table class="subjects-table"><caption class="screen-reader">GPO, materia, aula, lunes a domingo y profesor</caption><thead><tr>${S.fitColumns.map((n) => `<th scope="col">${c.esc(n)}</th>`).join("")}</tr></thead><tbody>${[
+      ...rows.values(),
+    ]
+      .map(
+        (x) =>
+          `<tr><td><span class="group-pill">${c.esc(x.group || "—")}</span></td><th scope="row">${c.esc(x.subject)}</th><td>${c.esc(x.classroom || "—")}</td>${x.days
+            .map(
+              (d) =>
+                `<td class="${d.length ? "has-class" : "no-class"}">${
+                  d.length
+                    ? [...new Set(d)]
+                        .sort()
+                        .map((t) => `<span>${c.esc(t)}</span>`)
+                        .join("")
+                    : "—"
+                }</td>`,
+            )
+            .join("")}<td>${c.esc(x.teacher || "Por completar")}</td></tr>`,
+      )
+      .join(
+        "",
+      )}</tbody></table></div><p class="table-mobile-hint">Desliza para ver las 11 columnas. Cada fila conserva su materia, grupo, aula y profesor.</p>`;
+  }
   function render(c, saved, monday, conflicts) {
     const S = root.FIT_SCHEDULE_CORE,
       today = new Date();
@@ -42,5 +80,5 @@
         "",
       )}</tbody></table></div><p class="table-mobile-hint">Desliza la tabla para consultar todos los días.</p>`;
   }
-  root.FIT_TIMETABLE = { render };
+  root.FIT_TIMETABLE = { render, renderSubjects };
 })(window);

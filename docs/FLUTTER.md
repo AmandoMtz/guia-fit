@@ -31,7 +31,7 @@ Las sesiones móviles se guardan mediante `flutter_secure_storage`; el token no 
 
 La app incluye catálogo, solicitud de vendedor, productos con fotografías, precios por unidad/lote, pedidos, estados y avisos persistentes. En celular, **Más** abre las secciones adicionales. La campana muestra los avisos de tu cuenta.
 
-Mi horario admite PDF, JPG, PNG y WebP. Guarda una tabla semanal editable con nombre, matrícula, carrera, materia, maestro, grupo, salón y horas. El original es opcional; la tabla funciona sin él. Los registros están separados por ID de cuenta, en archivos locales de la app (Android/iOS) o IndexedDB (web). No se guardan horarios en Aiven, ni se comparte el horario entre la web principal y Flutter Web aunque usen la misma cuenta.
+Mi horario admite PDF, JPG, PNG y WebP. Guarda una tabla de 11 columnas y una vista semanal editable con nombre, matrícula, carrera, materia, maestro, grupo, salón y horas. El original se descarta al terminar la extracción. Se guardan solo los datos estructurados. Los registros están separados por ID de cuenta, en archivos locales de la app (Android/iOS) o IndexedDB (web). No se guardan horarios en Aiven, ni se comparte el horario entre la web principal y Flutter Web aunque usen la misma cuenta.
 
 PDF textual usa `pdfrx`. En Android/iOS, las imágenes y las páginas escaneadas se leen con ML Kit local; en Flutter Web se usa Tesseract y el modelo español incluidos en `flutter/web/vendor/`. Conserva `flutter/web/ocr.js` y esos assets al compilar. No requiere una clave de Google, Firebase ni un servicio de OCR.
 
@@ -80,3 +80,5 @@ Los logotipos y croquis son los archivos originales. Los iconos de lanzador de l
 Consulta `VERIFICACION.md` para las comprobaciones ejecutadas. El correo real, conexión a tus servicios y enlaces desde dispositivos físicos requieren tu configuración de Render/Aiven y el proveedor de correo.
 
 Referencias de OCR: [plugin ML Kit](https://pub.dev/packages/google_mlkit_text_recognition/versions/0.15.0), [modelo latino incluido en Android](https://developers.google.com/ml-kit/vision/text-recognition/v2/android), [Tesseract local](https://github.com/naptha/tesseract.js/blob/master/docs/local-installation.md).
+
+Mi cuenta permite cambiar Alumno/Alumno vendedor y subir, reemplazar o eliminar una foto de perfil. Las fotos de perfil, productos y cuentas usan Aiven a través de la API. Los horarios siguen siendo locales. Consulta `ALMACENAMIENTO.md`.

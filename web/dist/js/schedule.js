@@ -29,8 +29,6 @@
       studentName: c.state.profile?.full_name || "",
       studentId: c.state.profile?.student_id || "",
       classes: [],
-      pdf: null,
-      pdfName: "",
       reviewedAt: null,
     };
   }
@@ -66,7 +64,7 @@
   }
   function draw(c, host, saved) {
     if (!saved) {
-      host.innerHTML = `<section class="schedule-welcome panel"><div class="calendar-art" aria-hidden="true">${c.icon("calendar")}</div><span class="eyebrow">TU SEMANA EN ORDEN</span><h2>Cada clase,<br>en su lugar.</h2><p>Sube una imagen o el PDF de tu horario. Revisa tu carrera, matrícula y materias, y organiza tu semana.</p><div class="button-row"><button class="btn" id="import-pdf">${c.icon("calendar")} Subir imagen o PDF</button><button class="btn secondary" id="manual-schedule">Capturar manualmente</button></div><div class="schedule-steps"><span><b>01</b> Importa tu horario</span><span><b>02</b> Revisa los datos</span><span><b>03</b> Consulta tu semana</span></div><p class="hint">Solo en este dispositivo y navegador. El archivo no se envía al servidor. Hasta 8 MB y 20 páginas.</p></section>`;
+      host.innerHTML = `<section class="schedule-welcome panel"><div class="calendar-art" aria-hidden="true">${c.icon("calendar")}</div><span class="eyebrow">TU SEMANA EN ORDEN</span><h2>Cada clase,<br>en su lugar.</h2><p>Sube una imagen o el PDF de tu horario. Revisa tu carrera, matrícula y materias, y organiza tu semana.</p><div class="button-row"><button class="btn" id="import-pdf">${c.icon("calendar")} Subir imagen o PDF</button><button class="btn secondary" id="manual-schedule">Capturar manualmente</button></div><div class="schedule-steps"><span><b>01</b> Importa tu horario</span><span><b>02</b> Revisa los datos</span><span><b>03</b> Consulta tu semana</span></div><p class="hint">Solo en este dispositivo y navegador. Se guardan las clases; la app descarta el archivo después de leerlo. Hasta 8 MB y 20 páginas.</p></section>`;
       host.querySelector("#manual-schedule").onclick = () =>
         review(c, blank(c));
       button(c, host.querySelector("#import-pdf"), () => importPdf(c));
@@ -88,7 +86,7 @@
       );
     const subjectCount = new Set(saved.classes.map((x) => S.norm(x.subject)))
       .size;
-    host.innerHTML = `<section class="schedule-header"><div><span class="eyebrow">${c.esc(saved.studentId)} · MI HORARIO</span><h2>${c.esc(saved.career)}</h2><p class="student-line">${c.esc(saved.studentName || c.state.profile?.full_name || "")} · ${c.esc(c.state.user.email)}</p><p>Revisado por ti el ${new Date(saved.reviewedAt).toLocaleDateString("es-MX")}. No es una validación institucional.</p></div><div class="schedule-numbers"><div><b>${subjectCount}</b><span>materias</span></div><div><b>${Math.round(total / 6) / 10}</b><span>horas / semana</span></div></div></section><div class="schedule-toolbar"><div class="button-row"><button class="btn secondary small" id="week-prev" aria-label="Semana anterior">←</button><strong>${date(0).toLocaleDateString("es-MX", { day: "numeric", month: "short" })} — ${date(6).toLocaleDateString("es-MX", { day: "numeric", month: "short" })}</strong><button class="btn secondary small" id="week-next" aria-label="Semana siguiente">→</button><button class="text-button" id="week-today">Hoy</button></div><div class="button-row"><button class="btn secondary small" id="view-pdf" ${saved.pdf ? "" : "disabled"}>Ver original</button><button class="btn small" id="edit-schedule">Editar horario</button></div></div>${conflicts.length ? '<div class="notice">Hay clases que se superponen. Revisa las horas en Editar horario.</div>' : ""}${root.FIT_TIMETABLE.render(c, saved, monday, conflicts)}<p class="hint">Semana recurrente. No incorpora vacaciones ni cambios oficiales. Guardado solo en este dispositivo; borrar los datos del navegador elimina el horario.</p><div class="button-row"><button class="text-button" id="replace-pdf">Importar otro horario</button><button class="text-button danger" id="delete-schedule">Eliminar horario</button></div>`;
+    host.innerHTML = `<section class="schedule-header"><div><span class="eyebrow">${c.esc(saved.studentId)} · MI HORARIO</span><h2>${c.esc(saved.career)}</h2><p class="student-line">${c.esc(saved.studentName || c.state.profile?.full_name || "")} · ${c.esc(c.state.user.email)}</p><p>Revisado por ti el ${new Date(saved.reviewedAt).toLocaleDateString("es-MX")}. No es una validación institucional.</p></div><div class="schedule-numbers"><div><b>${subjectCount}</b><span>materias</span></div><div><b>${Math.round(total / 6) / 10}</b><span>horas / semana</span></div></div></section><div class="schedule-toolbar"><div class="button-row"><button class="btn secondary small" id="week-prev" aria-label="Semana anterior">←</button><strong>${date(0).toLocaleDateString("es-MX", { day: "numeric", month: "short" })} — ${date(6).toLocaleDateString("es-MX", { day: "numeric", month: "short" })}</strong><button class="btn secondary small" id="week-next" aria-label="Semana siguiente">→</button><button class="text-button" id="week-today">Hoy</button></div><div class="button-row"><button class="btn small" id="edit-schedule">Editar horario</button></div></div>${conflicts.length ? '<div class="notice">Hay clases que se superponen. Revisa las horas en Editar horario.</div>' : ""}<details class="subject-table-panel" open><summary>Mis materias · Tabla de 11 columnas</summary>${root.FIT_TIMETABLE.renderSubjects(c, saved)}</details>${root.FIT_TIMETABLE.render(c, saved, monday, conflicts)}<p class="hint">Semana recurrente. No incorpora vacaciones ni cambios oficiales. Guardado solo en este dispositivo; borrar los datos del navegador elimina el horario.</p><div class="button-row"><button class="text-button" id="replace-pdf">Importar otro horario</button><button class="text-button danger" id="delete-schedule">Eliminar horario</button></div>`;
     host.querySelector("#week-prev").onclick = () => {
       c.state.scheduleWeek = week - 1;
       draw(c, host, saved);
@@ -103,16 +101,9 @@
     };
     host.querySelector("#edit-schedule").onclick = () =>
       review(c, structuredClone(saved));
-    button(c, host.querySelector("#view-pdf"), () =>
-      viewPdf(c, saved.pdf, saved.pdfName),
-    );
     button(c, host.querySelector("#replace-pdf"), () => importPdf(c));
     button(c, host.querySelector("#delete-schedule"), async () => {
-      if (
-        !confirm(
-          "¿Eliminar de este dispositivo tu horario y el archivo original?",
-        )
-      )
+      if (!confirm("¿Eliminar de este dispositivo los datos de tu horario?"))
         return;
       await storage("delete", saved.userId);
       c.toast("Horario eliminado de este dispositivo.");
@@ -189,7 +180,6 @@
         const isPdf = new TextDecoder().decode(bytes.slice(0, 5)) === "%PDF-";
         let source;
         if (isPdf) {
-          source = new Blob([bytes], { type: "application/pdf" });
           doc = await openPdf(bytes.slice(0));
           if (doc.numPages > 20)
             throw Error("Selecciona un PDF de hasta 20 páginas.");
@@ -227,7 +217,11 @@
         }
         if (c.state.user?.id !== userId || !progress.isConnected) return;
         const parsed = S.parse(lines),
-          next = { ...blank(c), ...parsed, pdf: source, pdfName: file.name };
+          next = { ...blank(c), ...parsed };
+        picker.value = "";
+        await doc?.destroy();
+        doc = null;
+        source = null;
         progress.close();
         review(c, next, true);
       } catch (e) {
@@ -238,6 +232,7 @@
                 "No se pudo leer el archivo. Puedes capturar el horario manualmente.",
         );
       } finally {
+        picker.value = "";
         await doc?.destroy();
         if (progress.isConnected) progress.close();
       }
@@ -246,11 +241,13 @@
   }
   function review(c, draft, imported = false, editId = null) {
     const d = c.dialog(
-      `<div class="dialog-content schedule-review"><span class="eyebrow">REVISA ANTES DE GUARDAR</span><h2>Tu horario, a tu manera.</h2><p>${imported ? `${draft.classes.length} clases detectadas. Comprueba cada dato contra el archivo original.` : "Edita tu carrera, matrícula y clases."}</p>${imported && !draft.classes.length ? '<div class="notice">No se reconocieron clases automáticamente. Revisa el texto detectado o agrega las clases manualmente. Puedes conservar el original como referencia.</div>' : ""}<form id="schedule-review-form"><label class="field">Nombre del estudiante<input name="studentName" value="${c.esc(draft.studentName || c.state.profile?.full_name || "")}" maxlength="160"></label><div class="form-grid"><label class="field">Carrera<input name="career" value="${c.esc(draft.career)}" required minlength="3" maxlength="160"></label><label class="field">Matrícula<input name="studentId" value="${c.esc(draft.studentId)}" required minlength="3" maxlength="30" pattern="[A-Za-z0-9-]+"></label></div><div class="section-heading"><h3>Clases de la semana</h3><div class="button-row">${draft.pdf ? '<button class="btn secondary small" type="button" id="review-pdf">Ver original</button>' : ""}<button class="btn secondary small" type="button" id="add-class">+ Agregar clase</button></div></div><div id="review-classes"></div>${draft.text ? `<details class="pdf-text"><summary>Consultar texto detectado del archivo</summary><pre>${c.esc(draft.text)}</pre></details>` : ""}${draft.pdf ? '<label class="check"><input type="checkbox" name="keepOriginal" checked> Conservar el archivo original como referencia en este dispositivo</label>' : ""}<label class="check review-check"><input type="checkbox" name="confirmed" required> Revisé la matrícula, carrera y las clases contra mi horario.</label><p class="hint">Se guardan localmente para tu cuenta en este dispositivo. Esta revisión no acredita una inscripción oficial.</p><p class="field-error" role="alert" id="review-error"></p><button class="btn full" type="submit">Guardar y ver mi calendario</button></form></div>`,
+      `<div class="dialog-content schedule-review"><span class="eyebrow">REVISA ANTES DE GUARDAR</span><h2>Tu horario, a tu manera.</h2><p>${imported ? `${draft.classes.length} clases detectadas. Revisa las 11 columnas, los días y las horas. El archivo ya fue descartado por la app.` : "Edita tu carrera, matrícula y clases."}</p>${imported && !draft.classes.length ? '<div class="notice">No se reconocieron clases automáticamente. Revisa el texto detectado o agrega las clases manualmente. Puedes completar los datos manualmente.</div>' : ""}<form id="schedule-review-form"><label class="field">Nombre del estudiante<input name="studentName" value="${c.esc(draft.studentName || c.state.profile?.full_name || "")}" maxlength="160"></label><div class="form-grid"><label class="field">Carrera<input name="career" value="${c.esc(draft.career)}" required minlength="3" maxlength="160"></label><label class="field">Matrícula<input name="studentId" value="${c.esc(draft.studentId)}" required minlength="3" maxlength="30" pattern="[A-Za-z0-9-]+"></label></div><div class="section-heading"><h3>Clases de la semana</h3><div class="button-row"><button class="btn secondary small" type="button" id="add-class">+ Agregar clase</button></div></div><div id="review-grid"></div><div id="review-classes"></div>${draft.warnings?.length ? `<div class="notice"><b>Hay datos por revisar</b><ul>${draft.warnings.map((w) => `<li>${c.esc(w)}</li>`).join("")}</ul></div>` : ""}${draft.text ? `<details class="pdf-text"><summary>Consultar texto detectado del archivo</summary><pre>${c.esc(draft.text)}</pre></details>` : ""}<label class="check review-check"><input type="checkbox" name="confirmed" required> Revisé la matrícula, carrera y las clases contra mi horario.</label><p class="hint">Se guardan localmente para tu cuenta en este dispositivo. Esta revisión no acredita una inscripción oficial.</p><p class="field-error" role="alert" id="review-error"></p><button class="btn full" type="submit">Guardar mi tabla de horario</button></form></div>`,
     );
     const f = d.querySelector("form");
     const redraw = () => {
       f.confirmed.checked = false;
+      d.querySelector("#review-grid").innerHTML =
+        root.FIT_TIMETABLE.renderSubjects(c, draft);
       d.querySelector("#review-classes").innerHTML = draft.classes.length
         ? draft.classes
             .map(
@@ -286,10 +283,6 @@
       }
       editClass(c, draft, null, redraw);
     };
-    if (draft.pdf)
-      button(c, d.querySelector("#review-pdf"), () =>
-        viewPdf(c, draft.pdf, draft.pdfName),
-      );
     f.studentName.oninput =
       f.career.oninput =
       f.studentId.oninput =
@@ -313,13 +306,10 @@
           throw Error("La sesión cambió. Abre el horario desde tu cuenta.");
         draft.studentName = f.studentName.value.trim();
         draft.career = f.career.value.trim();
-        if (f.keepOriginal && !f.keepOriginal.checked) {
-          draft.pdf = null;
-          draft.pdfName = "";
-        }
         draft.studentId = f.studentId.value.trim();
         draft.reviewedAt = new Date().toISOString();
         delete draft.text;
+        delete draft.warnings;
         await storage("put", draft.userId, draft);
         d.close();
         c.toast("Horario guardado en este dispositivo.");
@@ -361,7 +351,7 @@
         )
         .join(
           "",
-        )}<div class="form-grid"><label class="field">Día<select name="day">${S.days.map((n, i) => `<option value="${i + 1}" ${x.day === i + 1 ? "selected" : ""}>${n}</option>`).join("")}</select></label><label class="field">Entrada<input type="time" name="start" required value="${c.esc(x.start)}"></label><label class="field">Salida<input type="time" name="end" required value="${c.esc(x.end)}"></label></div><label class="field">Vincular con el directorio (opcional)<select name="place_id"><option value="">Sin vincular</option>${c.state.places.map((p) => `<option value="${c.esc(p.id)}" ${p.id === x.place_id ? "selected" : ""}>${c.esc(p.name)}</option>`).join("")}</select></label><p class="hint">Elige el espacio solo si corresponde al salón del PDF. Sus recorridos deben estar verificados.</p><p class="field-error" role="alert"></p><button class="btn full" type="submit">Guardar clase</button></form></div>`,
+        )}<div class="form-grid"><label class="field">Día<select name="day">${S.days.map((n, i) => `<option value="${i + 1}" ${x.day === i + 1 ? "selected" : ""}>${n}</option>`).join("")}</select></label><label class="field">Entrada<input type="time" name="start" required value="${c.esc(x.start)}"></label><label class="field">Salida<input type="time" name="end" required value="${c.esc(x.end)}"></label></div><label class="field">Vincular con el directorio (opcional)<select name="place_id"><option value="">Sin vincular</option>${c.state.places.map((p) => `<option value="${c.esc(p.id)}" ${p.id === x.place_id ? "selected" : ""}>${c.esc(p.name)}</option>`).join("")}</select></label><p class="hint">Elige el espacio solo si corresponde al aula de tu horario. Sus recorridos deben estar verificados.</p><p class="field-error" role="alert"></p><button class="btn full" type="submit">Guardar clase</button></form></div>`,
     );
     d.querySelector("form").onsubmit = (e) => {
       e.preventDefault();
@@ -377,76 +367,6 @@
       d.close();
       done();
     };
-  }
-  async function viewPdf(c, blob, name) {
-    if (blob.type.startsWith("image/")) {
-      const url = URL.createObjectURL(blob);
-      const d = c.dialog(
-        `<div class="dialog-content pdf-dialog"><h2>${c.esc(name || "Horario original")}</h2><img class="schedule-original-image" src="${url}" alt="Imagen original de tu horario"></div>`,
-      );
-      d.addEventListener("close", () => URL.revokeObjectURL(url), {
-        once: true,
-      });
-      return;
-    }
-    const d = c.dialog(
-      `<div class="dialog-content pdf-dialog"><h2>${c.esc(name || "Mi horario PDF")}</h2><div class="button-row"><button id="pdf-prev" class="btn secondary small" disabled>Anterior</button><span id="pdf-page" role="status">Abriendo…</span><button id="pdf-next" class="btn secondary small" disabled>Siguiente</button></div><div class="pdf-canvas-wrap"><canvas id="pdf-canvas" aria-label="Página de tu horario PDF"></canvas></div><p id="pdf-error" class="field-error" role="alert"></p></div>`,
-    );
-    let doc,
-      number = 1,
-      task;
-    d.addEventListener(
-      "close",
-      () => {
-        task?.cancel();
-        doc?.destroy();
-      },
-      { once: true },
-    );
-    try {
-      doc = await openPdf(await blob.arrayBuffer());
-      if (!d.isConnected) {
-        await doc.destroy();
-        return;
-      }
-      const drawPage = async () => {
-        d.querySelector("#pdf-prev").disabled = d.querySelector(
-          "#pdf-next",
-        ).disabled = true;
-        const page = await doc.getPage(number);
-        const viewport = page.getViewport({ scale: 1.35 });
-        const canvas = d.querySelector("canvas");
-        canvas.width = viewport.width;
-        canvas.height = viewport.height;
-        task = page.render({
-          canvasContext: canvas.getContext("2d"),
-          viewport,
-        });
-        await task.promise;
-        if (!d.isConnected) return;
-        d.querySelector("#pdf-page").textContent =
-          `${number} / ${doc.numPages}`;
-        d.querySelector("#pdf-prev").disabled = number === 1;
-        d.querySelector("#pdf-next").disabled = number === doc.numPages;
-      };
-      d.querySelector("#pdf-prev").onclick = async () => {
-        number--;
-        try {
-          await drawPage();
-        } catch {}
-      };
-      d.querySelector("#pdf-next").onclick = async () => {
-        number++;
-        try {
-          await drawPage();
-        } catch {}
-      };
-      await drawPage();
-    } catch (e) {
-      if (d.isConnected)
-        d.querySelector("#pdf-error").textContent =
-          "No se pudo mostrar el PDF. Puedes cerrar esta vista y seguir editando las clases.";
-    }
   }
   root.FIT_SCHEDULE = { render };
 })(window);

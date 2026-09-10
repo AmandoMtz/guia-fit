@@ -1,5 +1,3 @@
-import 'dart:convert';
-import 'dart:typed_data';
 import 'campus.dart' show normalize;
 
 const scheduleDays = [
@@ -118,46 +116,40 @@ Set<String> scheduleConflicts(List<ScheduleClass> classes) {
 }
 
 class LocalSchedule {
-  String userId, career, studentId, studentName, pdfName, sourceMime;
+  String userId, career, studentId, studentName;
   List<ScheduleClass> classes;
-  Uint8List? pdf;
+  List<String> warnings;
   DateTime? reviewedAt;
   LocalSchedule({
     required this.userId,
     this.career = '',
     this.studentId = '',
     this.studentName = '',
-    this.sourceMime = 'application/pdf',
-    this.pdfName = '',
     List<ScheduleClass>? classes,
-    this.pdf,
+    List<String>? warnings,
     this.reviewedAt,
-  }) : classes = classes ?? [];
+  }) : classes = classes ?? [],
+       warnings = warnings ?? [];
+  // Ignora los archivos de versiones anteriores sin decodificarlos.
   factory LocalSchedule.fromJson(Map<String, dynamic> j) => LocalSchedule(
     userId: j['userId'],
-    career: j['career'],
-    studentId: j['studentId'],
+    career: j['career'] ?? '',
+    studentId: j['studentId'] ?? '',
     studentName: j['studentName'] ?? '',
-    sourceMime: j['sourceMime'] ?? 'application/pdf',
-    pdfName: j['pdfName'] ?? '',
-    classes: (j['classes'] as List)
+    classes: (j['classes'] as List? ?? [])
         .map((x) => ScheduleClass.fromJson(Map<String, dynamic>.from(x)))
         .toList(),
-    pdf: j['pdfBase64'] == null ? null : base64Decode(j['pdfBase64']),
     reviewedAt: j['reviewedAt'] == null
         ? null
-        : DateTime.parse(j['reviewedAt']),
+        : DateTime.tryParse(j['reviewedAt']),
   );
   Map<String, dynamic> toJson() => {
-    'version': 1,
+    'version': 2,
     'userId': userId,
     'career': career,
     'studentId': studentId,
     'studentName': studentName,
-    'sourceMime': sourceMime,
-    'pdfName': pdfName,
     'classes': classes.map((x) => x.toJson()).toList(),
-    'pdfBase64': pdf == null ? null : base64Encode(pdf!),
     'reviewedAt': reviewedAt?.toIso8601String(),
   };
   LocalSchedule copy() => LocalSchedule.fromJson(toJson());
@@ -216,6 +208,9 @@ LocalSchedule parseScheduleLines(List<String> lines, String userId) {
     if (result.classes.any(
       (x) =>
           x.subject == subject &&
+          x.teacher == teacher &&
+          x.classroom == room &&
+          x.group == group &&
           x.day == day &&
           x.start == range.start &&
           x.end == range.end,
@@ -238,7 +233,7 @@ LocalSchedule parseScheduleLines(List<String> lines, String userId) {
 
   for (final line in lines) {
     final cells = line
-            .split(RegExp(r'\s*\|\s*|\t+'))
+            .split(RegExp(r'\s*\|\s*|\t'))
             .map((x) => x.trim())
             .toList(),
         ns = cells.map(normalize).toList();
@@ -255,7 +250,17 @@ LocalSchedule parseScheduleLines(List<String> lines, String userId) {
       header = ns;
       continue;
     }
+    if (line.startsWith('!REVISAR ')) {
+      result.warnings.add('Revisa el texto sin fila: ${line.substring(9)}');
+      continue;
+    }
     if (header != null && cells.length > 1) {
+      if (header.length == 11 && cells.length != 11) {
+        result.warnings.add(
+          'Una fila no conserva las 11 celdas. Revisa: $line',
+        );
+        continue;
+      }
       String value(String pattern) {
         final i = header!.indexWhere((h) => RegExp(pattern).hasMatch(h));
         return i >= 0 && i < cells.length ? cells[i] : '';
@@ -266,26 +271,30 @@ LocalSchedule parseScheduleLines(List<String> lines, String userId) {
           ),
           teacher = value('docente|maestro|profesor'),
           room = value('salon|aula'),
-          group = value('^grupo');
+          group = value(r'^(grupo|gpo)\.?$');
       final daily = header.indexed.where((x) => scheduleDay(x.$2) > 0).toList();
       if (daily.isNotEmpty) {
         for (final entry in daily) {
           final cell = entry.$1 < cells.length ? cells[entry.$1] : '';
-          final room2 = room.isNotEmpty
-              ? room
-              : RegExp(
-                      r'(?:sal[oó]n|aula)\s*:?\s*([^|,;]+)',
-                      caseSensitive: false,
-                    ).firstMatch(cell)?[1] ??
-                    '';
-          add(
-            subject,
-            teacher,
-            room2,
-            scheduleDay(entry.$2),
-            scheduleRange(cell),
-            group,
-          );
+          final ranges =
+              RegExp(
+                    r'\b\d{1,2}(?::\d{2})?\s*(?:-|–|—|a)\s*\d{1,2}(?::\d{2})?\b',
+                    caseSensitive: false,
+                  )
+                  .allMatches(cell)
+                  .map((m) => scheduleRange(m[0]!))
+                  .whereType<({String start, String end})>()
+                  .toList();
+          if (cell.isNotEmpty &&
+              !RegExp(r'^[-–—.\s]*$').hasMatch(cell) &&
+              ranges.isEmpty) {
+            result.warnings.add(
+              '$subject, ${entry.$2}: revisa «$cell». No se inventó una hora de salida.',
+            );
+          }
+          for (final range in ranges) {
+            add(subject, teacher, room, scheduleDay(entry.$2), range, group);
+          }
         }
         continue;
       }
@@ -327,9 +336,55 @@ class ScheduleWord {
   ScheduleWord(this.text, this.x0, this.y0, this.x1, this.y1);
 }
 
+const fitScheduleColumns = [
+  'GPO',
+  'MATERIA',
+  'AULA',
+  'LUNES',
+  'MARTES',
+  'MIÉRCOLES',
+  'JUEVES',
+  'VIERNES',
+  'SÁBADO',
+  'DOMINGO',
+  'PROFESOR',
+];
+int _columnOf(String s) {
+  final n = normalize(s).replaceAll(RegExp('[.:]'), '').trim();
+  if (RegExp(r'^(gpo|grupo)$').hasMatch(n)) return 0;
+  if (RegExp(r'^(materia|asignatura)$').hasMatch(n)) return 1;
+  if (RegExp(r'^(aula|salon)$').hasMatch(n)) return 2;
+  if (RegExp(r'^(profesor|docente|maestro)$').hasMatch(n)) return 10;
+  return scheduleDay(n) > 0 ? scheduleDay(n) + 2 : -1;
+}
+
 List<String> scheduleRowsFromWords(List<ScheduleWord> words) {
-  final rows = <List<ScheduleWord>>[];
+  final rows = <List<ScheduleWord>>[], output = <String>[];
+  final expanded = <ScheduleWord>[];
   for (final w in words.where((x) => x.text.trim().isNotEmpty)) {
+    final parts = RegExp(r'\S+').allMatches(w.text).toList();
+    if (parts.where((p) => _columnOf(p[0]!) >= 0).length < 2) {
+      expanded.add(w);
+      continue;
+    }
+    final scale = (w.x1 - w.x0) / w.text.length;
+    for (final p in parts) {
+      expanded.add(
+        ScheduleWord(
+          p[0]!,
+          w.x0 + p.start * scale,
+          w.y0,
+          w.x0 + p.end * scale,
+          w.y1,
+        ),
+      );
+    }
+  }
+  expanded.sort(
+    (a, b) =>
+        a.y0.compareTo(b.y0) == 0 ? a.x0.compareTo(b.x0) : a.y0.compareTo(b.y0),
+  );
+  for (final w in expanded) {
     final center = (w.y0 + w.y1) / 2;
     final row = rows
         .where(
@@ -344,12 +399,88 @@ List<String> scheduleRowsFromWords(List<ScheduleWord> words) {
       row.add(w);
     }
   }
-  rows.sort((a, b) => a.first.y0.compareTo(b.first.y0));
-  return rows.map((r) {
-    r.sort((a, b) => a.x0.compareTo(b.x0));
+  rows.sort(
+    (a, b) => ((a.first.y0 + a.first.y1) / 2).compareTo(
+      (b.first.y0 + b.first.y1) / 2,
+    ),
+  );
+  List<double>? bounds;
+  List<String>? pending;
+  double? lastY;
+  void flush() {
+    if (pending != null) output.add(pending!.join(' | '));
+    pending = null;
+  }
+
+  for (final row in rows) {
+    row.sort((a, b) => a.x0.compareTo(b.x0));
+    final y = (row.first.y0 + row.first.y1) / 2;
+    final heads = List<double?>.filled(11, null);
+    for (final w in row) {
+      final n = _columnOf(w.text);
+      if (n >= 0) heads[n] = (w.x0 + w.x1) / 2;
+    }
+    if (heads.every((x) => x != null) &&
+        heads.indexed.every((x) => x.$1 == 0 || x.$2! > heads[x.$1 - 1]!)) {
+      flush();
+      bounds = List.generate(10, (i) => (heads[i]! + heads[i + 1]!) / 2);
+      final gaps = List.generate(6, (i) => heads[i + 4]! - heads[i + 3]!)
+        ..sort();
+      final step = gaps[gaps.length ~/ 2];
+      bounds[0] = bounds[0] < heads[0]! + step / 2
+          ? bounds[0]
+          : heads[0]! + step / 2;
+      bounds[1] = heads[2]! - (heads[3]! - heads[2]!) / 2;
+      bounds[9] = heads[9]! + step / 2;
+      output.add(fitScheduleColumns.join(' | '));
+      lastY = y;
+      continue;
+    }
+    if (bounds != null) {
+      final cells = List.filled(11, '');
+      final spans = [double.negativeInfinity, ...bounds, double.infinity];
+      for (final w in row) {
+        var best = 0;
+        var amount = double.negativeInfinity;
+        for (var n = 0; n < 11; n++) {
+          final right = w.x1 < spans[n + 1] ? w.x1 : spans[n + 1];
+          final left = w.x0 > spans[n] ? w.x0 : spans[n];
+          if (right - left > amount) {
+            amount = right - left;
+            best = n;
+          }
+        }
+        cells[best] += '${cells[best].isEmpty ? '' : ' '}${w.text.trim()}';
+      }
+      final anyTime = cells
+          .sublist(3, 10)
+          .any((s) => RegExp(r'\d').hasMatch(s));
+      if (cells[0].isNotEmpty ||
+          (cells[1].isNotEmpty && cells[2].isNotEmpty && anyTime)) {
+        flush();
+      }
+      final continuation =
+          pending != null &&
+          y - lastY! <
+              ((row.first.y1 - row.first.y0) * 2.5).clamp(24, double.infinity);
+      if (pending == null &&
+          (cells[0].isNotEmpty || (cells[1].isNotEmpty && anyTime))) {
+        pending = cells;
+      } else if (continuation) {
+        pending = List.generate(
+          11,
+          (i) => [pending![i], cells[i]].where((x) => x.isNotEmpty).join(' '),
+        );
+      } else {
+        flush();
+        output.add('!REVISAR ${row.map((x) => x.text).join(' ')}');
+      }
+      lastY = y;
+      continue;
+    }
     final line = StringBuffer();
     ScheduleWord? prior;
-    for (final w in r) {
+    for (final w in row) {
       if (prior != null) {
         line.write(
           w.x0 - prior.x1 > ((w.y1 - w.y0) * 1.2).clamp(18, double.infinity)
@@ -360,6 +491,8 @@ List<String> scheduleRowsFromWords(List<ScheduleWord> words) {
       line.write(w.text.trim());
       prior = w;
     }
-    return line.toString();
-  }).toList();
+    output.add(line.toString());
+  }
+  flush();
+  return output;
 }

@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:guia_fit/models/schedule.dart';
 
@@ -67,27 +66,30 @@ void main() {
     );
   });
   test(
-    'la copia editable preserva PDF y cuenta sin modificar el horario guardado',
+    'la copia editable no guarda archivos antiguos ni modifica el horario original',
     () {
       final original = LocalSchedule(
         userId: 'user-a',
         career: 'Ingeniería Civil',
         studentId: '123',
-        pdfName: 'horario.pdf',
-        pdf: Uint8List.fromList([37, 80, 68, 70, 45]),
         classes: [ScheduleClass(id: '1', subject: 'Cálculo')],
       );
       final copy = original.copy();
       copy.classes.first.subject = 'Física';
-      copy.pdf![0] = 0;
       expect(original.classes.first.subject, 'Cálculo');
-      expect(original.pdf!.first, 37);
-      final saved = LocalSchedule.fromJson(
-        jsonDecode(jsonEncode(original.toJson())),
-      );
+      final legacy = {
+        ...original.toJson(),
+        'version': 1,
+        'pdfBase64': 'archivo antiguo inválido',
+        'pdfName': 'horario.pdf',
+        'sourceMime': 'application/pdf',
+      };
+      final saved = LocalSchedule.fromJson(jsonDecode(jsonEncode(legacy)));
       expect(saved.userId, 'user-a');
-      expect(saved.pdf, original.pdf);
       expect(saved.studentId, '123');
+      expect(saved.toJson().containsKey('pdfBase64'), false);
+      expect(saved.toJson().containsKey('pdfName'), false);
+      expect(saved.toJson()['version'], 2);
     },
   );
 }

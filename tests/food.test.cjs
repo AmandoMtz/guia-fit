@@ -18,6 +18,12 @@ test("Comidas: permisos, dinero, pedidos y notificaciones persistentes", async (
         "utf8",
       ),
     );
+  await engine.exec(
+    fs.readFileSync(
+      path.join(__dirname, "../backend/migrations/003_profiles.sql"),
+      "utf8",
+    ),
+  );
   const query = (sql, args) => engine.query(sql, args),
     db = { query, connect: async () => ({ query, release() {} }) };
   const emails = [];
@@ -79,7 +85,7 @@ test("Comidas: permisos, dinero, pedidos y notificaciones persistentes", async (
         .send({
           full_name: "Persona de prueba",
           email: "intent@example.test",
-          password: "Una frase extensa de prueba",
+          password: "Una frase extensa de prueba1!",
           account_type: "seller",
           role: "admin",
         })

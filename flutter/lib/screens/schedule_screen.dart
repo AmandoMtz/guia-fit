@@ -5,6 +5,8 @@ import '../services/schedule_ocr.dart';
 import '../widgets/schedule_table.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import '../widgets/schedule_subjects_table.dart';
 import 'package:pdfrx/pdfrx.dart';
 import '../models/schedule.dart';
 import '../services/app_controller.dart';
@@ -74,6 +76,9 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       _error = null;
     });
     PdfDocument? document;
+    LocalSchedule? imported;
+    String? detectedText;
+    final owner = c.user?.id;
     try {
       final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
@@ -143,45 +148,34 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
               rendered.dispose();
             }
           } else {
-            final rows = <List<PdfPageTextFragment>>[];
-            for (final fragment in text.fragments.where(
-              (f) => f.text.trim().isNotEmpty,
-            )) {
-              final row = rows
-                  .where(
-                    (r) => (r.first.bounds.top - fragment.bounds.top).abs() < 4,
-                  )
-                  .firstOrNull;
-              if (row == null) {
-                rows.add([fragment]);
-              } else {
-                row.add(fragment);
-              }
-            }
-            rows.sort(
-              (a, b) => b.first.bounds.top.compareTo(a.first.bounds.top),
-            );
-            for (final row in rows) {
-              row.sort((a, b) => a.bounds.left.compareTo(b.bounds.left));
-              final line = StringBuffer();
-              PdfPageTextFragment? prior;
-              for (final f in row) {
-                if (prior != null) {
-                  line.write(
-                    f.bounds.left - prior.bounds.right > 12 ? ' | ' : ' ',
+            final words = <ScheduleWord>[];
+            for (final fragment in text.fragments) {
+              // Cada palabra conserva las coordenadas reales del PDF, incluso si el lector agrupa toda una fila.
+              for (final part in RegExp(r'\S+').allMatches(fragment.text)) {
+                final bounds = fragment.getBoundsForRange(
+                  start: part.start,
+                  end: part.end,
+                );
+                if (bounds != null) {
+                  words.add(
+                    ScheduleWord(
+                      part[0]!,
+                      bounds.left,
+                      -bounds.top,
+                      bounds.right,
+                      -bounds.bottom,
+                    ),
                   );
                 }
-                line.write(f.text.replaceAll(RegExp(r'[\r\n]+'), ' ').trim());
-                prior = f;
               }
-              lines.add(line.toString());
             }
+            lines.addAll(scheduleRowsFromWords(words));
           }
         }
       } else {
         lines.addAll(await recognizeScheduleImage(bytes, mime));
       }
-      if (!mounted || c.user == null) return;
+      if (!mounted || c.user == null || c.user!.id != owner) return;
       final draft = parseScheduleLines(lines, c.user!.id);
       if (draft.studentId.isEmpty) {
         draft.studentId = c.profile?['student_id'] ?? '';
@@ -189,10 +183,10 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       if (draft.studentName.isEmpty) {
         draft.studentName = c.profile?['full_name'] ?? '';
       }
-      draft.pdf = bytes;
-      draft.pdfName = file.name;
-      draft.sourceMime = mime;
-      await _edit(draft, text: lines.join('\n'), imported: true);
+      await document?.dispose();
+      document = null;
+      imported = draft;
+      detectedText = lines.join('\n');
     } catch (e) {
       if (mounted) {
         setState(
@@ -203,7 +197,25 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       }
     } finally {
       await document?.dispose();
+      if (!kIsWeb &&
+          (defaultTargetPlatform == TargetPlatform.android ||
+              defaultTargetPlatform == TargetPlatform.iOS)) {
+        try {
+          if (await FilePicker.platform.clearTemporaryFiles() == false) {
+            throw StateError('No se pudo limpiar la copia temporal.');
+          }
+        } catch (_) {
+          if (mounted) {
+            _error =
+                'No se pudo limpiar la copia temporal del selector. Cierra la app e intenta de nuevo.';
+          }
+          imported = null;
+        }
+      }
       if (mounted) setState(() => _busy = false);
+    }
+    if (imported != null && mounted && c.user?.id == owner) {
+      await _edit(imported, text: detectedText, imported: true);
     }
   }
 
@@ -281,7 +293,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
         ),
         const SizedBox(height: 18),
         const Text(
-          'Solo en este dispositivo. El archivo no se envía al servidor. Hasta 8 MB y 20 páginas.',
+          'Solo en este dispositivo. La app guarda las clases y descarta el archivo al terminar de leerlo. Hasta 8 MB y 20 páginas.',
           style: TextStyle(color: fitMuted, fontSize: 12, height: 1.7),
         ),
       ],
@@ -397,12 +409,6 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
             onPressed: () => setState(() => _week = 0),
             child: const Text('Hoy'),
           ),
-          OutlinedButton(
-            onPressed: saved.pdf == null
-                ? null
-                : () => showSchedulePdf(context, saved),
-            child: const Text('Ver original'),
-          ),
           FilledButton(
             onPressed: _busy ? null : () => _edit(saved.copy()),
             child: const Text('Editar horario'),
@@ -414,6 +420,14 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
           'Hay clases que se superponen. Revisa las horas en Editar horario.',
         ),
       const SizedBox(height: 18),
+      const SizedBox(height: 18),
+      const Text(
+        'Mis materias · 11 columnas',
+        style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+      ),
+      const SizedBox(height: 12),
+      ScheduleSubjectsTable(schedule: saved),
+      const SizedBox(height: 24),
       ScheduleTable(
         schedule: saved,
         monday: monday,
@@ -482,53 +496,6 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   String _date(DateTime d) => '${d.day}/${d.month}/${d.year}';
 }
 
-Future<void> showSchedulePdf(BuildContext context, LocalSchedule draft) async {
-  if (draft.pdf == null) return;
-  await showDialog<void>(
-    context: context,
-    builder: (context) => Dialog(
-      child: SizedBox(
-        width: 900,
-        height: MediaQuery.sizeOf(context).height * .84,
-        child: Column(
-          children: [
-            ListTile(
-              title: Text(
-                draft.pdfName.isEmpty ? 'Mi horario original' : draft.pdfName,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              trailing: IconButton(
-                onPressed: () => Navigator.pop(context),
-                tooltip: 'Cerrar original',
-                icon: const Icon(Icons.close),
-              ),
-            ),
-            Expanded(
-              child: draft.sourceMime.startsWith('image/')
-                  ? InteractiveViewer(
-                      child: Image.memory(
-                        draft.pdf!,
-                        fit: BoxFit.contain,
-                        errorBuilder: (_, e, s) => const Center(
-                          child: Text('No se pudo mostrar la imagen.'),
-                        ),
-                      ),
-                    )
-                  : PdfViewer.data(
-                      draft.pdf!,
-                      sourceName:
-                          '${draft.userId}-${draft.pdfName}-${draft.pdf.hashCode}',
-                      passwordProvider: () async => null,
-                    ),
-            ),
-          ],
-        ),
-      ),
-    ),
-  );
-}
-
 class ScheduleReviewDialog extends StatefulWidget {
   final LocalSchedule draft;
   final AppController controller;
@@ -550,7 +517,7 @@ class ScheduleReviewDialog extends StatefulWidget {
 class _ScheduleReviewDialogState extends State<ScheduleReviewDialog> {
   final _form = GlobalKey<FormState>();
   late final TextEditingController _career, _student, _studentName;
-  bool _confirmed = false, _busy = false, _keepOriginal = true;
+  bool _confirmed = false, _busy = false;
   String? _error;
   LocalSchedule get draft => widget.draft;
   @override
@@ -630,10 +597,6 @@ class _ScheduleReviewDialogState extends State<ScheduleReviewDialog> {
     try {
       draft.career = _career.text.trim();
       draft.studentName = _studentName.text.trim();
-      if (!_keepOriginal) {
-        draft.pdf = null;
-        draft.pdfName = '';
-      }
       draft.studentId = _student.text.trim();
       draft.reviewedAt = DateTime.now();
       await ScheduleStore().save(draft);
@@ -664,13 +627,13 @@ class _ScheduleReviewDialogState extends State<ScheduleReviewDialog> {
             children: [
               Text(
                 widget.imported
-                    ? '${draft.classes.length} clases detectadas. Comprueba cada dato contra el archivo original.'
+                    ? '${draft.classes.length} clases detectadas. Revisa las 11 columnas, los días y las horas. La app ya descartó el archivo.'
                     : 'Edita tu carrera, matrícula y clases.',
                 style: const TextStyle(color: fitMuted, height: 1.7),
               ),
               if (widget.imported && draft.classes.isEmpty)
                 const InfoBanner(
-                  'No se reconocieron clases automáticamente. Revisa el texto detectado o agrega las clases manualmente. Puedes conservar el original como referencia.',
+                  'No se reconocieron clases automáticamente. Revisa el texto detectado o agrega las clases manualmente. Puedes completar los datos manualmente.',
                 ),
               const SizedBox(height: 18),
               TextFormField(
@@ -710,11 +673,6 @@ class _ScheduleReviewDialogState extends State<ScheduleReviewDialog> {
                     icon: const Icon(Icons.add),
                     label: const Text('Agregar clase'),
                   ),
-                  if (draft.pdf != null)
-                    TextButton(
-                      onPressed: () => showSchedulePdf(context, draft),
-                      child: const Text('Ver original'),
-                    ),
                 ],
               ),
               const SizedBox(height: 14),
@@ -722,6 +680,8 @@ class _ScheduleReviewDialogState extends State<ScheduleReviewDialog> {
                 const InfoBanner(
                   'Agrega una entrada por cada día y bloque de clase.',
                 ),
+              ScheduleSubjectsTable(schedule: draft),
+              for (final warning in draft.warnings) InfoBanner(warning),
               for (final c in draft.classes)
                 Card(
                   margin: const EdgeInsets.only(bottom: 10),
@@ -794,19 +754,6 @@ class _ScheduleReviewDialogState extends State<ScheduleReviewDialog> {
                       ),
                     ),
                   ],
-                ),
-              if (draft.pdf != null)
-                CheckboxListTile(
-                  contentPadding: EdgeInsets.zero,
-                  controlAffinity: ListTileControlAffinity.leading,
-                  value: _keepOriginal,
-                  onChanged: _busy
-                      ? null
-                      : (v) => setState(() => _keepOriginal = v ?? true),
-                  title: const Text(
-                    'Conservar el archivo original como referencia en este dispositivo',
-                    style: TextStyle(fontSize: 13),
-                  ),
                 ),
               CheckboxListTile(
                 contentPadding: EdgeInsets.zero,

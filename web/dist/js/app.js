@@ -286,6 +286,7 @@
   }
   async function loadData() {
     if (!client || !state.user) return;
+    const owner = state.user.id;
     const responses = await Promise.all([
       client.from("profiles").select("*").eq("id", state.user.id).single(),
       client
@@ -301,7 +302,10 @@
       client.from("places").select("*").order("name"),
       client.from("route_edges").select("*"),
     ]);
+    if (state.user?.id !== owner) return;
     state.profile = responses[0].data;
+    if (state.user && state.profile)
+      state.user.food_seller_intent = state.profile.food_seller_intent;
     state.verification = responses[1].data;
     state.admin = responses[2].data?.role === "admin";
     state.dataError = responses.some((r) => r.error)
@@ -355,7 +359,7 @@
         .charAt(0)
         .toUpperCase();
     $("#app").innerHTML =
-      `<div class="shell"><header class="topbar app-top">${brand()}<div class="top-actions"><span class="app-title">Guía FIT</span>${state.user ? `<button class="notification-bell" data-view="notifications" aria-label="Mis avisos">${icon("bell")}<span id="notification-count" hidden></span></button>` : ""}<span class="avatar" aria-hidden="true">${esc(initial)}</span><button class="btn ghost small" id="logout">${icon("exit")}${state.demo ? "Salir de demo" : "Cerrar sesión"}</button></div></header><div class="workspace"><nav class="sidebar" aria-label="Navegación principal"><div class="eyebrow">EXPLORA LA FIT</div>${menu.map(([id, i, label]) => `<button class="nav-item ${state.view === id ? "active" : ""}" data-view="${id}" ${state.view === id ? 'aria-current="page"' : ""}>${icon(i)}${label}</button>`).join("")}<p class="sidebar-note">Facultad de Ingeniería Tampico<br>Universidad Autónoma de Tamaulipas</p></nav><main class="content" id="main"><div class="page-head"><div><span class="eyebrow muted">GUÍA DEL CAMPUS</span><h1>${current[0]}</h1><p>${current[1]}</p></div>${state.demo ? '<span class="badge pending">Modo demostración</span>' : badge(state.verification?.status === "verified")}</div>${state.demo ? '<div class="notice">Demostración: no has iniciado sesión. Los lugares proceden del croquis; sus recorridos todavía deben verificarse.</div>' : ""}${state.dataError ? `<div class="notice error" role="alert">${esc(state.dataError)} <button id="retry-data" class="text-button">Reintentar</button></div>` : ""}<div id="view"></div></main></div></div>`;
+      `<div class="shell"><header class="topbar app-top">${brand()}<div class="top-actions"><span class="app-title">Guía FIT</span>${state.user ? `<button class="notification-bell" data-view="notifications" aria-label="Mis avisos">${icon("bell")}<span id="notification-count" hidden></span></button>` : ""}${profileAvatar(initial)}<button class="btn ghost small" id="logout">${icon("exit")}${state.demo ? "Salir de demo" : "Cerrar sesión"}</button></div></header><div class="workspace"><nav class="sidebar" aria-label="Navegación principal"><div class="eyebrow">EXPLORA LA FIT</div>${menu.map(([id, i, label]) => `<button class="nav-item ${state.view === id ? "active" : ""}" data-view="${id}" ${state.view === id ? 'aria-current="page"' : ""}>${icon(i)}${label}</button>`).join("")}<p class="sidebar-note">Facultad de Ingeniería Tampico<br>Universidad Autónoma de Tamaulipas</p></nav><main class="content" id="main"><div class="page-head"><div><span class="eyebrow muted">GUÍA DEL CAMPUS</span><h1>${current[0]}</h1><p>${current[1]}</p></div>${state.demo ? '<span class="badge pending">Modo demostración</span>' : badge(state.verification?.status === "verified")}</div>${state.demo ? '<div class="notice">Demostración: no has iniciado sesión. Los lugares proceden del croquis; sus recorridos todavía deben verificarse.</div>' : ""}${state.dataError ? `<div class="notice error" role="alert">${esc(state.dataError)} <button id="retry-data" class="text-button">Reintentar</button></div>` : ""}<div id="view"></div></main></div></div>`;
     document.querySelectorAll("[data-view]").forEach(
       (b) =>
         (b.onclick = () => {
@@ -634,6 +638,17 @@
       drawSteps();
     };
   }
+  function profileAvatar(initial = null, large = false) {
+    const letter =
+      initial ||
+      (state.profile?.full_name || state.user?.email || "D")
+        .slice(0, 1)
+        .toUpperCase();
+    const url = state.profile?.photo_updated_at
+      ? `${client.base}/api/profile/photo?v=${encodeURIComponent(state.profile.photo_updated_at)}`
+      : "";
+    return `<span class="avatar profile-avatar ${large ? "large" : ""}" aria-hidden="true"><span>${esc(letter)}</span>${url ? `<img src="${esc(url)}" alt="">` : ""}</span>`;
+  }
   function profileView() {
     if (state.demo) {
       $("#view").innerHTML =
@@ -647,7 +662,84 @@
     }
     const p = state.profile || {};
     $("#view").innerHTML =
-      `<div class="profile-grid"><section class="panel"><h2>Mis datos</h2><form id="profile-form">${field("full_name", "Nombre completo", "text", "name")}<div class="field"><label>Correo electrónico</label><p>${esc(state.user.email)}</p></div>${field("student_id", "Matrícula (opcional)", "text", "off", "Se validará únicamente con una fuente institucional autorizada.")}<button class="btn">Guardar cambios</button><p class="hint" style="margin-top:16px">Modificar el nombre o la matrícula devuelve su validación institucional al estado pendiente.</p></form></section><section class="panel"><h2>Estado de tu cuenta</h2><p class="hint">Identificador para revisión institucional:<br><span style="overflow-wrap:anywhere">${esc(state.user.id)}</span></p><div class="status-item">${badge(!!state.user.email_confirmed_at)}<p>Correo electrónico</p></div><div class="status-item">${badge(state.verification?.status === "verified")}<p>Vinculación con la facultad</p><p class="hint">${state.verification?.status === "verified" ? "Confirmada por un administrador con una fuente autorizada." : "Pendiente de contrastar tus datos con una fuente institucional autorizada."}</p></div><p class="hint" style="margin-top:20px">Tu nombre y tu matrícula no se consideran auténticos únicamente por haberlos escrito en el formulario.</p></section></div>`;
+      `<section class="profile-hero"><div>${profileAvatar(null, true)}<div><span class="eyebrow">TU ESPACIO EN LA FIT</span><h2>${esc(p.full_name || "Mi cuenta")}</h2><p>${p.food_seller_intent ? "Alumno vendedor" : "Alumno"}</p></div></div><form id="profile-photo-form"><label class="field">Foto de perfil<input type="file" id="profile-photo" accept="image/jpeg,image/png,image/webp" required></label><div class="button-row"><button class="btn small" type="submit">Guardar foto</button>${p.photo_updated_at ? '<button class="text-button" type="button" id="delete-avatar">Quitar foto</button>' : ""}</div><p class="hint">JPG, PNG o WebP; hasta 5 MB. Se guarda una copia optimizada en tu cuenta.</p></form></section><div class="profile-grid"><section class="panel"><h2>Mis datos</h2><form id="profile-form">${field("full_name", "Nombre completo", "text", "name")}<div class="field"><label>Correo electrónico</label><p>${esc(state.user.email)}</p></div>${field("student_id", "Matrícula (opcional)", "text", "off", "Se validará únicamente con una fuente institucional autorizada.")}<button class="btn">Guardar cambios</button><p class="hint" style="margin-top:16px">Modificar el nombre o la matrícula devuelve su validación institucional al estado pendiente.</p></form></section><section class="panel"><h2>Estado de tu cuenta</h2><p class="hint">Identificador para revisión institucional:<br><span style="overflow-wrap:anywhere">${esc(state.user.id)}</span></p><div class="status-item">${badge(!!state.user.email_confirmed_at)}<p>Correo electrónico</p></div><div class="status-item">${badge(state.verification?.status === "verified")}<p>Vinculación con la facultad</p><p class="hint">${state.verification?.status === "verified" ? "Confirmada por un administrador con una fuente autorizada." : "Pendiente de contrastar tus datos con una fuente institucional autorizada."}</p></div><p class="hint" style="margin-top:20px">Tu nombre y tu matrícula no se consideran auténticos únicamente por haberlos escrito en el formulario.</p></section></div>`;
+    $("#view").insertAdjacentHTML(
+      "beforeend",
+      `<section class="panel account-mode-panel"><div><span class="eyebrow">UNA CUENTA, MÁS POSIBILIDADES</span><h2>Mi tipo de cuenta</h2><p>Activa tu espacio de ventas cuando lo necesites. Conservas tu acceso de alumno y tus pedidos.</p></div><form id="account-mode-form"><label class="field">Usar mi cuenta como<select name="mode"><option value="student" ${!p.food_seller_intent ? "selected" : ""}>Alumno</option><option value="student_seller" ${p.food_seller_intent ? "selected" : ""}>Alumno vendedor</option></select></label><button class="btn" type="submit">Guardar tipo de cuenta</button><button class="text-button" id="go-my-shop" type="button">${p.food_seller_intent ? "Configurar mi puesto" : "Ver Comidas"} →</button><p class="hint">El puesto necesita aprobación antes de publicar. Si vuelves a Alumno, se oculta tu puesto y se pausan nuevos pedidos; puedes terminar los que ya recibiste.</p></form></section><section class="panel storage-summary"><h2>¿Dónde se guardan mis datos?</h2><div><p><b>En tu cuenta</b><br>Perfil, foto, tipo de cuenta, puesto, productos, pedidos y avisos.</p><p><b>Solo en este dispositivo</b><br>Nombre, matrícula, carrera y clases de tu horario. Otra cuenta no ve tu tabla.</p><p><b>Archivo del horario</b><br>Se procesa y se descarta. No se guarda el PDF ni la imagen en el servidor o en la app.</p></div><p class="hint">El horario no se sincroniza entre dispositivos. Borrar los datos del navegador elimina la tabla local.</p></section>`,
+    );
+    const refreshProfile = async () => {
+      const owner = state.user?.id;
+      const name = $("#full_name")?.value,
+        student = $("#student_id")?.value;
+      await loadData();
+      if (state.user?.id !== owner) return;
+      render();
+      if (state.view === "profile") {
+        $("#full_name").value = name ?? "";
+        $("#student_id").value = student ?? "";
+      }
+    };
+    const profileAction = async (b, path, method, body, notice) => {
+      if (b.disabled) return;
+      const owner = state.user?.id;
+      b.disabled = true;
+      try {
+        const result = await client.request(path, method, body);
+        if (state.user?.id !== owner) return;
+        if (result.error) throw result.error;
+        await refreshProfile();
+        toast(notice);
+      } catch (e) {
+        toast(e.message || "No se pudo guardar el cambio.");
+      } finally {
+        b.disabled = false;
+      }
+    };
+    $("#profile-photo-form").onsubmit = (e) => {
+      e.preventDefault();
+      const file = $("#profile-photo").files[0];
+      if (!file) return;
+      if (
+        file.size > 5242880 ||
+        !["image/jpeg", "image/png", "image/webp"].includes(file.type)
+      ) {
+        toast("Usa una imagen JPG, PNG o WebP de hasta 5 MB.");
+        return;
+      }
+      const body = new FormData();
+      body.append("file", file);
+      profileAction(
+        e.currentTarget.querySelector("[type=submit]"),
+        "/api/profile/photo",
+        "POST",
+        body,
+        "Foto de perfil actualizada.",
+      );
+    };
+    if ($("#delete-avatar"))
+      $("#delete-avatar").onclick = (e) =>
+        profileAction(
+          e.currentTarget,
+          "/api/profile/photo",
+          "DELETE",
+          undefined,
+          "Foto de perfil eliminada.",
+        );
+    $("#account-mode-form").onsubmit = (e) => {
+      e.preventDefault();
+      profileAction(
+        e.currentTarget.querySelector("[type=submit]"),
+        "/api/profile/mode",
+        "PATCH",
+        { mode: e.currentTarget.elements.mode.value },
+        "Tipo de cuenta actualizado.",
+      );
+    };
+    $("#go-my-shop").onclick = () => {
+      state.foodTab = p.food_seller_intent ? "mine" : "products";
+      state.view = "food";
+      render();
+    };
     $("#full_name").value = p.full_name || "";
     $("#student_id").value = p.student_id || "";
     $("#profile-form").onsubmit = async (e) => {

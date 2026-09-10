@@ -70,12 +70,12 @@ function createFoodRouter({ db, siteUrl, administrator, limit }) {
   router.get("/catalog", async (req, res) => {
     const vendors = (
       await db.query(
-        "select v.id,v.business_name,v.description,v.pickup_location,v.hours_text,count(p.id)::int as product_count from food_vendors v left join food_products p on p.vendor_id=v.id and p.deleted_at is null and p.available=true where v.status='approved' group by v.id order by v.business_name",
+        "select v.id,v.business_name,v.description,v.pickup_location,v.hours_text,count(p.id)::int as product_count from food_vendors v left join food_products p on p.vendor_id=v.id and p.deleted_at is null and p.available=true where v.status='approved' and v.is_active=true group by v.id order by v.business_name",
       )
     ).rows;
     const products = (
       await db.query(
-        "select p.id,p.vendor_id,p.name,p.description,p.photo_id,p.price_cents,p.sale_unit,p.units_per_lot,p.available,v.business_name,v.pickup_location from food_products p join food_vendors v on v.id=p.vendor_id where v.status='approved' and p.deleted_at is null and p.available=true order by p.created_at desc",
+        "select p.id,p.vendor_id,p.name,p.description,p.photo_id,p.price_cents,p.sale_unit,p.units_per_lot,p.available,v.business_name,v.pickup_location from food_products p join food_vendors v on v.id=p.vendor_id where v.status='approved' and v.is_active=true and p.deleted_at is null and p.available=true order by p.created_at desc",
       )
     ).rows.map(picture);
     res.json({ data: { vendors, products } });
@@ -130,10 +130,11 @@ function createFoodRouter({ db, siteUrl, administrator, limit }) {
           [req.user.id, name, description, pickup, hours, recheck],
         )
       ).rows[0];
-      await client.query(
-        "update users set food_seller_intent=true where id=$1",
-        [req.user.id],
-      );
+      if (!prior)
+        await client.query(
+          "update users set food_seller_intent=true where id=$1",
+          [req.user.id],
+        );
       return row;
     });
     res.status(200).json({ data: result });
@@ -355,11 +356,17 @@ function createFoodRouter({ db, siteUrl, administrator, limit }) {
       }
       const p = (
         await client.query(
-          "select p.*,v.user_id as seller_user_id,v.status as vendor_status,v.pickup_location,v.business_name from food_products p join food_vendors v on v.id=p.vendor_id where p.id=$1 for share of p,v",
+          "select p.*,v.user_id as seller_user_id,v.status as vendor_status,v.is_active as vendor_active,v.pickup_location,v.business_name from food_products p join food_vendors v on v.id=p.vendor_id where p.id=$1 for share of p,v",
           [productId],
         )
       ).rows[0];
-      if (!p || p.deleted_at || !p.available || p.vendor_status !== "approved")
+      if (
+        !p ||
+        p.deleted_at ||
+        !p.available ||
+        !p.vendor_active ||
+        p.vendor_status !== "approved"
+      )
         throw error(
           409,
           "El producto ya no está disponible. Actualiza el catálogo.",

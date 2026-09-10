@@ -1,3 +1,5 @@
+> Esta guía corresponde a la versión anterior. Para este ZIP usa [ACTUALIZAR_V3.md](ACTUALIZAR_V3.md).
+
 # Actualizar tu Guía FIT en GitHub, Render y Aiven
 
 Esta entrega parte del ZIP que compartiste y añade Comidas y Mi horario a web y Flutter. No se ha modificado tu repositorio remoto ni desplegado en tus cuentas.
@@ -52,7 +54,7 @@ Con despliegue automático activado, Render despliega después del push. Si est�
 
 Al arrancar, el servidor aplica `002_food.sql` una sola vez. Añade puestos, productos, pedidos, avisos y el indicador de interés en vender. **No borres ni recrees la base de Aiven.** Si elegiste `AUTO_MIGRATE=false`, ejecuta `npm run db:migrate` en un entorno con tus variables de Aiven antes de iniciar esta versión.
 
-No se necesitan variables nuevas, servicios de almacenamiento, claves de OCR ni otra base. Las fotografías de productos quedan en Aiven; los horarios y sus originales opcionales quedan en el dispositivo del alumno.
+No se necesitan variables nuevas, servicios de almacenamiento, claves de OCR ni otra base. Las fotografías de productos quedan en Aiven; solo los datos del horario quedan en el dispositivo del alumno; esta actualización descarta los originales.
 
 ## 5. Activar vendedores y probar el recorrido
 

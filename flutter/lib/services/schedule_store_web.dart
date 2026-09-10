@@ -5,9 +5,19 @@ import '../models/schedule.dart';
 class ScheduleStore {
   Future<Database> _open() => idbFactoryNative.open(
     'fit-flutter-schedules-v2',
-    version: 1,
-    onUpgradeNeeded: (e) {
-      e.database.createObjectStore('schedules');
+    version: 2,
+    onUpgradeNeeded: (e) async {
+      if (e.oldVersion == 0) {
+        e.database.createObjectStore('schedules');
+        return;
+      }
+      final store = e.transaction.objectStore('schedules');
+      await for (final cursor in store.openCursor(autoAdvance: true)) {
+        final saved = LocalSchedule.fromJson(
+          jsonDecode(cursor.value as String),
+        );
+        await cursor.update(jsonEncode(saved.toJson()));
+      }
     },
   );
   Future<LocalSchedule?> read(String userId) async {

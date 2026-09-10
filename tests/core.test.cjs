@@ -36,8 +36,8 @@ test("validación de acceso, recuperación y contraseña nueva", () => {
   assert.deepEqual(
     core.validate(
       {
-        password: "frase suficientemente larga",
-        confirm: "frase suficientemente larga",
+        password: "frase suficientemente larga1!",
+        confirm: "frase suficientemente larga1!",
       },
       "reset",
     ),

@@ -77,36 +77,51 @@
       }
     return [...set];
   }
-  // El orden visual de la página se conserva; los espacios anchos delimitan celdas.
+  const fitColumns = [
+    "GPO",
+    "MATERIA",
+    "AULA",
+    ...days.map((x) => x.toUpperCase()),
+    "PROFESOR",
+  ];
+  const columnOf = (s) => {
+    const n = norm(s).replace(/[.:]/g, "").trim();
+    if (/^(gpo|grupo)$/.test(n)) return 0;
+    if (/^(materia|asignatura)$/.test(n)) return 1;
+    if (/^(aula|salon)$/.test(n)) return 2;
+    if (/^(profesor|docente|maestro)$/.test(n)) return 10;
+    return dayOf(n) ? dayOf(n) + 2 : -1;
+  };
+  // Reconstruye celdas por coordenadas: un día vacío nunca desaparece.
   function rowsFromItems(items) {
-    const rows = [];
-    for (const item of items.filter((i) => i.str?.trim())) {
-      const y = item.transform[5],
-        x = item.transform[4];
-      let row = rows.find((r) => Math.abs(r.y - y) < 4);
-      if (!row) {
-        row = { y, items: [] };
-        rows.push(row);
-      }
-      row.items.push({ text: item.str, x, end: x + (item.width || 0) });
-    }
-    return rows
-      .sort((a, b) => b.y - a.y)
-      .map((r) => {
-        const xs = r.items.sort((a, b) => a.x - b.x);
-        let out = "",
-          last;
-        for (const x of xs) {
-          if (last) out += x.x - last.end > 12 ? " | " : " ";
-          out += x.text;
-          last = x;
-        }
-        return out;
-      });
+    return rowsFromBoxes(
+      items
+        .filter((i) => i.str?.trim())
+        .map((i) => ({
+          text: i.str,
+          x0: i.transform[4],
+          x1: i.transform[4] + (i.width || 0),
+          y0: -i.transform[5],
+          y1: -i.transform[5] + (Math.abs(i.height) || 8),
+        })),
+    );
   }
   function rowsFromBoxes(boxes) {
     const rows = [];
-    for (const b of boxes.filter((x) => x.text?.trim())) {
+    // Algunos lectores agrupan varios encabezados en un solo fragmento.
+    const words = boxes.flatMap((b) => {
+      if (!b.text?.trim()) return [];
+      const parts = [...b.text.matchAll(/\S+/g)];
+      if (parts.filter((p) => columnOf(p[0]) >= 0).length < 2) return [b];
+      const scale = (b.x1 - b.x0) / b.text.length;
+      return parts.map((p) => ({
+        ...b,
+        text: p[0],
+        x0: b.x0 + p.index * scale,
+        x1: b.x0 + (p.index + p[0].length) * scale,
+      }));
+    });
+    for (const b of words.sort((a, b) => a.y0 - b.y0 || a.x0 - b.x0)) {
       const center = (b.y0 + b.y1) / 2;
       let r = rows.find(
         (x) => Math.abs(x.y - center) < Math.max(5, (b.y1 - b.y0) * 0.48),
@@ -117,21 +132,86 @@
       }
       r.items.push(b);
     }
-    return rows
-      .sort((a, b) => a.y - b.y)
-      .map((r) => {
-        const xs = r.items.sort((a, b) => a.x0 - b.x0);
-        let line = "",
-          prior;
-        for (const b of xs) {
-          if (prior)
-            line +=
-              b.x0 - prior.x1 > Math.max(18, (b.y1 - b.y0) * 1.2) ? " | " : " ";
-          line += b.text.trim();
-          prior = b;
+    let bounds = null,
+      pending = null,
+      lastY = null;
+    const output = [];
+    const flush = () => {
+      if (pending) output.push(pending.join(" | "));
+      pending = null;
+    };
+    for (const r of rows.sort((a, b) => a.y - b.y)) {
+      const xs = r.items.sort((a, b) => a.x0 - b.x0);
+      const heads = Array(11).fill(null);
+      for (const x of xs) {
+        const n = columnOf(x.text);
+        if (n >= 0) heads[n] = (x.x0 + x.x1) / 2;
+      }
+      if (
+        heads.every((x) => x !== null) &&
+        heads.every((x, i) => !i || x > heads[i - 1])
+      ) {
+        flush();
+        bounds = heads.slice(0, -1).map((x, i) => (x + heads[i + 1]) / 2);
+        // Las columnas de días son regulares; los encabezados de materia y profesor pueden estar centrados en celdas anchas.
+        const gaps = heads
+          .slice(4, 10)
+          .map((x, i) => x - heads[i + 3])
+          .sort((a, b) => a - b);
+        const step = gaps[Math.floor(gaps.length / 2)];
+        bounds[0] = Math.min(bounds[0], heads[0] + step / 2);
+        bounds[1] = heads[2] - (heads[3] - heads[2]) / 2;
+        bounds[9] = heads[9] + step / 2;
+        output.push(fitColumns.join(" | "));
+        lastY = r.y;
+        continue;
+      }
+      if (bounds) {
+        const cells = Array(11).fill("");
+        for (const x of xs) {
+          // Máxima intersección con la columna; evita mover textos largos por su centro.
+          const spans = [-Infinity, ...bounds, Infinity];
+          let best = 0,
+            amount = -1;
+          for (let n = 0; n < 11; n++) {
+            const overlap =
+              Math.min(x.x1, spans[n + 1]) - Math.max(x.x0, spans[n]);
+            if (overlap > amount) {
+              amount = overlap;
+              best = n;
+            }
+          }
+          cells[best] += (cells[best] ? " " : "") + x.text.trim();
         }
-        return line;
-      });
+        const anyTime = cells.slice(3, 10).some((x) => /\d/.test(x));
+        if (cells[0] || (cells[1] && cells[2] && anyTime)) flush();
+        const continuation =
+          pending && r.y - lastY < Math.max(24, (xs[0].y1 - xs[0].y0) * 2.5);
+        if (!pending && (cells[0] || (cells[1] && anyTime))) pending = cells;
+        else if (continuation)
+          pending = pending.map((v, i) =>
+            [v, cells[i]].filter(Boolean).join(" "),
+          );
+        else {
+          flush();
+          output.push("!REVISAR " + xs.map((x) => x.text).join(" "));
+        }
+        lastY = r.y;
+        continue;
+      }
+      let line = "",
+        prior;
+      for (const b of xs) {
+        if (prior)
+          line +=
+            b.x0 - prior.x1 > Math.max(18, (b.y1 - b.y0) * 1.2) ? " | " : " ";
+        line += b.text.trim();
+        prior = b;
+      }
+      output.push(line);
+    }
+    flush();
+    return output;
   }
   function parse(lines) {
     const text = lines.join("\n"),
@@ -148,10 +228,11 @@
         ?.split("|")[0]
         ?.trim() ||
       "";
-    const classes = [];
+    const classes = [],
+      warnings = [];
     let header = null;
     for (const line of lines) {
-      const cells = line.split(/\s*\|\s*|\t+/).map((x) => x.trim()),
+      const cells = line.split(/\s*\|\s*|\t/).map((x) => x.trim()),
         ns = cells.map(norm);
       if (
         ns.some((x) =>
@@ -180,6 +261,13 @@
         });
       };
       if (header && cells.length > 1) {
+        if (header.length === 11 && cells.length !== 11) {
+          warnings.push(
+            "Una fila no tiene las 11 celdas reconocibles. No se asignaron sus horas a otros días: " +
+              line,
+          );
+          continue;
+        }
         const value = (re) => {
           const index = header.findIndex((h) => re.test(h));
           return index >= 0 ? cells[index] || "" : "";
@@ -189,23 +277,34 @@
           ),
           teacher = value(/docente|maestro|profesor/),
           room = value(/salon|aula/),
-          group = value(/^grupo/);
+          group = value(/^(grupo|gpo)\.?$/);
         const daily = header
           .map((h, i) => ({ day: dayOf(h), cell: cells[i] || "" }))
           .filter((x) => x.day);
         if (daily.length) {
           for (const x of daily) {
-            const r = range(x.cell);
-            add(
-              subject,
-              teacher,
-              room ||
-                x.cell.match(/(?:sal[oó]n|aula)\s*:?\s*([^|,;]+)/i)?.[1] ||
-                "",
-              x.day,
-              r,
-              group,
-            );
+            const ranges = [
+              ...x.cell.matchAll(
+                /\b\d{1,2}(?::\d{2})?\s*(?:-|–|—|a)\s*\d{1,2}(?::\d{2})?\b/gi,
+              ),
+            ]
+              .map((m) => range(m[0]))
+              .filter(Boolean);
+            if (x.cell && !/^[-–—.\s]*$/.test(x.cell) && !ranges.length)
+              warnings.push(
+                `${subject || "Materia pendiente"}, ${days[x.day - 1]}: revisa «${x.cell}». No se inventó una hora de salida.`,
+              );
+            for (const r of ranges)
+              add(
+                subject,
+                teacher,
+                room ||
+                  x.cell.match(/(?:sal[oó]n|aula)\s*:?\s*([^|,;]+)/i)?.[1] ||
+                  "",
+                x.day,
+                r,
+                group,
+              );
           }
           continue;
         }
@@ -240,6 +339,9 @@
         a.findIndex(
           (x) =>
             x.subject === c.subject &&
+            x.teacher === c.teacher &&
+            x.classroom === c.classroom &&
+            x.group === c.group &&
             x.day === c.day &&
             x.start === c.start &&
             x.end === c.end,
@@ -256,11 +358,23 @@
       studentName,
       studentId: studentMatch?.[1]?.toUpperCase() || "",
       classes: unique.slice(0, 120),
+      warnings: [
+        ...new Set([
+          ...warnings,
+          ...lines
+            .filter((x) => x.startsWith("!REVISAR "))
+            .map((x) => "Revisa el texto sin fila: " + x.slice(9)),
+          ...(unique.length > 120
+            ? ["Se detectaron más de 120 bloques. Revisa los datos restantes."]
+            : []),
+        ]),
+      ],
       text: text.slice(0, 160000),
     };
   }
   const api = {
     days,
+    fitColumns,
     norm,
     dayOf,
     time,

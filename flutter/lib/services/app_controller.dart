@@ -13,6 +13,8 @@ class AppController extends ChangeNotifier {
   bool demo = false, recovery = false, loading = false, admin = false;
   String? dataError, authNotice;
   Map<String, dynamic>? profile, verification;
+  Uint8List? profilePhoto;
+  String? photoError;
   List<Place> places = [], referencePlaces = [], demoPlaces = [];
   List<RouteEdge> edges = [], demoEdges = [];
   StreamSubscription<Uri>? _links;
@@ -82,6 +84,8 @@ class AppController extends ChangeNotifier {
   void exploreDemo() {
     demo = true;
     user = null;
+    profilePhoto = null;
+    photoError = null;
     recovery = false;
     dataError = null;
     places = referencePlaces;
@@ -92,6 +96,7 @@ class AppController extends ChangeNotifier {
   Future<void> loadData() async {
     if (client == null || user == null) return;
     dataError = null;
+    final owner = user!.id;
     try {
       final data = await Future.wait<dynamic>([
         client!.request('/api/data/profiles'),
@@ -100,8 +105,11 @@ class AppController extends ChangeNotifier {
         client!.request('/api/data/route_edges'),
         client!.request('/api/data/app_roles'),
       ]);
+      if (user?.id != owner) return;
       admin = (data[4] as List).any((x) => x['role'] == 'admin');
       profile = Map<String, dynamic>.from((data[0] as List).first);
+      await loadProfilePhoto();
+      if (user?.id != owner) return;
       verification = (data[1] as List).isEmpty
           ? null
           : Map<String, dynamic>.from((data[1] as List).first);
@@ -112,9 +120,12 @@ class AppController extends ChangeNotifier {
           .map((x) => RouteEdge.fromJson(Map<String, dynamic>.from(x)))
           .toList();
     } catch (e) {
+      if (user?.id != owner) return;
       places = [];
       edges = [];
       profile = null;
+      profilePhoto = null;
+      photoError = null;
       verification = null;
       dataError = authError(e);
       if (e is ApiError && e.status == 401) user = null;
@@ -190,12 +201,61 @@ class AppController extends ChangeNotifier {
     await loadData();
   }
 
+  Future<void> loadProfilePhoto() async {
+    profilePhoto = null;
+    photoError = null;
+    if (profile?['photo_updated_at'] == null || user == null) return;
+    final id = user!.id;
+    try {
+      final bytes = await client!.readProfilePhoto();
+      if (user?.id == id) profilePhoto = bytes;
+    } catch (e) {
+      if (user?.id == id) photoError = authError(e);
+    }
+  }
+
+  Future<void> updateProfilePhoto(Uint8List bytes, String name) async {
+    final owner = user?.id;
+    final result = await client!.uploadProfilePhoto(bytes, name);
+    if (user?.id != owner) return;
+    profile?['photo_updated_at'] = result['photo_updated_at'];
+    await loadProfilePhoto();
+    notifyListeners();
+  }
+
+  Future<void> deleteProfilePhoto() async {
+    final owner = user?.id;
+    await client!.request('/api/profile/photo', method: 'DELETE');
+    if (user?.id != owner) return;
+    profile?['photo_updated_at'] = null;
+    profilePhoto = null;
+    photoError = null;
+    notifyListeners();
+  }
+
+  Future<void> updateAccountMode(bool seller) async {
+    final owner = user?.id;
+    await client!.request(
+      '/api/profile/mode',
+      method: 'PATCH',
+      body: {'mode': seller ? 'student_seller' : 'student'},
+    );
+    if (user?.id != owner) return;
+    profile?['food_seller_intent'] = seller;
+    final restored = await client!.restore();
+    if (user?.id != owner || restored?.id != owner) return;
+    user = restored;
+    notifyListeners();
+  }
+
   Future<void> signOut() async {
     if (!demo && client != null) await client!.signOut();
     user = null;
     demo = false;
     recovery = false;
     profile = null;
+    profilePhoto = null;
+    photoError = null;
     verification = null;
     admin = false;
     dataError = null;

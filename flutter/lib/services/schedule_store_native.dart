@@ -20,9 +20,15 @@ class ScheduleStore {
   Future<LocalSchedule?> read(String userId) async {
     final file = await _file(userId);
     if (!await file.exists()) return null;
-    final saved = LocalSchedule.fromJson(jsonDecode(await file.readAsString()));
+    final data = jsonDecode(await file.readAsString()) as Map<String, dynamic>;
+    final saved = LocalSchedule.fromJson(data);
     if (saved.userId != userId) {
       throw StateError('El horario pertenece a otra cuenta.');
+    }
+    if (data['version'] != 2 ||
+        data.containsKey('pdfBase64') ||
+        data.containsKey('pdfName')) {
+      await save(saved);
     }
     return saved;
   }

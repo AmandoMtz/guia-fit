@@ -124,9 +124,50 @@ class FitApiClient {
     if (!kIsWeb) await _storage.delete(key: 'fit_session');
   }
 
-  Future<Map<String, dynamic>> uploadFoodPhoto(
+  Future<Map<String, dynamic>> uploadFoodPhoto(Uint8List bytes, String name) =>
+      _uploadPhoto(bytes, name, '/api/food/photos');
+
+  Future<Map<String, dynamic>> uploadProfilePhoto(
     Uint8List bytes,
     String name,
+  ) => _uploadPhoto(bytes, name, '/api/profile/photo');
+
+  Future<Uint8List?> readProfilePhoto() async {
+    try {
+      final response = await _http
+          .get(
+            Uri.parse('$base/api/profile/photo'),
+            headers: {
+              'X-FIT-Client': kIsWeb ? 'web' : 'mobile',
+              if (!kIsWeb && _sessionToken != null)
+                'Authorization': 'Bearer $_sessionToken',
+            },
+          )
+          .timeout(const Duration(seconds: 25));
+      if (response.statusCode == 404) return null;
+      if (response.statusCode >= 400) {
+        throw ApiError(
+          'photo_error',
+          'No se pudo cargar tu foto.',
+          response.statusCode,
+        );
+      }
+      return response.bodyBytes;
+    } on ApiError {
+      rethrow;
+    } catch (_) {
+      throw const ApiError(
+        'network_error',
+        'No se pudo cargar tu foto. Revisa tu conexión.',
+        0,
+      );
+    }
+  }
+
+  Future<Map<String, dynamic>> _uploadPhoto(
+    Uint8List bytes,
+    String name,
+    String path,
   ) async {
     final ext = name.split('.').last.toLowerCase();
     final mime = {
@@ -143,10 +184,7 @@ class FitApiClient {
       );
     }
     try {
-      final req = http.MultipartRequest(
-        'POST',
-        Uri.parse('$base/api/food/photos'),
-      );
+      final req = http.MultipartRequest('POST', Uri.parse('$base$path'));
       req.headers.addAll({
         'X-FIT-Client': kIsWeb ? 'web' : 'mobile',
         if (!kIsWeb && _sessionToken != null)

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'food_screen.dart';
 import 'schedule_screen.dart';
@@ -192,7 +193,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             mode: "admin",
             onChanged: _pollNotifications,
           ),
-          _ => ProfileScreen(controller: c),
+          _ => ProfileScreen(
+            controller: c,
+            onFood: () => setState(() => _tab = 3),
+          ),
         },
       ],
     );
@@ -233,6 +237,18 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 style: TextStyle(fontWeight: FontWeight.w700),
               ),
         actions: [
+          if (c.user != null)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: CircleAvatar(
+                backgroundImage: c.profilePhoto == null
+                    ? null
+                    : MemoryImage(c.profilePhoto!),
+                child: c.profilePhoto == null
+                    ? const Icon(Icons.person_outline)
+                    : null,
+              ),
+            ),
           if (c.user != null)
             IconButton(
               tooltip: "Mis avisos",
@@ -832,7 +848,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
 class ProfileScreen extends StatefulWidget {
   final AppController controller;
-  const ProfileScreen({super.key, required this.controller});
+  final VoidCallback? onFood;
+  const ProfileScreen({super.key, required this.controller, this.onFood});
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
 }
@@ -840,10 +857,12 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   final _form = GlobalKey<FormState>();
   late TextEditingController _name, _student;
-  bool _saving = false;
+  bool _saving = false, _photoBusy = false, _modeBusy = false;
+  late bool _seller;
   @override
   void initState() {
     super.initState();
+    _seller = widget.controller.profile?['food_seller_intent'] == true;
     _name = TextEditingController(
       text: widget.controller.profile?['full_name'] as String? ?? '',
     );
@@ -857,6 +876,50 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _name.dispose();
     _student.dispose();
     super.dispose();
+  }
+
+  Future<void> _photo({bool remove = false}) async {
+    if (_photoBusy) return;
+    setState(() => _photoBusy = true);
+    try {
+      if (remove) {
+        await widget.controller.deleteProfilePhoto();
+      } else {
+        final result = await FilePicker.platform.pickFiles(
+          type: FileType.custom,
+          allowedExtensions: ['jpg', 'jpeg', 'png', 'webp'],
+          withData: true,
+        );
+        if (result == null || !mounted) return;
+        final file = result.files.single;
+        if (file.bytes == null || file.size > 5242880) {
+          throw Exception('Usa una foto de hasta 5 MB.');
+        }
+        await widget.controller.updateProfilePhoto(file.bytes!, file.name);
+      }
+      if (mounted) {
+        message(context, remove ? 'Foto eliminada.' : 'Foto actualizada.');
+      }
+    } catch (e) {
+      if (mounted) {
+        message(context, e.toString().replaceFirst('Exception: ', ''));
+      }
+    } finally {
+      if (mounted) setState(() => _photoBusy = false);
+    }
+  }
+
+  Future<void> _mode() async {
+    if (_modeBusy) return;
+    setState(() => _modeBusy = true);
+    try {
+      await widget.controller.updateAccountMode(_seller);
+      if (mounted) message(context, 'Tipo de cuenta actualizado.');
+    } catch (e) {
+      if (mounted) message(context, authError(e));
+    } finally {
+      if (mounted) setState(() => _modeBusy = false);
+    }
   }
 
   @override
@@ -882,6 +945,131 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        Surface(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  CircleAvatar(
+                    radius: 40,
+                    backgroundImage: c.profilePhoto == null
+                        ? null
+                        : MemoryImage(c.profilePhoto!),
+                    child: c.profilePhoto == null
+                        ? const Icon(Icons.person_outline, size: 38)
+                        : null,
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'TU ESPACIO EN LA FIT',
+                          style: TextStyle(
+                            color: fitOrange,
+                            fontSize: 11,
+                            letterSpacing: 1,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          c.profile?['full_name'] ?? 'Mi cuenta',
+                          style: const TextStyle(
+                            fontSize: 23,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        Text(
+                          c.profile?['food_seller_intent'] == true
+                              ? 'Alumno vendedor'
+                              : 'Alumno',
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              Wrap(
+                spacing: 12,
+                children: [
+                  FilledButton.icon(
+                    onPressed: _photoBusy ? null : () => _photo(),
+                    icon: const Icon(Icons.add_a_photo_outlined),
+                    label: Text(_photoBusy ? 'Guardando…' : 'Subir foto'),
+                  ),
+                  if (c.profile?['photo_updated_at'] != null)
+                    TextButton(
+                      onPressed: _photoBusy ? null : () => _photo(remove: true),
+                      child: const Text('Quitar foto'),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'JPG, PNG o WebP; hasta 5 MB. Se guarda una copia optimizada en tu cuenta.',
+                style: TextStyle(color: fitMuted, fontSize: 12),
+              ),
+              if (c.photoError != null) InfoBanner(c.photoError!, error: true),
+            ],
+          ),
+        ),
+        Surface(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Text(
+                'Mi tipo de cuenta',
+                style: TextStyle(fontSize: 21, fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<bool>(
+                initialValue: _seller,
+                items: const [
+                  DropdownMenuItem(value: false, child: Text('Alumno')),
+                  DropdownMenuItem(value: true, child: Text('Alumno vendedor')),
+                ],
+                onChanged: _modeBusy
+                    ? null
+                    : (value) => setState(() => _seller = value ?? false),
+              ),
+              const SizedBox(height: 12),
+              FilledButton(
+                onPressed: _modeBusy ? null : _mode,
+                child: Text(
+                  _modeBusy ? 'Guardando…' : 'Guardar tipo de cuenta',
+                ),
+              ),
+              if (widget.onFood != null)
+                TextButton(
+                  onPressed: widget.onFood,
+                  child: const Text('Abrir Comidas'),
+                ),
+              const Text(
+                'Puedes activar las ventas aunque no las elegiste al registrarte. Tu puesto necesita aprobación para publicar. Volver a Alumno oculta el puesto y pausa nuevos pedidos; puedes terminar los pendientes.',
+                style: TextStyle(color: fitMuted, fontSize: 12, height: 1.7),
+              ),
+            ],
+          ),
+        ),
+        const Surface(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '¿Dónde se guardan mis datos?',
+                style: TextStyle(fontSize: 19, fontWeight: FontWeight.w700),
+              ),
+              SizedBox(height: 12),
+              Text(
+                'En tu cuenta: perfil, foto, tipo de cuenta, puesto, productos, pedidos y avisos.\n\nSolo en este dispositivo: nombre, matrícula, carrera y clases de tu horario, separados por cuenta.\n\nEl PDF o la imagen del horario se procesa y se descarta. Tu tabla local no se sincroniza con otros equipos.',
+                style: TextStyle(height: 1.7),
+              ),
+            ],
+          ),
+        ),
         Surface(
           child: Form(
             key: _form,

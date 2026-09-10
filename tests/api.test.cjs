@@ -20,6 +20,12 @@ test("API Render/Aiven: autenticación real, permisos y verificación", async (t
   await engine.exec(
     fs.readFileSync(path.join(root, "backend/migrations/002_food.sql"), "utf8"),
   );
+  await engine.exec(
+    fs.readFileSync(
+      path.join(root, "backend/migrations/003_profiles.sql"),
+      "utf8",
+    ),
+  );
   const query = (sql, args) => engine.query(sql, args);
   const db = { query, connect: async () => ({ query, release() {} }) };
   const emails = [];

@@ -45,7 +45,7 @@ void main() {
           ),
         );
         await tester.pumpAndSettle();
-        expect(schedule.pdf, isNull);
+        expect(schedule.toJson().containsKey('pdfBase64'), false);
         expect(find.text('Cálculo diferencial'), findsOneWidget);
         expect(find.text('Ana López'), findsOneWidget);
         expect(tester.takeException(), isNull);

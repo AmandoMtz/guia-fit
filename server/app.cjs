@@ -7,6 +7,7 @@ const path = require("node:path");
 const { transaction } = require("./db.cjs");
 const S = require("./security.cjs");
 const { createFoodRouter } = require("./food.cjs");
+const { createProfileRouter } = require("./profile.cjs");
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const generic =
   "Si corresponde a una cuenta válida, recibirás un correo con los siguientes pasos.";
@@ -32,7 +33,7 @@ function createApp({
           defaultSrc: ["'self'"],
           scriptSrc: ["'self'", "'wasm-unsafe-eval'"],
           styleSrc: ["'self'", "'unsafe-inline'"],
-          imgSrc: ["'self'", "https:", "data:"],
+          imgSrc: ["'self'", "https:", "data:", "blob:"],
           connectSrc: ["'self'"],
           workerSrc: ["'self'", "blob:"],
           objectSrc: ["'none'"],
@@ -409,14 +410,15 @@ function createApp({
         throw fail(403, "forbidden", "Solo puedes consultar tu perfil.");
       if (table === "app_roles")
         return res.json({
-          data: //
+          //
+          data:
             req.user.role === "admin"
               ? [{ user_id: req.user.id, role: "admin" }]
               : [],
         });
       const sql =
         table === "profiles"
-          ? "select id,full_name,student_id,updated_at from profiles where id=$1"
+          ? "select p.id,p.full_name,p.student_id,p.updated_at,f.updated_at as photo_updated_at,u.food_seller_intent from profiles p join users u on u.id=p.id left join profile_photos f on f.user_id=p.id where p.id=$1"
           : "select user_id,status,verified_at from institutional_verifications where user_id=$1";
       return res.json({ data: (await db.query(sql, [req.user.id])).rows });
     }
@@ -609,6 +611,7 @@ function createApp({
         .json({ data: { url: origin + "/api/photos/" + rows[0].id } });
     },
   );
+  app.use("/api/profile", authenticate, createProfileRouter({ db, limit }));
   app.use(
     "/api/food",
     authenticate,

@@ -1,5 +1,26 @@
-/* Un registro por cuenta: metadatos y PDF se reemplazan en la misma transacción. */
+/* Un registro por cuenta. Solo datos estructurados; nunca archivos ni texto OCR. */
 (function (root) {
+  function clean(value) {
+    const keys = ["userId", "career", "studentId", "studentName", "reviewedAt"];
+    const classKeys = [
+      "id",
+      "subject",
+      "teacher",
+      "classroom",
+      "group",
+      "day",
+      "start",
+      "end",
+      "place_id",
+    ];
+    return {
+      version: 2,
+      ...Object.fromEntries(keys.map((k) => [k, value[k]])),
+      classes: (value.classes || []).map((c) =>
+        Object.fromEntries(classKeys.map((k) => [k, c[k]])),
+      ),
+    };
+  }
   function createStore(factory) {
     let connection;
     async function database() {
@@ -9,9 +30,20 @@
         );
       if (connection) return connection;
       connection = new Promise((resolve, reject) => {
-        const req = factory.open("fit-schedules-v2", 1);
-        req.onupgradeneeded = () =>
-          req.result.createObjectStore("schedules", { keyPath: "userId" });
+        const req = factory.open("fit-schedules-v2", 2);
+        req.onupgradeneeded = () => {
+          const records = req.result.objectStoreNames.contains("schedules")
+            ? req.transaction.objectStore("schedules")
+            : req.result.createObjectStore("schedules", { keyPath: "userId" });
+          const cursor = records.openCursor();
+          cursor.onsuccess = () => {
+            const row = cursor.result;
+            if (row) {
+              row.update(clean(row.value));
+              row.continue();
+            }
+          };
+        };
         req.onsuccess = () => {
           const db = req.result;
           db.onversionchange = () => {
@@ -53,7 +85,7 @@
           method === "get"
             ? store.get(key)
             : method === "put"
-              ? store.put(value)
+              ? store.put(clean(value))
               : store.delete(key);
         let result;
         req.onsuccess = () => {

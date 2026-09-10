@@ -1,5 +1,5 @@
 import 'dart:io';
-import 'dart:typed_data';
+import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:guia_fit/models/schedule.dart';
 import 'package:guia_fit/services/schedule_store_native.dart';
@@ -18,9 +18,6 @@ void main() {
           studentId: '12345',
           studentName: 'Ana López',
           career: 'Ingeniería Civil',
-          sourceMime: 'image/png',
-          pdfName: 'horario.png',
-          pdf: Uint8List.fromList([137, 80, 78, 71]),
           classes: [ScheduleClass(id: '1', subject: 'Cálculo', group: '2A')],
         );
         final b = LocalSchedule(
@@ -33,18 +30,24 @@ void main() {
         final reopened = ScheduleStore(directory: directory);
         final saved = await reopened.read('account-a');
         expect(saved!.classes.first.group, '2A');
-        expect(saved.sourceMime, 'image/png');
-        expect(saved.pdf, a.pdf);
+        expect(saved.toJson().containsKey('pdfBase64'), false);
         expect((await reopened.read('account-b'))!.studentId, '67890');
         expect(await reopened.read('other-account'), isNull);
         a.classes.first.subject = 'Física';
-        a.pdf = null;
         await reopened.save(a);
         expect(
           (await reopened.read('account-a'))!.classes.first.subject,
           'Física',
         );
-        expect((await reopened.read('account-a'))!.pdf, isNull);
+        final file = File('${directory.path}/fit_schedules/account-a.json');
+        await file.writeAsString(
+          jsonEncode({...a.toJson(), 'version': 1, 'pdfBase64': 'original'}),
+        );
+        await reopened.read('account-a');
+        expect(
+          jsonDecode(await file.readAsString()).containsKey('pdfBase64'),
+          false,
+        );
         await reopened.delete('account-a');
         expect(await reopened.read('account-a'), isNull);
         expect((await reopened.read('account-b'))!.studentId, '67890');

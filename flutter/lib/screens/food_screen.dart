@@ -719,6 +719,10 @@ class _FoodScreenState extends State<FoodScreen> {
               ),
               const SizedBox(height: 10),
               Text('${v['pickup_location']} · ${v['hours_text']}'),
+              if (v['is_active'] == false)
+                const InfoBanner(
+                  'Tu puesto está pausado. Puedes terminar pedidos pendientes. Activa Alumno vendedor en Mi cuenta para volver a mostrarlo.',
+                ),
               if (v['status'] != 'approved')
                 InfoBanner(
                   v['status'] == 'pending'

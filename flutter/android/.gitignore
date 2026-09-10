@@ -12,3 +12,8 @@ GeneratedPluginRegistrant.java
 key.properties
 **/*.keystore
 **/*.jks
+
+# Conserva el wrapper para clonar y compilar el proyecto completo.
+!/gradlew
+!/gradlew.bat
+!gradle/wrapper/gradle-wrapper.jar

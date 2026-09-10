@@ -1,41 +1,37 @@
-# Comprobaciones de la actualización 2
+# Comprobaciones de la actualización 3
 
-Fecha: 9 de septiembre de 2026.
+Revisión: 9–10 de septiembre de 2026.
 
-| Comprobación ejecutada | Resultado |
+| Comprobación | Resultado |
 |---|---|
-| `npm test` | 35 pruebas contabilizadas por Node; todas aprobadas |
-| `npm audit` | 0 vulnerabilidades reportadas en esta revisión, incluidas dependencias de desarrollo |
-| `flutter analyze --no-pub` | Sin incidencias |
-| `flutter test --no-pub` | 13 pruebas aprobadas |
-| `flutter build web --release --no-pub` | Compilación JavaScript completada, con OCR local y fuentes de iconos incluidas |
-| Rutas y MIME de motores locales | Scripts, worker PDF, worker OCR y WASM servidos correctamente por Express |
-| Política CSP del lector local | Permite WebAssembly y workers propios; no se habilitó `unsafe-eval` para JavaScript |
-| Blueprint Render | Validado con el esquema JSON oficial de Render |
-| JavaScript de la web | Sintaxis comprobada con Node |
-| Migración 001, logos y croquis | SHA-256 idéntico a los archivos del ZIP de origen |
-| Motores OCR de web y Flutter Web | Copias idénticas de scripts, WASM y modelo español |
+| Pruebas Node de API, almacenamiento, PDF/OCR y horarios | 50 aprobadas |
+| `npm audit` | 0 vulnerabilidades reportadas, incluyendo desarrollo |
+| Pruebas Flutter de modelos, almacenamiento y widgets | 24 aprobadas: 22 generales y 2 específicas de cambio de cuenta |
+| `flutter analyze --no-pub` | Sin incidencias en la revisión |
+| Flutter Web | Compilación JavaScript de producción comprobada |
+| JavaScript propio de web y servidor | Sintaxis comprobada con Node |
+| Migraciones 001 y 002, `render.yaml`, logos y croquis | Idénticos a los del ZIP recibido |
 
-## Funciones comprobadas
+## Qué se comprobó
 
-La API se probó con Express real, solicitudes HTTP de Supertest y PostgreSQL embebido PGlite. El correo se simuló: no se enviaron mensajes externos. Se revisaron autenticación, confirmación de correo, hash de contraseñas y sesiones, cookies HttpOnly/Secure, perfiles y administración.
+**Formato FIT:** los clientes web y Flutter comparten ejemplos sintéticos con las 11 columnas. Las pruebas cubren celdas vacías, encabezados repetidos, GPO, profesor repetido en distintas materias/días, texto de varias líneas, varios intervalos por día, domingo, tabuladores con huecos y filas incompletas. Humanismo con Ibarra el martes a las 11 e Investigación con Ibarra el miércoles a las 11 quedan separados y no se marcan como cruce.
 
-Las pruebas de Comidas cubren alta pendiente, revisión administrativa con fuente, aislamiento de productos y fotografías por vendedor, catálogo de puestos aprobados, precio calculado por servidor, lotes, reintentos sin duplicación, cambios de estado, permisos de compradores/vendedores, conservación de avisos al recrear la API, lectura de avisos solo de la cuenta e historial conservado al borrar productos.
+**Lectura:** se ejecutó PDF.js sobre PDF reales generados en memoria, incluido el formato de 11 columnas. Tesseract y el modelo español se ejecutaron sobre una imagen sintética. La lectura no envía el horario a una API. No se recibió un PDF real de horario del alumno: el diseño concreto de ese documento queda sujeto a revisión al importarlo.
 
-El lector PDF se ejecutó contra un PDF sintético generado en memoria. El OCR se ejecutó con Tesseract y el modelo español local sobre una imagen sintética, comprobando nombre del alumno, matrícula, grupo, día y horas. No se proporcionó un horario real para validar su formato concreto.
+**Almacenamiento local:** IndexedDB simulado y archivos JSON temporales verificaron persistencia de clases, edición, eliminación por cuenta y limpieza de originales antiguos. El registro nuevo no admite PDF, imagen, nombre de archivo ni texto OCR. La tabla Flutter se probó a 360 y 1280 px; se comprobó que los días y acciones de edición identifican la clase correcta.
 
-El almacenamiento web se probó con IndexedDB simulado: reabrir conserva PDF y datos; editar y borrar una cuenta no modifica otra; una escritura inválida conserva el registro anterior. El almacenamiento nativo se probó con archivos temporales: dos cuentas aisladas, actualización, eliminación, imagen y tabla sin original.
+**API:** se usaron Express, Supertest y PostgreSQL embebido PGlite. Las fotos se decodificaron con Sharp, comprobando WebP de 512 × 512, ausencia de EXIF, reemplazo de una única fila, eliminación, aislamiento y rechazo de imágenes inválidas o demasiado grandes. El modo vendedor se probó en una cuenta creada sin esa opción: no eleva privilegios, mantiene la revisión administrativa, pausa nuevos pedidos y permite terminar los pendientes. Una suspensión sigue vigente después de cambiar de modo.
 
-Las pruebas Flutter incluyen validación del horario, cruces, datos del alumno/grupo, conservación de datos y tabla sin PDF/imagen en 360 y 1280 px. Se comprobó que el botón Editar identifica la clase correcta. Las pruebas originales de acceso, directorio y rutas siguen aprobando.
+También se comprobó que una respuesta tardía de perfil o fotografía de la cuenta anterior no reemplace los datos de la cuenta nueva después de cerrar/iniciar sesión.
 
-## Alcance de la comprobación
+Las pruebas originales de acceso, verificación, pedidos, avisos y directorio se mantienen. Se actualizaron dos contraseñas ficticias de pruebas para cumplir la política de letra, número y carácter especial que ya tenía tu repositorio; no se modificó esa política.
 
-Entorno: Node 24.19 y Flutter 3.35.3 / Dart 3.9.2. Dependencias fijadas por archivos lock. El servidor admite Node desde 22.16 y Render selecciona la rama 22.
+## Límites de la comprobación
 
-No se realizó inspección visual de la web en navegador. No se compiló ni firmó APK/IPA, ni se probó ML Kit en un teléfono Android/iOS físico. Flutter Web se compila para JavaScript; su soporte Wasm general no forma parte de esta entrega. El OCR web sí utiliza un motor WebAssembly local.
+No se desplegó en tu Render, no se accedió a tu base real de Aiven, no se publicó un commit en GitHub y no se enviaron correos reales. El ZIP incluye fuentes y la migración aditiva; la guía de actualización explica cómo publicarlos.
 
-No se publicaron cambios en GitHub/Render, no se conectó a tu base real de Aiven ni se probó correo externo. Esas comprobaciones requieren las variables y servicios de tus cuentas, siguiendo `ACTUALIZAR_V2.md` y `RENDER_AIVEN_GIT.md`. No hay prueba de entrega push con la aplicación cerrada porque esa función no se implementó; los avisos son persistentes dentro de la app.
+No se realizó inspección visual de la web con navegador. No se compiló ni firmó APK/IPA ni se ejecutó ML Kit en un teléfono físico. Los cambios de almacenamiento y parser nativo se comprobaron mediante pruebas Flutter; el OCR nativo conserva su implementación local.
 
-El resultado de OCR depende de legibilidad, orientación y estructura del documento. El alumno revisa y corrige todos los datos. No se certifican matrículas, inscripciones o permisos de vendedor mediante OCR. El croquis conserva su estado de referencia pendiente y no se inventaron nuevos salones o caminos.
+Las horas y campos incompletos requieren corrección. La revisión del alumno no equivale a una verificación institucional. Los avisos de pedidos son internos a la app, no push con la aplicación cerrada.
 
-El ZIP contiene fuentes, plataformas, configuración de ejemplo, modelos OCR y librerías estáticas de la web. No incluye credenciales, node_modules, SDK, compilaciones ni datos reales de alumnos.
+El ZIP contiene web, servidor, Flutter, plataformas, librerías estáticas, modelos de OCR, configuración de ejemplo, pruebas y documentación. Excluye credenciales, certificados, node_modules, SDK, compilaciones y datos reales de alumnos.

@@ -61,7 +61,7 @@ test("Comidas: permisos, dinero, pedidos y notificaciones persistentes", async (
     );
     return body === undefined ? r : r.send(body);
   };
-  let vendor, otherVendor, product, order, photo;
+  let vendor, otherVendor, product, order, photo, chat;
   const vendorBody = {
     business_name: "Puesto de prueba",
     description: "Datos ficticios de prueba automatizada",
@@ -220,6 +220,100 @@ test("Comidas: permisos, dinero, pedidos y notificaciones persistentes", async (
     },
   );
   await t.test(
+    "el chat de comprador y vendedor es temporal, privado y no crea tablas persistentes",
+    async () => {
+      chat = (
+        await req(buyer, "post", "/chats", { product_id: product.id }).expect(201)
+      ).body.data;
+      assert.equal(chat.role, "buyer");
+      assert.equal(chat.product_id, product.id);
+      assert.equal(chat.messages.length, 0);
+      const ttl = new Date(chat.expires_at) - new Date(chat.created_at);
+      assert.equal(ttl, 12 * 60 * 60 * 1000);
+
+      const reused = (
+        await req(buyer, "post", "/chats", { product_id: product.id }).expect(201)
+      ).body.data;
+      assert.equal(reused.id, chat.id);
+      await req(stranger, "get", "/chats/" + chat.id).expect(404);
+      await req(seller2, "get", "/chats/" + chat.id).expect(404);
+
+      await req(buyer, "post", "/chats/" + chat.id + "/messages", {
+        text: "¿Sigues en el salón?",
+      }).expect(201);
+      let sellerChats = (await req(seller, "get", "/chats").expect(200)).body.data;
+      assert.equal(sellerChats.items[0].id, chat.id);
+      assert.equal(sellerChats.items[0].unread_count, 1);
+      assert.equal(
+        (await req(seller, "get", "/notifications")).body.data.chat_unread_count,
+        1,
+      );
+      await req(seller, "post", "/chats/" + chat.id + "/read", {}).expect(200);
+      assert.equal(
+        (await req(seller, "get", "/notifications")).body.data.chat_unread_count,
+        0,
+      );
+
+      await req(seller, "post", "/chats/" + chat.id + "/messages", {
+        text: "Sí, aquí estoy. También tengo agua.",
+      }).expect(201);
+      const buyerDetail = (
+        await req(buyer, "get", "/chats/" + chat.id).expect(200)
+      ).body.data;
+      assert.equal(buyerDetail.messages.length, 2);
+      assert.equal(buyerDetail.unread_count, 1);
+
+      const png = Buffer.from(
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jQWQAAAAASUVORK5CYII=",
+        "base64",
+      );
+      const imageMessage = (
+        await req(seller, "post", "/chats/" + chat.id + "/images")
+          .attach("file", png, { filename: "producto.png", contentType: "image/png" })
+          .expect(201)
+      ).body.data;
+      assert.equal(imageMessage.kind, "image");
+      assert.match(imageMessage.image_url, /\/api\/food\/chats\/.+\/images\//);
+      await api
+        .get(imageMessage.image_url)
+        .set("Authorization", "Bearer " + buyer.token)
+        .expect("Content-Type", /image\/webp/)
+        .expect(200);
+      await api
+        .get(imageMessage.image_url)
+        .set("Authorization", "Bearer " + stranger.token)
+        .expect(404);
+      await req(buyer, "post", "/chats/" + chat.id + "/images")
+        .attach("file", Buffer.from("<svg></svg>"), {
+          filename: "archivo.svg",
+          contentType: "image/svg+xml",
+        })
+        .expect(400);
+
+      const dbTables = (
+        await query(
+          "select count(*)::int as n from information_schema.tables where table_schema='public' and table_name like 'food_chat%'",
+        )
+      ).rows[0].n;
+      assert.equal(dbTables, 0);
+
+      const fresh = request(
+        createApp({
+          db,
+          siteUrl: "https://fit.example.test",
+          production: true,
+        }),
+      );
+      const freshChats = (
+        await fresh
+          .get("/api/food/chats")
+          .set("Authorization", "Bearer " + buyer.token)
+          .expect(200)
+      ).body.data;
+      assert.equal(freshChats.items.length, 0);
+    },
+  );
+  await t.test(
     "precio y total se calculan en servidor; una repetición no duplica el pedido ni aviso",
     async () => {
       const body = {
@@ -228,6 +322,7 @@ test("Comidas: permisos, dinero, pedidos y notificaciones persistentes", async (
         quantity: 2,
         note: "Recoger al salir de clase",
         expected_price_cents: 8550,
+        chat_id: chat.id,
       };
       await req(buyer, "post", "/orders", { ...body, total_cents: 1 }).expect(
         400,
@@ -237,11 +332,12 @@ test("Comidas: permisos, dinero, pedidos y notificaciones persistentes", async (
         ...body,
         expected_price_cents: 1,
       }).expect(409);
-      await req(seller, "post", "/orders", body).expect(400);
+      await req(seller, "post", "/orders", body).expect(403);
       order = (await req(buyer, "post", "/orders", body).expect(201)).body.data;
       assert.equal(order.total_cents, 17100);
       assert.equal(order.units_per_lot, 3);
       assert.equal(order.sale_unit, "lot");
+      assert.equal(order.chat_id, chat.id);
       const again = (await req(buyer, "post", "/orders", body).expect(201)).body
         .data;
       assert.equal(again.id, order.id);

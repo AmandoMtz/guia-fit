@@ -1,6 +1,7 @@
 const { Router } = require("express");
 const multer = require("multer");
 const { transaction } = require("./db.cjs");
+const { createTemporaryFoodChat } = require("./food-chat.cjs");
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const error = (status, message, code = "validation_error") =>
   Object.assign(new Error(message), { status, code });
@@ -37,7 +38,10 @@ const statusLabels = {
 };
 function createFoodRouter({ db, siteUrl, administrator, limit }) {
   const router = Router(),
-    origin = new URL(siteUrl).origin;
+    origin = new URL(siteUrl).origin,
+    chat = createTemporaryFoodChat({ db });
+  const withChat = (userId, row) =>
+    row ? { ...row, chat_id: chat.chatIdForOrder(userId, row.id) } : row;
   const picture = (r) => ({
     ...r,
     photo_url: r.photo_id ? origin + "/api/photos/" + r.photo_id : null,
@@ -63,8 +67,14 @@ function createFoodRouter({ db, siteUrl, administrator, limit }) {
     ).rows[0];
   }
   router.use(async (req, res, next) => {
-    if (!["GET", "HEAD", "OPTIONS"].includes(req.method))
-      await limit(req, "food-write:" + req.user.id, 120);
+    if (!["GET", "HEAD", "OPTIONS"].includes(req.method)) {
+      const chatWrite = req.path.startsWith("/chats");
+      await limit(
+        req,
+        (chatWrite ? "food-chat-write:" : "food-write:") + req.user.id,
+        chatWrite ? 600 : 120,
+      );
+    }
     next();
   });
   router.get("/catalog", async (req, res) => {
@@ -302,6 +312,65 @@ function createFoodRouter({ db, siteUrl, administrator, limit }) {
         .json({ data: { id: row.id, url: origin + "/api/photos/" + row.id } });
     },
   );
+  const chatUpload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 5242880, files: 1, fields: 0, parts: 2 },
+  });
+  router.get("/chats/events", (req, res) => {
+    chat.connect(req.user.id, req.sessionHash, res);
+  });
+  router.get("/chats", (req, res) => {
+    res.json({ data: chat.list(req.user.id) });
+  });
+  router.post("/chats", async (req, res) => {
+    fields(req.body, ["product_id"]);
+    const data = await chat.create(req.user.id, id(req.body.product_id));
+    res.status(201).json({ data });
+  });
+  router.get("/chats/:id", (req, res) => {
+    res.json({ data: chat.detail(req.user.id, id(req.params.id)) });
+  });
+  router.post("/chats/:id/read", (req, res) => {
+    fields(req.body || {}, []);
+    res.json({ data: chat.read(req.user.id, id(req.params.id)) });
+  });
+  router.post("/chats/:id/messages", (req, res) => {
+    fields(req.body, ["text"]);
+    const data = chat.addText(
+      req.user.id,
+      id(req.params.id),
+      req.body.text,
+    );
+    res.status(201).json({ data });
+  });
+  router.post(
+    "/chats/:id/images",
+    chatUpload.single("file"),
+    async (req, res) => {
+      const data = await chat.addImage(
+        req.user.id,
+        id(req.params.id),
+        req.file,
+      );
+      res.status(201).json({ data });
+    },
+  );
+  router.get("/chats/:id/images/:messageId", (req, res) => {
+    const image = chat.image(
+      req.user.id,
+      id(req.params.id),
+      id(req.params.messageId),
+    );
+    res
+      .set({
+        "Content-Type": image.mime,
+        "Content-Disposition": "inline",
+        "Cache-Control": "no-store",
+        "X-Content-Type-Options": "nosniff",
+      })
+      .send(Buffer.from(image.bytes));
+  });
+
   router.get("/orders", async (req, res) => {
     const role = req.query.role === "seller" ? "seller" : "buyer";
     const rows = (
@@ -310,7 +379,7 @@ function createFoodRouter({ db, siteUrl, administrator, limit }) {
         [req.user.id],
       )
     ).rows;
-    res.json({ data: rows });
+    res.json({ data: rows.map((row) => withChat(req.user.id, row)) });
   });
   router.get("/orders/:id", async (req, res) => {
     const row = (
@@ -320,7 +389,7 @@ function createFoodRouter({ db, siteUrl, administrator, limit }) {
       )
     ).rows[0];
     if (!row) throw error(404, "Pedido no encontrado.", "not_found");
-    res.json({ data: row });
+    res.json({ data: withChat(req.user.id, row) });
   });
   router.post("/orders", async (req, res) => {
     fields(req.body, [
@@ -329,9 +398,11 @@ function createFoodRouter({ db, siteUrl, administrator, limit }) {
       "note",
       "request_id",
       "expected_price_cents",
+      "chat_id",
     ]);
     const productId = id(req.body.product_id),
       requestId = id(req.body.request_id),
+      chatId = req.body.chat_id ? id(req.body.chat_id) : null,
       quantity = req.body.quantity,
       note = text(req.body.note ?? "", 0, 500, "la nota del pedido");
     if (
@@ -341,6 +412,7 @@ function createFoodRouter({ db, siteUrl, administrator, limit }) {
       !Number.isInteger(req.body.expected_price_cents)
     )
       throw error(400, "Solicita entre 1 y 50 unidades o lotes.");
+    if (chatId) chat.validateOrderLink(req.user.id, chatId, productId);
     const result = await transaction(db, async (client) => {
       await client.query("select id from users where id=$1 for update", [
         req.user.id,
@@ -419,7 +491,8 @@ function createFoodRouter({ db, siteUrl, administrator, limit }) {
       );
       return orderDetails(client, row.id);
     });
-    res.status(201).json({ data: result });
+    if (chatId) chat.linkOrder(req.user.id, chatId, result.id);
+    res.status(201).json({ data: withChat(req.user.id, result) });
   });
   router.patch("/orders/:id", async (req, res) => {
     fields(req.body, ["status"]);
@@ -472,7 +545,7 @@ function createFoodRouter({ db, siteUrl, administrator, limit }) {
       );
       return orderDetails(client, row.id);
     });
-    res.json({ data: result });
+    res.json({ data: withChat(req.user.id, result) });
   });
   router.get("/notifications", async (req, res) => {
     const items = (
@@ -499,7 +572,14 @@ function createFoodRouter({ db, siteUrl, administrator, limit }) {
       const stamp = new Date(row.updated_at).toISOString();
       if (stamp > order_summary.revision) order_summary.revision = stamp;
     }
-    res.json({ data: { items, unread_count: count, order_summary } });
+    res.json({
+      data: {
+        items,
+        unread_count: count,
+        chat_unread_count: chat.unreadCount(req.user.id),
+        order_summary,
+      },
+    });
   });
   router.patch("/notifications/read", async (req, res) => {
     fields(req.body, ["ids", "all"]);

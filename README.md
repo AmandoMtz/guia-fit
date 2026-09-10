@@ -19,6 +19,7 @@ Web responsiva y aplicación Flutter/Dart para encontrar espacios, comprar comid
 | Web              | HTML, CSS y JavaScript, adaptable a celular y escritorio                                |
 | API              | Node.js / Express, alojada junto a la web en Render                                     |
 | Datos y fotos    | PostgreSQL en Aiven, conexión TLS con CA verificada                                     |
+| Chat de Comidas  | Memoria temporal del servidor; mensajes e imágenes expiran a las 12 h                    |
 | Horario personal | Tabla editable guardada en el dispositivo por ID de cuenta; el PDF o imagen se descarta |
 | App              | Flutter y Dart para Android, iOS y web; consume la misma API                            |
 | Correo           | Resend por HTTPS; SMTP opcional                                                         |
@@ -40,14 +41,15 @@ Web responsiva y aplicación Flutter/Dart para encontrar espacios, comprar comid
 - **Mis compras**: seguimiento de lo que tú pediste, con instrucciones según su estado.
 - **Pedidos recibidos**: acceso directo a las ventas, filtros Nuevos / En preparación / Por entregar / Historial y contadores por cuenta.
 - **Mi puesto**: menú, fotos y precios; activa o pausa productos y consulta el estado real de publicación.
-- **Solicitar pedido**: cantidad con botones +/−, total y piezas por lote antes de enviar. Después aparece la confirmación y el botón Ver seguimiento.
-- **Avisos**: Ver pedido abre el pedido exacto, tanto de compra como de venta. Los contadores y cambios se consultan cada 30 segundos con la app activa; las confirmaciones y formularios no se cierran al actualizar.
+- **Chat antes de pedir**: al pulsar **Consultar / pedir** se abre una conversación tipo mensajería entre comprador y vendedor. Admite texto e imágenes JPG/PNG/WebP; no admite otros archivos. El chat y sus imágenes expiran 12 horas después de iniciarse y no se escriben en Aiven.
+- **Confirmar pedido desde el chat**: cantidad con botones +/−, total y piezas por lote antes de enviar. Solo el pedido confirmado queda en el historial persistente y puede seguirse aunque el chat ya haya terminado.
+- **Mensajes en tiempo real y avisos**: mientras Comidas está abierta, los mensajes llegan mediante una conexión en tiempo real. La campana también muestra el conteo de mensajes temporales; los avisos de pedidos siguen siendo persistentes.
 
 ## Módulos conservados
 
 - **Comidas**: catálogo de vendedores aprobados, productos con foto y precios en MXN por unidad o lote, búsqueda por puesto y solicitudes de compradores con sesión iniciada.
 - **Mi puesto**: solicitud de alta, edición de datos, alta/edición/eliminación de productos, disponibilidad y pedidos recibidos. La opción de vendedor en el registro indica interés; no otorga aprobación ni privilegios.
-- **Pedidos y avisos**: solicitado → aceptado → listo → entregado; cancelación antes de aceptar y rechazo por el vendedor. Avisos persistentes en la cuenta, consultados cada 30 segundos con la app abierta y al entrar en Avisos. No incluye cobros, reparto, mensajes externos ni notificaciones push con la app cerrada.
+- **Pedidos, chats y avisos**: solicitado → aceptado → listo → entregado; cancelación antes de aceptar y rechazo por el vendedor. Los chats son internos y temporales (12 h, solo memoria del servidor); los pedidos y sus avisos sí persisten en Aiven. No incluye cobros, reparto, mensajes externos ni notificaciones push con la app cerrada.
 - **Mi horario**: importa PDF, JPG, PNG o WebP. Extrae texto localmente; imágenes y páginas escaneadas usan OCR en el dispositivo. Revisa nombre, matrícula, carrera, materia, maestro, grupo, salón, día y horas antes de guardar.
 - **Tabla de 11 columnas y vista semanal**: genera la tabla a partir de los datos, sin necesidad de mostrar o conservar el original. Permite editar clases, vincular salones con el directorio y detectar cruces. La app descarta el PDF o imagen después de leerlo; solo persisten los datos estructurados.
 - **Privacidad del horario**: cada ID de cuenta tiene su propio registro local. No se sube a Aiven ni se sincroniza a otros dispositivos, dominios o navegadores. Al iniciar otra cuenta, la aplicación abre el horario de esa cuenta. Borrar datos del navegador/app elimina el horario local.
@@ -99,4 +101,4 @@ Para actualizar las copias estáticas tras cambiar sus dependencias fijadas: `np
 - **Sin PDF guardado**: se eliminó la opción de conservar originales. La actualización local retira originales anteriores sin borrar las clases.
 - La migración aditiva `003_profiles.sql` incorpora fotos y pausa de puestos. Las migraciones 001 y 002 permanecen intactas.
 
-Consulta [ACTUALIZAR_V4.md](docs/ACTUALIZAR_V4.md) y [ALMACENAMIENTO.md](docs/ALMACENAMIENTO.md). No se cambia la configuración de Render/Aiven ni se necesitan claves nuevas.
+Consulta [ACTUALIZAR_V4.md](docs/ACTUALIZAR_V4.md) y [ALMACENAMIENTO.md](docs/ALMACENAMIENTO.md). No se cambia el esquema de Aiven ni se necesitan claves nuevas. El chat temporal usa memoria del proceso de Render: un reinicio o nuevo despliegue puede cerrar conversaciones activas antes de las 12 horas, precisamente porque no se persisten.

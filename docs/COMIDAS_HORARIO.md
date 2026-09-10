@@ -13,16 +13,23 @@ Puedes volver a **Alumno**: se oculta el puesto y se pausan pedidos nuevos; se c
 ## Comprar y seguir tu pedido
 
 1. En **Comidas → Explorar**, busca un producto o abre **Ver puestos** para consultar un menú.
-2. Pulsa **Pedir**. Elige cuántas unidades o lotes quieres, revisa el total y añade una nota opcional.
-3. Pulsa **Solicitar pedido**. La confirmación explica que falta la respuesta del vendedor; **Ver seguimiento** abre el pedido enviado.
-4. Consulta **Mis compras**. Los estados visibles son **Por confirmar**, **En preparación**, **Listo para recoger** y **Entregado**. La fila de seguimiento muestra Enviado → Confirmado → Listo → Entregado.
-5. Espera a que esté listo antes de ir al punto de entrega. El pago se acuerda con el vendedor al recoger.
+2. Pulsa **Consultar / pedir**. Se abre un chat privado con el vendedor para preguntar si sigue ahí, qué más tiene disponible o cualquier detalle antes de confirmar.
+3. El chat admite texto e imágenes JPG/PNG/WebP de hasta 5 MiB. No admite PDF, documentos, audio ni video. La conversación completa y sus imágenes expiran 12 horas después de iniciarse y no se escriben en Aiven.
+4. Cuando estés listo, pulsa **Hacer pedido** dentro del chat. Elige cuántas unidades o lotes quieres, revisa el total, añade una nota opcional y confirma.
+5. Consulta **Mis compras**. Los estados visibles son **Por confirmar**, **En preparación**, **Listo para recoger** y **Entregado**. La fila de seguimiento muestra Enviado → Confirmado → Listo → Entregado. El pedido permanece aunque el chat ya haya expirado.
+6. Espera a que esté listo antes de ir al punto de entrega. El pago se acuerda con el vendedor al recoger.
 
 Cancelar solo está disponible antes de la aceptación. Rechazados y cancelados quedan en el historial. El estado En preparación representa que el vendedor aceptó la solicitud; no se inventan tiempos estimados ni una ubicación en tiempo real.
 
+### Chat temporal de 12 horas
+
+**Comidas → Chats** reúne las conversaciones activas de comprador y vendedor. Los mensajes nuevos llegan en tiempo real mientras Comidas está abierta y la campana incluye su contador temporal. Abrir un chat marca como leídos sus mensajes para esa cuenta. Solo comprador y vendedor pueden consultar la conversación y sus imágenes.
+
+El chat usa únicamente memoria temporal del proceso del servidor: no existe una tabla de chats en PostgreSQL ni se reutiliza la tabla persistente de fotografías. Por ello, un reinicio o un nuevo despliegue de Render puede cerrar chats activos antes de las 12 horas. Los pedidos confirmados y sus avisos persistentes no se pierden por ese motivo.
+
 ## Vender y atender clientes
 
-**Pedidos recibidos** tiene su propio acceso en Comidas: muestra las solicitudes de tus clientes. **Mis compras** muestra lo que tú compras, aunque también tengas puesto.
+**Pedidos recibidos** tiene su propio acceso en Comidas: muestra las solicitudes de tus clientes. **Chats** muestra las conversaciones temporales en las que eres comprador o vendedor. **Mis compras** muestra lo que tú compras, aunque también tengas puesto.
 
 - **Nuevos:** Aceptar pedido o No puedo atenderlo.
 - **En preparación:** Avisar: listo para recoger; si no puedes completarlo, Cancelar preparación avisa al comprador.
@@ -43,11 +50,11 @@ Los avisos, contadores y cambios de estado se consultan cada 30 segundos con la 
 
 Cada producto admite nombre, descripción, fotografía JPG/PNG/WebP y precio en pesos mexicanos. Indica **unitario** o **lote**, con cuántas piezas incluye el lote. El vendedor administra disponibilidad y puede quitar productos del catálogo sin borrar el historial.
 
-El comprador necesita iniciar sesión. Revisa el producto, cantidad y total antes de solicitar. El servidor vuelve a comprobar disponibilidad y precio, calcula el total y evita pedidos duplicados al reintentar la misma solicitud.
+El comprador necesita iniciar sesión. El flujo web abre primero el chat y permite confirmar el pedido desde esa conversación. El servidor vuelve a comprobar disponibilidad y precio, calcula el total y evita pedidos duplicados al reintentar la misma solicitud.
 
 Estados: solicitado → aceptado → listo → entregado. El vendedor puede rechazar pedidos solicitados o aceptados; el comprador puede cancelar mientras está solicitado. El vendedor recibe un aviso persistente y el comprador recibe avisos de cambios. Se consultan dentro de la app, con actualización periódica; no son notificaciones push con la app cerrada ni mensajes por WhatsApp/correo. No se cobran pagos en línea.
 
-Límites: 80 productos activos por puesto; imagen de producto de hasta 5 MiB; hasta 50 unidades o lotes por solicitud; los listados muestran los últimos 300 pedidos y 80 avisos. Los registros anteriores permanecen en la base.
+Límites: 80 productos activos por puesto; imagen de producto de hasta 5 MiB; hasta 50 unidades o lotes por solicitud; chat de 12 h con mensajes de hasta 1200 caracteres y hasta 24 imágenes temporales; los listados muestran los últimos 300 pedidos y 80 avisos. Los registros persistentes anteriores permanecen en la base.
 
 ## Importar el horario de 11 columnas
 

@@ -130,7 +130,72 @@
       );
     }
   }
+  function updateChatCount(c, count) {
+    const total = Number(count || 0);
+    document.querySelectorAll("[data-chat-count]").forEach((el) => {
+      el.textContent = total > 99 ? "99+" : String(total);
+      el.hidden = total === 0;
+    });
+  }
+  function disconnect() {
+    if (active?.chatSource) active.chatSource.close();
+    if (active?.chatGuard) clearInterval(active.chatGuard);
+    active = null;
+  }
+  async function refreshChats(c, session) {
+    if (!session || active !== session || !session.host.isConnected) return null;
+    const data = await call(c, "/chats");
+    if (active !== session || !session.host.isConnected) return null;
+    session.chats = data;
+    updateChatCount(c, data.unread_count);
+    return data;
+  }
+  function connectChatEvents(c, session, current) {
+    const base = c.client?.base || "";
+    const source = new EventSource(base + "/api/food/chats/events", {
+      withCredentials: true,
+    });
+    session.chatSource = source;
+    const refreshFromEvent = async (event) => {
+      if (!current()) {
+        source.close();
+        return;
+      }
+      let payload = {};
+      try {
+        payload = JSON.parse(event.data || "{}");
+      } catch {
+        return;
+      }
+      const previous = Number(session.chats?.unread_count || 0);
+      try {
+        const data = await refreshChats(c, session);
+        if (!data || !current()) return;
+        if (session.openChat?.id === payload.chat_id)
+          await session.openChat.refresh();
+        else if (!payload.from_self && data.unread_count > previous)
+          c.toast("Tienes un nuevo mensaje temporal en Comidas.");
+        if (c.state.foodTab === "chats" && !document.querySelector("dialog[open]"))
+          chatsView(c, c.$("#food-body"), data, session);
+        c.poll();
+      } catch {
+        // EventSource reconnects automatically; the next event or manual refresh retries.
+      }
+    };
+    source.addEventListener("chat", refreshFromEvent);
+    source.addEventListener("ping", () => {
+      if (!current()) source.close();
+    });
+    session.chatGuard = setInterval(() => {
+      if (!current()) {
+        clearInterval(session.chatGuard);
+        source.close();
+      }
+    }, 15000);
+  }
+
   async function render(c) {
+    disconnect();
     const host = c.$("#view"),
       view = c.state.view;
     const owner = c.state.user?.id;
@@ -140,12 +205,16 @@
       refresh: null,
       revision: "",
       noteRevision: "",
+      chats: { items: [], unread_count: 0 },
+      chatSource: null,
+      chatGuard: null,
+      openChat: null,
     };
     active = session;
     const current = () =>
       active === session && host.isConnected && c.state.user?.id === owner;
     if (c.state.demo) {
-      host.innerHTML = `<section class="food-hero"><div><span class="eyebrow">COMIDAS EN LA FIT</span><h2>¿Qué vas a comer?</h2><p>Elige un producto, espera la confirmación del vendedor y recoge en su puesto.</p><button class="btn" id="food-login">Iniciar sesión para pedir</button></div><figure><img src="assets/food-example.jpg" alt="Fotografía ilustrativa de tacos"><figcaption>Imagen de ejemplo · Larry Miller · <a href="https://creativecommons.org/licenses/by-sa/2.0/" target="_blank" rel="noopener">CC BY-SA 2.0</a></figcaption></figure></section>`;
+      host.innerHTML = `<section class="food-hero"><div><span class="eyebrow">COMIDAS EN LA FIT</span><h2>¿Qué vas a comer?</h2><p>Consulta al vendedor por chat, confirma tu pedido y recoge en su puesto.</p><button class="btn" id="food-login">Iniciar sesión para pedir</button></div><figure><img src="assets/food-example.jpg" alt="Fotografía ilustrativa de tacos"><figcaption>Imagen de ejemplo · Larry Miller · <a href="https://creativecommons.org/licenses/by-sa/2.0/" target="_blank" rel="noopener">CC BY-SA 2.0</a></figcaption></figure></section>`;
       c.$("#food-login").onclick = c.signOut;
       return;
     }
@@ -165,19 +234,22 @@
         if (current()) admin(c, host, rows);
         return;
       }
-      const [catalog, mine, notes] = await Promise.all([
+      const [catalog, mine, notes, chats] = await Promise.all([
         call(c, "/catalog"),
         call(c, "/mine"),
         call(c, "/notifications"),
+        call(c, "/chats"),
       ]);
       if (!current()) return;
       updateSummary(c, notes);
+      session.chats = chats;
       session.revision = JSON.stringify(notes.order_summary);
       let tab = c.state.foodTab || "products";
       if (tab === "sales" && !mine.vendor) tab = c.state.foodTab = "mine";
       const nav = [
         ["products", "food", "Explorar", "Encuentra qué comer"],
         ["orders", "bag", "Mis compras", "Lo que tú pediste"],
+        ["chats", "chat", "Chats", "Mensajes temporales de 12 h"],
         ...(mine.vendor
           ? [
               [
@@ -195,13 +267,16 @@
           mine.vendor ? "Productos y datos del puesto" : "Da de alta tu puesto",
         ],
       ];
-      host.innerHTML = `<nav class="food-navigation" aria-label="Secciones de Comidas">${nav.map(([id, icon, title, hint]) => `<button data-food-tab="${id}" class="food-nav-item ${tab === id || (tab === "vendors" && id === "products") ? "active" : ""}" ${tab === id || (tab === "vendors" && id === "products") ? 'aria-current="page"' : ""}>${c.icon(icon)}<span><strong>${title}${id === "orders" || id === "sales" ? ` <span class="food-count" data-food-count="${id === "orders" ? "buyer" : "seller"}" hidden></span>` : ""}</strong><small>${hint}</small></span></button>`).join("")}</nav><div id="food-attention" class="food-attention" aria-live="polite" hidden></div><div id="food-body"></div>`;
+      host.innerHTML = `<nav class="food-navigation" aria-label="Secciones de Comidas">${nav.map(([id, icon, title, hint]) => `<button data-food-tab="${id}" class="food-nav-item ${tab === id || (tab === "vendors" && id === "products") ? "active" : ""}" ${tab === id || (tab === "vendors" && id === "products") ? 'aria-current="page"' : ""}>${c.icon(icon)}<span><strong>${title}${id === "orders" || id === "sales" ? ` <span class="food-count" data-food-count="${id === "orders" ? "buyer" : "seller"}" hidden></span>` : id === "chats" ? ' <span class="food-count" data-chat-count hidden></span>' : ""}</strong><small>${hint}</small></span></button>`).join("")}</nav><div id="food-attention" class="food-attention" aria-live="polite" hidden></div><div id="food-body"></div>`;
       host
         .querySelectorAll("[data-food-tab]")
         .forEach((b) => (b.onclick = () => go(c, b.dataset.foodTab)));
       updateSummary(c, notes);
+      updateChatCount(c, chats.unread_count);
+      connectChatEvents(c, session, current);
       const body = c.$("#food-body");
       if (tab === "products") products(c, body, catalog, mine);
+      if (tab === "chats") chatsView(c, body, chats, session);
       if (tab === "vendors") vendors(c, body, catalog);
       if (tab === "mine") own(c, body, mine);
       if (tab === "orders" || tab === "sales") {
@@ -239,7 +314,7 @@
     }
   }
   function products(c, body, catalog, mine) {
-    body.innerHTML = `<div class="section-heading"><div><h2>¿Qué se te antoja?</h2><p class="hint">${catalog.products.length} productos · ${catalog.vendors.length} puestos aprobados</p></div><button class="btn secondary small" id="browse-vendors">Ver puestos ${c.icon("store")}</button></div><div class="buy-guide"><span><b>1</b> Elige y solicita</span><span><b>2</b> Espera confirmación</span><span><b>3</b> Recoge en el puesto</span></div><div class="tools food-tools"><label class="search">${c.icon("search")}<input class="control" id="food-search" aria-label="Buscar producto o puesto" placeholder="Busca tacos, tortas, bebidas…" value="${c.esc(c.state.foodQuery || "")}"></label><label class="screen-reader" for="food-vendor">Filtrar por puesto</label><select class="control" id="food-vendor"><option value="">Todos los puestos</option>${catalog.vendors.map((v) => `<option value="${v.id}" ${c.state.foodVendor === v.id ? "selected" : ""}>${c.esc(v.business_name)}</option>`).join("")}</select></div><p class="hint" id="food-results" aria-live="polite"></p><div class="food-grid" id="food-cards"></div>`;
+    body.innerHTML = `<div class="section-heading"><div><h2>¿Qué se te antoja?</h2><p class="hint">${catalog.products.length} productos · ${catalog.vendors.length} puestos aprobados</p></div><button class="btn secondary small" id="browse-vendors">Ver puestos ${c.icon("store")}</button></div><div class="buy-guide"><span><b>1</b> Consulta por chat</span><span><b>2</b> Confirma el pedido</span><span><b>3</b> Recoge en el puesto</span></div><div class="tools food-tools"><label class="search">${c.icon("search")}<input class="control" id="food-search" aria-label="Buscar producto o puesto" placeholder="Busca tacos, tortas, bebidas…" value="${c.esc(c.state.foodQuery || "")}"></label><label class="screen-reader" for="food-vendor">Filtrar por puesto</label><select class="control" id="food-vendor"><option value="">Todos los puestos</option>${catalog.vendors.map((v) => `<option value="${v.id}" ${c.state.foodVendor === v.id ? "selected" : ""}>${c.esc(v.business_name)}</option>`).join("")}</select></div><p class="hint" id="food-results" aria-live="polite"></p><div class="food-grid" id="food-cards"></div>`;
     body.querySelector("#browse-vendors").onclick = () => go(c, "vendors");
     const draw = () => {
       const q = body
@@ -260,7 +335,7 @@
         ? list
             .map(
               (p) =>
-                `<article class="food-card"><div class="food-photo">${p.photo_url ? `<img src="${c.esc(p.photo_url)}" alt="${c.esc(p.name)}" loading="lazy">` : `${c.icon("food")}<span>Producto sin foto</span>`}<span class="food-sale-tag">${p.sale_unit === "lot" ? `Lote · ${p.units_per_lot} piezas` : "Por unidad"}</span></div><div class="food-card-body"><span class="eyebrow">${c.esc(p.business_name)}</span><h3>${c.esc(p.name)}</h3><p>${c.esc(p.description)}</p><p class="pickup">${c.icon("pin")}${c.esc(p.pickup_location)}</p><div class="price-row"><div><strong>${money(p.price_cents)}</strong><small>MXN por ${sale(p)}</small></div><button class="btn small" data-order="${p.id}" ${mine.vendor?.id === p.vendor_id ? "disabled" : ""}>${mine.vendor?.id === p.vendor_id ? "Tu producto" : "Pedir"}</button></div></div></article>`,
+                `<article class="food-card"><div class="food-photo">${p.photo_url ? `<img src="${c.esc(p.photo_url)}" alt="${c.esc(p.name)}" loading="lazy">` : `${c.icon("food")}<span>Producto sin foto</span>`}<span class="food-sale-tag">${p.sale_unit === "lot" ? `Lote · ${p.units_per_lot} piezas` : "Por unidad"}</span></div><div class="food-card-body"><span class="eyebrow">${c.esc(p.business_name)}</span><h3>${c.esc(p.name)}</h3><p>${c.esc(p.description)}</p><p class="pickup">${c.icon("pin")}${c.esc(p.pickup_location)}</p><div class="price-row"><div><strong>${money(p.price_cents)}</strong><small>MXN por ${sale(p)}</small></div><button class="btn small" data-order="${p.id}" ${mine.vendor?.id === p.vendor_id ? "disabled" : ""}>${mine.vendor?.id === p.vendor_id ? "Tu producto" : "Consultar / pedir"}</button></div></div></article>`,
             )
             .join("")
         : empty(
@@ -272,13 +347,13 @@
               ? "Cambia la búsqueda o consulta otro puesto."
               : "Aquí aparecerán los productos disponibles de los puestos aprobados.",
           );
-      body.querySelectorAll("[data-order]").forEach(
-        (b) =>
-          (b.onclick = () =>
-            orderDialog(
-              c,
-              catalog.products.find((p) => p.id === b.dataset.order),
-            )),
+      body.querySelectorAll("[data-order]").forEach((b) =>
+        act(c, b, async () => {
+          await orderDialog(
+            c,
+            catalog.products.find((p) => p.id === b.dataset.order),
+          );
+        }),
       );
       images(body);
     };
@@ -312,58 +387,323 @@
         }),
     );
   }
-  function orderDialog(c, p) {
-    const requestId = crypto.randomUUID();
-    const d = c.dialog(
-      `<div class="dialog-content"><span class="eyebrow">TU PEDIDO · ${c.esc(p.business_name)}</span><h2>${c.esc(p.name)}</h2><p>${c.esc(p.description)}</p><div class="order-pickup">${c.icon("pin")}<div><strong>Recoge en</strong><p>${c.esc(p.pickup_location)}</p></div></div><form id="order-form"><label class="field">${p.sale_unit === "lot" ? "¿Cuántos lotes quieres?" : "¿Cuántas unidades quieres?"}<div class="quantity-control"><button type="button" class="btn secondary" data-quantity="-1" aria-label="Quitar uno">−</button><input name="quantity" type="number" value="1" min="1" max="50" step="1" required><button type="button" class="btn secondary" data-quantity="1" aria-label="Agregar uno">+</button></div></label><p class="hint">${money(p.price_cents)} MXN por ${sale(p)}.</p><label class="field">Nota para el vendedor <span class="hint">(opcional)</span><textarea name="note" maxlength="500" placeholder="Por ejemplo: sin cebolla"></textarea></label><div class="checkout-total"><span>Total del pedido</span><strong id="order-total"></strong><small id="order-pieces"></small></div><p class="hint">Primero espera a que el vendedor confirme. Acuerda el pago al recoger; esta solicitud no realiza ningún cobro.</p><p role="alert" class="field-error"></p><button class="btn full" type="submit">Solicitar pedido</button></form></div>`,
-    );
-    const f = d.querySelector("form"),
-      q = f.elements.quantity;
-    const total = () => {
-      const count = Number(q.value),
-        valid = Number.isInteger(count) && count >= 1 && count <= 50;
-      d.querySelector("#order-total").textContent = valid
-        ? `${money(count * p.price_cents)} MXN`
-        : "Revisa la cantidad";
-      d.querySelector("#order-pieces").textContent =
-        valid && p.sale_unit === "lot"
-          ? `${count * p.units_per_lot} piezas en total`
-          : "";
-      d.querySelector('[data-quantity="-1"]').disabled = !valid || count <= 1;
-      d.querySelector('[data-quantity="1"]').disabled = !valid || count >= 50;
+  function chatRemaining(expiresAt) {
+    const ms = Math.max(0, new Date(expiresAt).getTime() - Date.now());
+    if (!ms) return "Finalizado";
+    const hours = Math.floor(ms / 3600000),
+      minutes = Math.max(1, Math.ceil((ms % 3600000) / 60000));
+    return hours ? `${hours} h ${minutes} min` : `${minutes} min`;
+  }
+  function chatsView(c, body, data, session) {
+    if (!body) return;
+    body.innerHTML = `<div class="section-heading"><div><span class="eyebrow">MENSAJES TEMPORALES</span><h2>Chats de Comidas</h2><p class="hint">Habla con el vendedor antes de confirmar. Cada conversación y sus imágenes desaparecen 12 horas después de iniciarse.</p></div><button class="btn secondary small" id="refresh-chats">${c.icon("refresh")} Actualizar</button></div><div class="chat-privacy-note">${c.icon("chat")}<div><strong>No se guardan en Aiven</strong><span>Los mensajes y las imágenes viven solo de forma temporal en el servidor. Los pedidos que confirmes sí quedan en tu historial.</span></div></div>${
+      data.items.length
+        ? `<div class="chat-list">${data.items
+            .map(
+              (chat) =>
+                `<button class="panel chat-list-item ${chat.unread_count ? "unread" : ""}" data-open-chat="${chat.id}"><div class="chat-avatar">${c.esc((chat.counterpart_name || "C").charAt(0).toUpperCase())}</div><div class="chat-list-main"><div><strong>${c.esc(chat.counterpart_name)}</strong><time>${chatRemaining(chat.expires_at)}</time></div><span>${c.esc(chat.product_name)}</span><p>${chat.last_message ? `${chat.last_message.mine ? "Tú: " : ""}${c.esc(chat.last_message.preview)}` : "Conversación iniciada. Escribe tu primer mensaje."}</p></div>${chat.unread_count ? `<b class="chat-unread">${chat.unread_count > 99 ? "99+" : chat.unread_count}</b>` : ""}</button>`,
+            )
+            .join("")}</div>`
+        : empty(
+            c,
+            "Aún no tienes chats activos",
+            "Abre un producto y usa Consultar / pedir. Los chats terminados desaparecen automáticamente.",
+          )
+    }`;
+    body.querySelector("#refresh-chats").onclick = async () => {
+      const button = body.querySelector("#refresh-chats");
+      button.disabled = true;
+      try {
+        const latest = await refreshChats(c, session);
+        if (latest) chatsView(c, body, latest, session);
+      } catch (e) {
+        c.toast(e.message);
+      } finally {
+        if (button.isConnected) button.disabled = false;
+      }
     };
-    q.oninput = total;
-    d.querySelectorAll("[data-quantity]").forEach(
-      (b) =>
-        (b.onclick = () => {
-          q.value = Math.max(
-            1,
-            Math.min(50, Number(q.value || 1) + Number(b.dataset.quantity)),
-          );
-          total();
-        }),
+    body.querySelectorAll("[data-open-chat]").forEach(
+      (button) =>
+        (button.onclick = () => openChat(c, button.dataset.openChat, session)),
     );
-    total();
-    formTask(c, f, async (values) => {
-      const order = await call(c, "/orders", "POST", {
-        product_id: p.id,
-        quantity: Number(values.quantity),
-        note: values.note,
-        request_id: requestId,
-        expected_price_cents: p.price_cents,
+  }
+  async function orderDialog(c, p) {
+    const session = active;
+    if (!session) return;
+    const chat = await call(c, "/chats", "POST", { product_id: p.id });
+    await refreshChats(c, session);
+    chatDialog(c, chat, session);
+  }
+  async function openChat(c, chatId, session = active) {
+    if (!session || active !== session) return;
+    try {
+      const chat = await call(c, "/chats/" + encodeURIComponent(chatId));
+      chatDialog(c, chat, session);
+    } catch (e) {
+      c.toast(e.message);
+      await refreshChats(c, session).catch(() => {});
+      if (c.state.foodTab === "chats" && session.host.isConnected)
+        chatsView(c, c.$("#food-body"), session.chats, session);
+    }
+  }
+  function chatDialog(c, initialChat, session) {
+    if (session.openChat?.dialog?.open) session.openChat.dialog.close();
+    let chat = initialChat,
+      refreshing = false,
+      sending = false,
+      countdown;
+    const d = c.dialog(
+      `<div class="dialog-content chat-dialog"><header class="chat-dialog-head"><div><span class="eyebrow">CHAT TEMPORAL · ${c.esc(chat.business_name)}</span><h2>${c.esc(chat.product_name)}</h2><p>${c.icon("pin")}${c.esc(chat.pickup_location)}</p></div><span class="chat-live-badge">12 h</span></header><div class="chat-expiry-banner">${c.icon("chat")}<div><strong>Esta conversación dura 12 horas</strong><span>Mensajes e imágenes se eliminan automáticamente. No se guardan en Aiven; el pedido confirmado sí se conserva.</span></div><time id="chat-countdown"></time></div><div id="chat-order-state"></div><div class="chat-messages" id="chat-messages" role="log" aria-live="polite" aria-label="Mensajes del chat"></div><div id="chat-error" class="field-error" role="alert"></div><form class="chat-composer" id="chat-composer"><label class="chat-image-button" title="Enviar imagen">${c.icon("photo")}<span class="screen-reader">Enviar imagen</span><input id="chat-image" type="file" accept="image/jpeg,image/png,image/webp" hidden></label><textarea id="chat-text" maxlength="1200" rows="1" placeholder="Escribe un mensaje…" aria-label="Mensaje"></textarea><button class="chat-send-button" type="submit" aria-label="Enviar mensaje">${c.icon("send")}</button></form><div class="chat-bottom"><small>Solo imágenes JPG, PNG o WebP de hasta 5 MB. No se permiten otros archivos.</small><div class="button-row" id="chat-actions"></div></div><div id="chat-order-panel" hidden></div></div>`,
+    );
+    const messages = d.querySelector("#chat-messages"),
+      textBox = d.querySelector("#chat-text"),
+      imageInput = d.querySelector("#chat-image"),
+      composer = d.querySelector("#chat-composer"),
+      errorBox = d.querySelector("#chat-error"),
+      actions = d.querySelector("#chat-actions"),
+      orderState = d.querySelector("#chat-order-state"),
+      orderPanel = d.querySelector("#chat-order-panel");
+
+    const renderMessages = () => {
+      const wasNearBottom =
+        messages.scrollHeight - messages.scrollTop - messages.clientHeight < 100;
+      messages.innerHTML = chat.messages.length
+        ? chat.messages
+            .map(
+              (message) =>
+                `<div class="chat-message-row ${message.mine ? "mine" : "theirs"}"><div class="chat-bubble ${message.kind === "image" ? "image" : ""}">${
+                  message.kind === "image"
+                    ? `<a href="${c.esc(message.image_url)}" target="_blank" rel="noopener"><img src="${c.esc(message.image_url)}" alt="Imagen compartida en el chat" loading="lazy"></a>`
+                    : `<p>${c.esc(message.text).replace(/\n/g, "<br>")}</p>`
+                }<time>${new Date(message.created_at).toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" })}</time></div></div>`,
+            )
+            .join("")
+        : `<div class="chat-empty"><div class="icon-circle">${c.icon("chat")}</div><strong>Inicia la conversación</strong><p>${chat.role === "buyer" ? "Pregunta si el vendedor está disponible, si tiene más productos o cualquier detalle antes de pedir." : "El comprador abrió este chat para consultar antes de hacer su pedido."}</p>${chat.role === "buyer" ? '<div class="chat-suggestions"><button type="button" data-chat-suggestion="¿Sigues vendiendo ahorita?">¿Sigues vendiendo ahorita?</button><button type="button" data-chat-suggestion="¿Qué otros productos tienes disponibles?">¿Qué otros productos tienes?</button></div>' : ""}</div>`;
+      messages.querySelectorAll("[data-chat-suggestion]").forEach(
+        (button) =>
+          (button.onclick = () => {
+            textBox.value = button.dataset.chatSuggestion;
+            textBox.focus();
+          }),
+      );
+      messages.querySelectorAll("img").forEach((img) => {
+        img.onerror = () => {
+          img.closest(".chat-bubble").innerHTML =
+            '<p class="hint">Imagen temporal no disponible.</p>';
+        };
       });
-      d.querySelector(".dialog-content").innerHTML =
-        `<div class="order-success"><div class="icon-circle">${c.icon("check")}</div><span class="eyebrow">SOLICITUD ENVIADA</span><h2>Ahora espera la confirmación</h2><p><strong>${c.esc(p.business_name)}</strong> recibió tu pedido de ${c.esc(p.name)}.</p><p class="hint">En Mis compras verás cuándo lo acepta y cuándo puedes recogerlo.</p><div class="button-row"><button class="btn" id="track-order">Ver seguimiento</button><button class="btn secondary" id="keep-shopping">Seguir explorando</button></div></div>`;
-      d.querySelector("#track-order").onclick = () => {
-        d.close();
-        go(c, "orders", order.id);
-      };
-      d.querySelector("#keep-shopping").onclick = () => {
-        d.close();
-        go(c, "products");
-      };
-      c.poll();
+      if (wasNearBottom || chat.messages.length <= 1)
+        messages.scrollTop = messages.scrollHeight;
+    };
+    const renderOrderState = () => {
+      orderState.innerHTML = chat.order_id
+        ? `<div class="chat-order-linked">${c.icon("check")}<span><strong>Pedido confirmado</strong><small>El pedido queda guardado aunque este chat desaparezca.</small></span><button class="btn secondary small" id="chat-track-order">Ver seguimiento</button></div>`
+        : "";
+      const track = d.querySelector("#chat-track-order");
+      if (track)
+        track.onclick = () => {
+          d.close();
+          go(c, chat.role === "seller" ? "sales" : "orders", chat.order_id);
+        };
+      actions.innerHTML = chat.order_id
+        ? `<button class="btn secondary small" id="chat-order-action">Ver pedido</button>`
+        : chat.role === "buyer"
+          ? `<button class="btn small" id="chat-order-action">Hacer pedido</button>`
+          : "";
+      const action = d.querySelector("#chat-order-action");
+      if (action)
+        action.onclick = () => {
+          if (chat.order_id) {
+            d.close();
+            go(c, chat.role === "seller" ? "sales" : "orders", chat.order_id);
+          } else openOrderComposer();
+        };
+    };
+    const setExpired = () => {
+      textBox.disabled = true;
+      imageInput.disabled = true;
+      composer.querySelector("button").disabled = true;
+      d.querySelector(".chat-image-button").classList.add("disabled");
+      actions.querySelectorAll("button").forEach((button) => (button.disabled = true));
+      errorBox.textContent =
+        "Este chat temporal terminó. Puedes iniciar uno nuevo desde el producto si continúa disponible.";
+    };
+    const updateCountdown = () => {
+      const time = d.querySelector("#chat-countdown");
+      if (!time) return;
+      time.textContent = chatRemaining(chat.expires_at);
+      if (new Date(chat.expires_at).getTime() <= Date.now()) setExpired();
+    };
+    const markRead = async () => {
+      if (!chat.unread_count) return;
+      await call(c, "/chats/" + chat.id + "/read", "POST", {});
+      chat.unread_count = 0;
+      await refreshChats(c, session).catch(() => {});
+    };
+    const refresh = async () => {
+      if (refreshing || !d.isConnected || !d.open) return;
+      refreshing = true;
+      try {
+        chat = await call(c, "/chats/" + encodeURIComponent(chat.id));
+        renderMessages();
+        renderOrderState();
+        updateCountdown();
+        await markRead();
+      } catch (e) {
+        errorBox.textContent = e.message;
+        setExpired();
+      } finally {
+        refreshing = false;
+      }
+    };
+    const openOrderComposer = async () => {
+      if (chat.role !== "buyer" || chat.order_id) return;
+      orderPanel.hidden = false;
+      orderPanel.innerHTML = '<div class="chat-order-loading" role="status">Cargando datos del producto…</div>';
+      try {
+        const catalog = await call(c, "/catalog"),
+          p = catalog.products.find((item) => item.id === chat.product_id);
+        if (!p) throw Error("Este producto ya no está disponible para nuevos pedidos.");
+        const requestId = crypto.randomUUID();
+        orderPanel.innerHTML = `<div class="chat-order-compose"><div class="section-heading"><div><span class="eyebrow">CONFIRMAR PEDIDO</span><h3>${c.esc(p.name)}</h3></div><button type="button" class="text-button" id="close-chat-order">Cerrar</button></div><form id="chat-order-form"><label class="field">${p.sale_unit === "lot" ? "¿Cuántos lotes quieres?" : "¿Cuántas unidades quieres?"}<div class="quantity-control"><button type="button" class="btn secondary" data-chat-quantity="-1" aria-label="Quitar uno">−</button><input name="quantity" type="number" value="1" min="1" max="50" step="1" required><button type="button" class="btn secondary" data-chat-quantity="1" aria-label="Agregar uno">+</button></div></label><p class="hint">${money(p.price_cents)} MXN por ${sale(p)}.</p><label class="field">Nota para el vendedor <span class="hint">(opcional)</span><textarea name="note" maxlength="500" placeholder="Por ejemplo: sin cebolla"></textarea></label><div class="checkout-total"><span>Total del pedido</span><strong id="chat-order-total"></strong><small id="chat-order-pieces"></small></div><p class="hint">El chat sigue siendo temporal. Solo el pedido confirmado se guardará en tu historial.</p><p role="alert" class="field-error"></p><button class="btn full" type="submit">Confirmar pedido</button></form></div>`;
+        d.querySelector("#close-chat-order").onclick = () => {
+          orderPanel.hidden = true;
+          orderPanel.innerHTML = "";
+        };
+        const form = d.querySelector("#chat-order-form"),
+          quantity = form.elements.quantity;
+        const total = () => {
+          const count = Number(quantity.value),
+            valid = Number.isInteger(count) && count >= 1 && count <= 50;
+          d.querySelector("#chat-order-total").textContent = valid
+            ? `${money(count * p.price_cents)} MXN`
+            : "Revisa la cantidad";
+          d.querySelector("#chat-order-pieces").textContent =
+            valid && p.sale_unit === "lot"
+              ? `${count * p.units_per_lot} piezas en total`
+              : "";
+          d.querySelector('[data-chat-quantity="-1"]').disabled =
+            !valid || count <= 1;
+          d.querySelector('[data-chat-quantity="1"]').disabled =
+            !valid || count >= 50;
+        };
+        quantity.oninput = total;
+        d.querySelectorAll("[data-chat-quantity]").forEach(
+          (button) =>
+            (button.onclick = () => {
+              quantity.value = Math.max(
+                1,
+                Math.min(
+                  50,
+                  Number(quantity.value || 1) + Number(button.dataset.chatQuantity),
+                ),
+              );
+              total();
+            }),
+        );
+        total();
+        formTask(c, form, async (values) => {
+          const order = await call(c, "/orders", "POST", {
+            product_id: p.id,
+            quantity: Number(values.quantity),
+            note: values.note,
+            request_id: requestId,
+            expected_price_cents: p.price_cents,
+            chat_id: chat.id,
+          });
+          chat.order_id = order.id;
+          orderPanel.hidden = true;
+          orderPanel.innerHTML = "";
+          renderOrderState();
+          c.toast("Pedido confirmado. El chat seguirá disponible hasta completar sus 12 horas.");
+          c.poll();
+          await refreshChats(c, session).catch(() => {});
+        });
+      } catch (e) {
+        orderPanel.innerHTML = `<div class="notice error" role="alert">${c.esc(e.message)}</div>`;
+      }
+    };
+
+    composer.onsubmit = async (event) => {
+      event.preventDefault();
+      const value = textBox.value.trim();
+      if (!value || sending) return;
+      sending = true;
+      composer.querySelector("button").disabled = true;
+      errorBox.textContent = "";
+      try {
+        await call(c, "/chats/" + chat.id + "/messages", "POST", {
+          text: value,
+        });
+        textBox.value = "";
+        await refresh();
+      } catch (e) {
+        errorBox.textContent = e.message;
+      } finally {
+        sending = false;
+        if (composer.querySelector("button").isConnected)
+          composer.querySelector("button").disabled = false;
+      }
+    };
+    textBox.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" && !event.shiftKey) {
+        event.preventDefault();
+        composer.requestSubmit();
+      }
     });
+    imageInput.onchange = async () => {
+      const file = imageInput.files?.[0];
+      imageInput.value = "";
+      if (!file || sending) return;
+      if (
+        file.size > 5242880 ||
+        !["image/jpeg", "image/png", "image/webp"].includes(file.type)
+      ) {
+        errorBox.textContent = "Usa una imagen JPG, PNG o WebP de hasta 5 MB.";
+        return;
+      }
+      sending = true;
+      imageInput.disabled = true;
+      d.querySelector(".chat-image-button").classList.add("uploading");
+      errorBox.textContent = "";
+      try {
+        const data = new FormData();
+        data.append("file", file);
+        await call(c, "/chats/" + chat.id + "/images", "POST", data);
+        await refresh();
+      } catch (e) {
+        errorBox.textContent = e.message;
+      } finally {
+        sending = false;
+        imageInput.disabled = false;
+        d.querySelector(".chat-image-button").classList.remove("uploading");
+      }
+    };
+
+    renderMessages();
+    renderOrderState();
+    updateCountdown();
+    markRead().catch(() => {});
+    countdown = setInterval(updateCountdown, 30000);
+    session.openChat = { id: chat.id, refresh, dialog: d };
+    d.addEventListener(
+      "close",
+      () => {
+        clearInterval(countdown);
+        if (session.openChat?.id === chat.id) session.openChat = null;
+        refreshChats(c, session)
+          .then((latest) => {
+            if (
+              latest &&
+              c.state.foodTab === "chats" &&
+              session.host.isConnected
+            )
+              chatsView(c, c.$("#food-body"), latest, session);
+          })
+          .catch(() => {});
+      },
+      { once: true },
+    );
   }
   function progress(c, o) {
     const index = F.steps.indexOf(o.status);
@@ -398,7 +738,7 @@
         ? rows
             .map(
               (o) =>
-                `<article class="panel order-card flow-order status-${o.status} ${focus === o.id ? "focused-order" : ""}" data-order-card="${o.id}" tabindex="-1"><div class="section-heading"><div><span class="eyebrow">${seller ? "CLIENTE" : "PUESTO"}</span><strong class="order-person">${c.esc(seller ? o.buyer_name : o.business_name)}</strong></div><span class="order-status ${o.status}">${F.names[o.status] || c.esc(o.status)}</span></div><div class="order-line"><div><h3>${c.esc(o.product_name)}</h3><p>${c.esc(F.quantity(o))}</p></div><strong class="order-amount">${money(o.total_cents)}<small>MXN</small></strong></div>${progress(c, o)}<p class="order-next">${c.esc(F.hints[seller ? "seller" : "buyer"][o.status] || "Consulta el estado de tu pedido.")}</p><p class="pickup">${c.icon("pin")}<span><b>Punto de entrega:</b> ${c.esc(o.pickup_location)}</span></p>${o.note ? `<p class="order-note"><b>Nota del cliente:</b> ${c.esc(o.note)}</p>` : ""}<div class="order-footer"><small>Pedido #${o.id.slice(0, 8)} · ${new Date(o.created_at).toLocaleString("es-MX")}</small><div class="button-row">${F.actions(
+                `<article class="panel order-card flow-order status-${o.status} ${focus === o.id ? "focused-order" : ""}" data-order-card="${o.id}" tabindex="-1"><div class="section-heading"><div><span class="eyebrow">${seller ? "CLIENTE" : "PUESTO"}</span><strong class="order-person">${c.esc(seller ? o.buyer_name : o.business_name)}</strong></div><span class="order-status ${o.status}">${F.names[o.status] || c.esc(o.status)}</span></div><div class="order-line"><div><h3>${c.esc(o.product_name)}</h3><p>${c.esc(F.quantity(o))}</p></div><strong class="order-amount">${money(o.total_cents)}<small>MXN</small></strong></div>${progress(c, o)}<p class="order-next">${c.esc(F.hints[seller ? "seller" : "buyer"][o.status] || "Consulta el estado de tu pedido.")}</p><p class="pickup">${c.icon("pin")}<span><b>Punto de entrega:</b> ${c.esc(o.pickup_location)}</span></p>${o.note ? `<p class="order-note"><b>Nota del cliente:</b> ${c.esc(o.note)}</p>` : ""}<div class="order-footer"><small>Pedido #${o.id.slice(0, 8)} · ${new Date(o.created_at).toLocaleString("es-MX")}</small><div class="button-row">${o.chat_id ? `<button class="btn secondary small" data-order-chat="${o.chat_id}">${c.icon("chat")} Abrir chat</button>` : ""}${F.actions(
                   o.status,
                   seller,
                 )
@@ -426,6 +766,10 @@
     const emptyButton = body.querySelector("#orders-empty-action");
     if (emptyButton)
       emptyButton.onclick = () => go(c, seller ? "mine" : "products");
+    body.querySelectorAll("[data-order-chat]").forEach(
+      (button) =>
+        (button.onclick = () => openChat(c, button.dataset.orderChat, active)),
+    );
     body.querySelectorAll("[data-status]").forEach((b) =>
       act(c, b, async () => {
         const order = orders.find((o) => o.id === b.dataset.id),
@@ -628,8 +972,12 @@
   }
 
   function notifications(c, host, data) {
-    host.innerHTML = `<div class="section-heading"><p>Abre un aviso para ir directamente a su pedido.</p><div class="button-row"><button class="btn secondary small" id="refresh-notes">Actualizar</button><button class="btn small" id="read-all" ${data.unread_count ? "" : "disabled"}>Marcar todos leídos</button></div></div>${data.items.length ? `<div class="notification-list">${data.items.map((n) => `<article class="panel notification ${n.read_at ? "" : "unread"}"><div><span class="eyebrow">${n.read_at ? "LEÍDO" : "NUEVO"}</span><h3>${c.esc(n.title)}</h3><p>${c.esc(n.body)}</p>${n.order_status ? `<p class="hint">Estado actual: ${F.names[n.order_status] || c.esc(n.order_status)}</p>` : ""}<small class="muted">${new Date(n.created_at).toLocaleString("es-MX")}</small></div><div class="button-row">${F.destination(n) ? `<button class="btn small" data-open-note="${n.id}">${n.order_id ? "Ver pedido" : "Ver mi puesto"} ${c.icon("arrow")}</button>` : ""}${!n.read_at ? `<button class="btn secondary small" data-read="${n.id}">Marcar leído</button>` : ""}</div></article>`).join("")}</div>` : empty(c, "Todo al día", "Aquí verás los pedidos nuevos, sus cambios y la revisión de tu puesto.")}`;
+    const chatUnread = Number(data.chat_unread_count || 0);
+    host.innerHTML = `<div class="section-heading"><p>Abre un aviso para ir directamente a su pedido.</p><div class="button-row"><button class="btn secondary small" id="refresh-notes">Actualizar</button><button class="btn small" id="read-all" ${data.unread_count ? "" : "disabled"}>Marcar todos leídos</button></div></div>${chatUnread ? `<div class="chat-notification-banner">${c.icon("chat")}<div><strong>${chatUnread} ${chatUnread === 1 ? "mensaje temporal nuevo" : "mensajes temporales nuevos"}</strong><span>Los chats de Comidas no se guardan en Aiven y desaparecen a las 12 horas.</span></div><button class="btn small" id="open-chat-notes">Ver chats</button></div>` : ""}${data.items.length ? `<div class="notification-list">${data.items.map((n) => `<article class="panel notification ${n.read_at ? "" : "unread"}"><div><span class="eyebrow">${n.read_at ? "LEÍDO" : "NUEVO"}</span><h3>${c.esc(n.title)}</h3><p>${c.esc(n.body)}</p>${n.order_status ? `<p class="hint">Estado actual: ${F.names[n.order_status] || c.esc(n.order_status)}</p>` : ""}<small class="muted">${new Date(n.created_at).toLocaleString("es-MX")}</small></div><div class="button-row">${F.destination(n) ? `<button class="btn small" data-open-note="${n.id}">${n.order_id ? "Ver pedido" : "Ver mi puesto"} ${c.icon("arrow")}</button>` : ""}${!n.read_at ? `<button class="btn secondary small" data-read="${n.id}">Marcar leído</button>` : ""}</div></article>`).join("")}</div>` : empty(c, chatUnread ? "No hay más avisos pendientes" : "Todo al día", chatUnread ? "Tus novedades restantes están en los chats temporales de Comidas." : "Aquí verás los pedidos nuevos, sus cambios y la revisión de tu puesto.")}`;
     host.querySelector("#refresh-notes").onclick = c.render;
+    host.querySelector("#open-chat-notes")?.addEventListener("click", () =>
+      go(c, "chats"),
+    );
     act(c, host.querySelector("#read-all"), async () => {
       await call(c, "/notifications/read", "PATCH", { all: true });
       c.render();
@@ -673,6 +1021,7 @@
 
   async function updateNotifications(c, data) {
     updateSummary(c, data);
+    updateChatCount(c, data.chat_unread_count);
     const session = active;
     if (
       !session ||
@@ -697,5 +1046,5 @@
       session.noteRevision = JSON.stringify(data);
     }
   }
-  root.FIT_FOOD = { render, updateNotifications };
+  root.FIT_FOOD = { render, updateNotifications, disconnect };
 })(window);

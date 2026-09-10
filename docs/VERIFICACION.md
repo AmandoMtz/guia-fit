@@ -14,6 +14,8 @@ Revisión de la entrega 4: 10 de septiembre de 2026.
 
 ## Comidas: comprobaciones de esta entrega
 
+- Chat temporal: `node --test tests/food.test.cjs` completó 11/11 pruebas. Se comprobó privacidad entre comprador/vendedor, TTL de 12 horas, mensajes, imagen válida optimizada a WebP, rechazo de archivos no permitidos, contador de no leídos y vinculación con el pedido.
+- Persistencia: la prueba verifica que no se crea ninguna tabla `food_chat%` y que una instancia nueva de la API no recupera chats, mientras el pedido confirmado sí permanece en las tablas existentes.
 - API: el detalle de un pedido solo puede consultarse por su comprador o su vendedor. Se rechazan usuarios ajenos, otro vendedor y un administrador ajeno. Los avisos indican el rol y el estado actual sin deducir permisos del texto.
 - Los contadores distinguen compras y ventas; los pedidos cancelados y entregados salen de los contadores activos. Marcar avisos como leídos no cambia los pedidos.
 - Dos lotes de tres piezas muestran seis piezas y conservan el precio del lote completo. Se mantienen cálculo de importes e idempotencia en el servidor.

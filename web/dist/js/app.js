@@ -25,6 +25,8 @@
     food: "M4 3v7m3-7v7m3-7v7M4 7h6m-3 3v11M17 3c-3 4-3 9 1 9h2V3h-3zm3 9v9",
     calendar: "M4 5h16v16H4z M4 10h16M8 3v4m8-4v4M8 14h2m4 0h2m-8 3h2",
     bell: "M5 16h14l-2-3V8a5 5 0 00-10 0v5l-2 3zm5 4h4",
+    chat: "M4 5h16v11H9l-5 4V5zm4 4h8M8 12h5",
+    send: "M3 11l18-8-7 18-3-7-8-3zm8 3L21 3",
     map: "M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3V6zm6-3v15m6-12v15",
     pin: "M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 1116 0z M15 10a3 3 0 11-6 0 3 3 0 016 0",
     arrow: "M4 12h16m-6-6 6 6-6 6",
@@ -367,6 +369,8 @@
     document.querySelectorAll("[data-view]").forEach(
       (b) =>
         (b.onclick = () => {
+          if (state.view === "food" && b.dataset.view !== "food")
+            window.FIT_FOOD?.disconnect?.();
           state.view = b.dataset.view;
           render();
         }),
@@ -429,9 +433,11 @@
     try {
       const result = await client.request("/api/food/notifications");
       if (state.user?.id !== userId) return;
-      const count = result.data?.unread_count;
+      const persistent = Number(result.data?.unread_count || 0),
+        temporary = Number(result.data?.chat_unread_count || 0),
+        count = persistent + temporary;
       const el = $("#notification-count");
-      if (el && count !== undefined) {
+      if (el && result.data) {
         el.textContent = count > 99 ? "99+" : String(count);
         el.hidden = count === 0;
       }
@@ -452,6 +458,7 @@
   });
   async function signOut() {
     try {
+      window.FIT_FOOD?.disconnect?.();
       if (client && !state.demo) {
         const { error } = await client.auth.signOut();
         if (error) throw error;
@@ -686,7 +693,7 @@
       `<section class="profile-hero"><div>${profileAvatar(null, true)}<div><span class="eyebrow">TU ESPACIO EN LA FIT</span><h2>${esc(p.full_name || "Mi cuenta")}</h2><p>${p.food_seller_intent ? "Alumno vendedor" : "Alumno"}</p></div></div><form id="profile-photo-form"><label class="field">Foto de perfil<input type="file" id="profile-photo" accept="image/jpeg,image/png,image/webp" required></label><div class="button-row"><button class="btn small" type="submit">Guardar foto</button>${p.photo_updated_at ? '<button class="text-button" type="button" id="delete-avatar">Quitar foto</button>' : ""}</div><p class="hint">JPG, PNG o WebP; hasta 5 MB. Se guarda una copia optimizada en tu cuenta.</p></form></section><div class="profile-grid"><section class="panel"><h2>Mis datos</h2><form id="profile-form">${field("full_name", "Nombre completo", "text", "name")}<div class="field"><label>Correo electrónico</label><p>${esc(state.user.email)}</p></div>${field("student_id", "Matrícula (opcional)", "text", "off", "Se validará únicamente con una fuente institucional autorizada.")}<button class="btn">Guardar cambios</button><p class="hint" style="margin-top:16px">Modificar el nombre o la matrícula devuelve su validación institucional al estado pendiente.</p></form></section><section class="panel"><h2>Estado de tu cuenta</h2><p class="hint">Identificador para revisión institucional:<br><span style="overflow-wrap:anywhere">${esc(state.user.id)}</span></p><div class="status-item">${badge(!!state.user.email_confirmed_at)}<p>Correo electrónico</p></div><div class="status-item">${badge(state.verification?.status === "verified")}<p>Vinculación con la facultad</p><p class="hint">${state.verification?.status === "verified" ? "Confirmada por un administrador con una fuente autorizada." : "Pendiente de contrastar tus datos con una fuente institucional autorizada."}</p></div><p class="hint" style="margin-top:20px">Tu nombre y tu matrícula no se consideran auténticos únicamente por haberlos escrito en el formulario.</p></section></div>`;
     $("#view").insertAdjacentHTML(
       "beforeend",
-      `<section class="panel account-mode-panel"><div><span class="eyebrow">UNA CUENTA, MÁS POSIBILIDADES</span><h2>Mi tipo de cuenta</h2><p>Activa tu espacio de ventas cuando lo necesites. Conservas tu acceso de alumno y tus pedidos.</p></div><form id="account-mode-form"><label class="field">Usar mi cuenta como<select name="mode"><option value="student" ${!p.food_seller_intent ? "selected" : ""}>Alumno</option><option value="student_seller" ${p.food_seller_intent ? "selected" : ""}>Alumno vendedor</option></select></label><button class="btn" type="submit">Guardar tipo de cuenta</button><button class="text-button" id="go-my-shop" type="button">${p.food_seller_intent ? "Configurar mi puesto" : "Ver Comidas"} →</button><p class="hint">El puesto necesita aprobación antes de publicar. Si vuelves a Alumno, se oculta tu puesto y se pausan nuevos pedidos; puedes terminar los que ya recibiste.</p></form></section><section class="panel storage-summary"><h2>¿Dónde se guardan mis datos?</h2><div><p><b>En tu cuenta</b><br>Perfil, foto, tipo de cuenta, puesto, productos, pedidos y avisos.</p><p><b>Solo en este dispositivo</b><br>Nombre, matrícula, carrera y clases de tu horario. Otra cuenta no ve tu tabla.</p><p><b>Archivo del horario</b><br>Se procesa y se descarta. No se guarda el PDF ni la imagen en el servidor o en la app.</p></div><p class="hint">El horario no se sincroniza entre dispositivos. Borrar los datos del navegador elimina la tabla local.</p></section>`,
+      `<section class="panel account-mode-panel"><div><span class="eyebrow">UNA CUENTA, MÁS POSIBILIDADES</span><h2>Mi tipo de cuenta</h2><p>Activa tu espacio de ventas cuando lo necesites. Conservas tu acceso de alumno y tus pedidos.</p></div><form id="account-mode-form"><label class="field">Usar mi cuenta como<select name="mode"><option value="student" ${!p.food_seller_intent ? "selected" : ""}>Alumno</option><option value="student_seller" ${p.food_seller_intent ? "selected" : ""}>Alumno vendedor</option></select></label><button class="btn" type="submit">Guardar tipo de cuenta</button><button class="text-button" id="go-my-shop" type="button">${p.food_seller_intent ? "Configurar mi puesto" : "Ver Comidas"} →</button><p class="hint">El puesto necesita aprobación antes de publicar. Si vuelves a Alumno, se oculta tu puesto y se pausan nuevos pedidos; puedes terminar los que ya recibiste.</p></form></section><section class="panel storage-summary"><h2>¿Dónde se guardan mis datos?</h2><div><p><b>En tu cuenta</b><br>Perfil, foto, tipo de cuenta, puesto, productos, pedidos y avisos.</p><p><b>Chat de Comidas</b><br>Mensajes e imágenes son temporales y expiran a las 12 h; no se guardan en Aiven. Solo el pedido confirmado permanece.</p><p><b>Solo en este dispositivo</b><br>Nombre, matrícula, carrera y clases de tu horario. Otra cuenta no ve tu tabla.</p><p><b>Archivo del horario</b><br>Se procesa y se descarta. No se guarda el PDF ni la imagen en el servidor o en la app.</p></div><p class="hint">El horario no se sincroniza entre dispositivos. Borrar los datos del navegador elimina la tabla local.</p></section>`,
     );
     const refreshProfile = async () => {
       const owner = state.user?.id;

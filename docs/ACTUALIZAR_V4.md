@@ -31,7 +31,7 @@ Vuelve a la misma PowerShell:
 ```powershell
 git status
 git add .
-git commit -m "Mejora Comidas, seguimiento y pedidos recibidos"
+git commit -m "Agrega chat temporal de 12 horas en Comidas"
 git push origin main
 ```
 
@@ -48,20 +48,22 @@ Mantén el mismo servicio, dominio y configuración:
 | AUTO_MIGRATE                  | `true`, una sola variable con ese nombre |
 | DATABASE_URL y certificado CA | Tus valores actuales                     |
 
-Esta entrega no añade migraciones ni modifica las migraciones 001, 002 o 003. Continúa utilizando tus usuarios, puestos, productos, pedidos y fotos en Aiven. No necesita una base nueva, claves nuevas ni cambios manuales de tablas.
+Esta entrega no añade migraciones ni modifica las migraciones 001, 002 o 003. Continúa utilizando tus usuarios, puestos, productos, pedidos y fotos en Aiven. Los mensajes e imágenes del chat no se guardan en PostgreSQL: viven temporalmente en memoria del Web Service y expiran a las 12 horas. No necesita una base nueva, claves nuevas ni cambios manuales de tablas.
 
 Revisa **Deploys**. Si no se inicia automáticamente, usa **Manual Deploy → Deploy latest commit**. Espera a que el commit aparezca activo y abre tu dominio habitual. Si aún ves la interfaz anterior, usa Ctrl+F5; evita borrar los datos del sitio porque ahí están los horarios locales.
 
 ## 5. Probar el flujo
 
 - Con la cuenta vendedora, abre **Comidas → Mi puesto** y consulta su estado y menú.
-- Con otra cuenta, solicita un producto y comprueba la cantidad y el precio antes de enviarlo.
+- Con otra cuenta, abre un producto y pulsa **Consultar / pedir**. Envía un mensaje y, si quieres, una imagen JPG/PNG/WebP.
+- En la cuenta vendedora, abre **Comidas → Chats**, responde y comprueba que el mensaje aparezca sin recargar.
+- Desde el mismo chat del comprador pulsa **Hacer pedido**, revisa cantidad y total y confírmalo.
 - En la cuenta vendedora, abre **Pedidos recibidos → Nuevos**, acepta y marca **Listo para recoger**.
 - En el comprador, abre **Mis compras** o la campana → **Ver pedido**; comprueba el estado y punto de entrega.
 - Confirma la entrega desde el vendedor únicamente cuando el comprador la reciba.
 - Si una cuenta compra y vende, sus compras y sus ventas aparecen por separado.
 
-La revisión administrativa está en **Revisar vendedores**. Se conserva tu cuenta administradora existente. Los avisos siguen siendo internos a la aplicación; no son WhatsApp ni notificaciones push con la app cerrada.
+La revisión administrativa está en **Revisar vendedores**. Se conserva tu cuenta administradora existente. El chat tiene una interfaz tipo mensajería, pero sigue siendo interno a Guía FIT; no usa WhatsApp ni notificaciones push con la app cerrada. Como no existe persistencia del chat, un reinicio o despliegue de Render puede terminar conversaciones activas antes de las 12 horas.
 
 ## Desarrollo local y Flutter
 

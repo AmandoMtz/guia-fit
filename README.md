@@ -1,8 +1,8 @@
-# Guía FIT 2 · Comidas y horario personal
+# Guía FIT 3 · Horarios, cuenta y Comidas
 
 Web responsiva y aplicación Flutter/Dart para encontrar espacios, comprar comida en la facultad y organizar el horario personal. Conserva acceso, registro, confirmación de correo, recuperación, perfiles, mapa y logotipos originales de UAT/FIT.
 
-**¿Ya lo tienes en GitHub y Render? Empieza por `docs/ACTUALIZAR_V2.md`.** La nueva migración conserva los datos existentes.
+**¿Ya lo tienes en GitHub y Render? Empieza por `docs/ACTUALIZAR_V3.md`.** La nueva migración conserva los datos existentes.
 
 ## Empezar
 
@@ -40,7 +40,7 @@ Web responsiva y aplicación Flutter/Dart para encontrar espacios, comprar comid
 - **Mi puesto**: solicitud de alta, edición de datos, alta/edición/eliminación de productos, disponibilidad y pedidos recibidos. La opción de vendedor en el registro indica interés; no otorga aprobación ni privilegios.
 - **Pedidos y avisos**: solicitado → aceptado → listo → entregado; cancelación antes de aceptar y rechazo por el vendedor. Avisos persistentes en la cuenta, consultados cada 30 segundos con la app abierta y al entrar en Avisos. No incluye cobros, reparto, mensajes externos ni notificaciones push con la app cerrada.
 - **Mi horario**: importa PDF, JPG, PNG o WebP. Extrae texto localmente; imágenes y páginas escaneadas usan OCR en el dispositivo. Revisa nombre, matrícula, carrera, materia, maestro, grupo, salón, día y horas antes de guardar.
-- **Tabla semanal**: genera la tabla a partir de los datos, sin necesidad de mostrar o conservar el original. Permite editar clases, vincular salones con el directorio y detectar cruces. El archivo original es una referencia opcional.
+- **Tabla de 11 columnas y vista semanal**: genera la tabla a partir de los datos, sin necesidad de mostrar o conservar el original. Permite editar clases, vincular salones con el directorio y detectar cruces. La app descarta el PDF o imagen después de leerlo; solo persisten los datos estructurados.
 - **Privacidad del horario**: cada ID de cuenta tiene su propio registro local. No se sube a Aiven ni se sincroniza a otros dispositivos, dominios o navegadores. Al iniciar otra cuenta, la aplicación abre el horario de esa cuenta. Borrar datos del navegador/app elimina el horario local.
 
 Consulta `docs/COMIDAS_HORARIO.md` para el uso y los límites de la importación.
@@ -81,3 +81,13 @@ Los servicios externos se configuran en tus propias cuentas. Este ZIP no publica
 PDF.js, Tesseract.js y el modelo de español se incluyen en `web/dist/vendor/`; Flutter Web lleva su copia del OCR en `flutter/web/vendor/`. No se envía el documento a un servicio de OCR. El navegador descarga los motores desde tu propio sitio antes de procesar. En Android/iOS, Flutter usa ML Kit con el modelo latino incluido en el paquete nativo. La importación funciona con documentos legibles; OCR y extracción no sustituyen la revisión del alumno ni una validación institucional.
 
 Para actualizar las copias estáticas tras cambiar sus dependencias fijadas: `npm run assets:pdf` y `npm run assets:ocr`, y añade los archivos generados a Git. Las dependencias de desarrollo y compilaciones no se incluyen en el ZIP. Las licencias acompañan a los motores; `FOOD_IMAGE_LICENSE.txt` acredita la fotografía ilustrativa de Comidas.
+
+## Cambios de esta entrega
+
+- Importación del formato **GPO, MATERIA, AULA, LUNES, MARTES, MIÉRCOLES, JUEVES, VIERNES, SÁBADO, DOMINGO, PROFESOR**. Conserva celdas vacías por coordenadas y reúne textos que ocupan varias líneas. No agrupa las clases únicamente por docente u hora.
+- **Mi cuenta → Mi tipo de cuenta** permite cambiar entre Alumno y Alumno vendedor, incluso en cuentas antiguas. La aprobación del puesto sigue a cargo del administrador. Volver a Alumno pausa las ventas nuevas y conserva el historial.
+- **Foto de perfil**: subir, reemplazar o quitar en web y Flutter. El servidor valida y convierte a WebP de hasta 512 × 512; guarda una sola imagen por cuenta. La foto personal solo se consulta desde la sesión de esa cuenta.
+- **Sin PDF guardado**: se eliminó la opción de conservar originales. La actualización local retira originales anteriores sin borrar las clases.
+- La migración aditiva `003_profiles.sql` incorpora fotos y pausa de puestos. Las migraciones 001 y 002 permanecen intactas.
+
+Consulta [ACTUALIZAR_V3.md](docs/ACTUALIZAR_V3.md) y [ALMACENAMIENTO.md](docs/ALMACENAMIENTO.md). No se cambia la configuración de Render/Aiven ni se necesitan claves nuevas.

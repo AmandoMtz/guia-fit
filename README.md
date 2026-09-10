@@ -1,8 +1,8 @@
-# Guía FIT 3 · Horarios, cuenta y Comidas
+# Guía FIT 4 · Comidas más claras
 
 Web responsiva y aplicación Flutter/Dart para encontrar espacios, comprar comida en la facultad y organizar el horario personal. Conserva acceso, registro, confirmación de correo, recuperación, perfiles, mapa y logotipos originales de UAT/FIT.
 
-**¿Ya lo tienes en GitHub y Render? Empieza por `docs/ACTUALIZAR_V3.md`.** La nueva migración conserva los datos existentes.
+**¿Ya lo tienes en GitHub y Render? Empieza por `docs/ACTUALIZAR_V4.md`.** Esta entrega mejora Comidas sin cambiar el esquema de la base de datos.
 
 ## Empezar
 
@@ -14,15 +14,15 @@ Web responsiva y aplicación Flutter/Dart para encontrar espacios, comprar comid
 
 ## Arquitectura
 
-| Pieza            | Implementación                                                                              |
-| ---------------- | ------------------------------------------------------------------------------------------- |
-| Web              | HTML, CSS y JavaScript, adaptable a celular y escritorio                                    |
-| API              | Node.js / Express, alojada junto a la web en Render                                         |
-| Datos y fotos    | PostgreSQL en Aiven, conexión TLS con CA verificada                                         |
-| Horario personal | Tabla editable y documento opcional guardados en el dispositivo, separados por ID de cuenta |
-| App              | Flutter y Dart para Android, iOS y web; consume la misma API                                |
-| Correo           | Resend por HTTPS; SMTP opcional                                                             |
-| Código           | Git, archivo de exclusiones, workflow de GitHub Actions y Blueprint de Render               |
+| Pieza            | Implementación                                                                          |
+| ---------------- | --------------------------------------------------------------------------------------- |
+| Web              | HTML, CSS y JavaScript, adaptable a celular y escritorio                                |
+| API              | Node.js / Express, alojada junto a la web en Render                                     |
+| Datos y fotos    | PostgreSQL en Aiven, conexión TLS con CA verificada                                     |
+| Horario personal | Tabla editable guardada en el dispositivo por ID de cuenta; el PDF o imagen se descarta |
+| App              | Flutter y Dart para Android, iOS y web; consume la misma API                            |
+| Correo           | Resend por HTTPS; SMTP opcional                                                         |
+| Código           | Git, archivo de exclusiones, workflow de GitHub Actions y Blueprint de Render           |
 
 ## Funciones incluidas
 
@@ -34,7 +34,16 @@ Web responsiva y aplicación Flutter/Dart para encontrar espacios, comprar comid
 - Panel web para agregar/editar salones, fotografías, tramos y revisar perfiles. Web y Flutter incluyen revisión de vendedores para administradores.
 - Fotos de entrada en JPG/PNG/WebP, máximo 5 MB, almacenadas en Aiven para conservarlas cuando Render reinicie.
 
-## Nuevos módulos
+## Comidas: del antojo a la entrega
+
+- **Explorar**: productos con foto, precio por unidad o lote, búsqueda y menús por puesto.
+- **Mis compras**: seguimiento de lo que tú pediste, con instrucciones según su estado.
+- **Pedidos recibidos**: acceso directo a las ventas, filtros Nuevos / En preparación / Por entregar / Historial y contadores por cuenta.
+- **Mi puesto**: menú, fotos y precios; activa o pausa productos y consulta el estado real de publicación.
+- **Solicitar pedido**: cantidad con botones +/−, total y piezas por lote antes de enviar. Después aparece la confirmación y el botón Ver seguimiento.
+- **Avisos**: Ver pedido abre el pedido exacto, tanto de compra como de venta. Los contadores y cambios se consultan cada 30 segundos con la app activa; las confirmaciones y formularios no se cierran al actualizar.
+
+## Módulos conservados
 
 - **Comidas**: catálogo de vendedores aprobados, productos con foto y precios en MXN por unidad o lote, búsqueda por puesto y solicitudes de compradores con sesión iniciada.
 - **Mi puesto**: solicitud de alta, edición de datos, alta/edición/eliminación de productos, disponibilidad y pedidos recibidos. La opción de vendedor en el registro indica interés; no otorga aprobación ni privilegios.
@@ -82,7 +91,7 @@ PDF.js, Tesseract.js y el modelo de español se incluyen en `web/dist/vendor/`; 
 
 Para actualizar las copias estáticas tras cambiar sus dependencias fijadas: `npm run assets:pdf` y `npm run assets:ocr`, y añade los archivos generados a Git. Las dependencias de desarrollo y compilaciones no se incluyen en el ZIP. Las licencias acompañan a los motores; `FOOD_IMAGE_LICENSE.txt` acredita la fotografía ilustrativa de Comidas.
 
-## Cambios de esta entrega
+## Funciones de la entrega anterior que se conservan
 
 - Importación del formato **GPO, MATERIA, AULA, LUNES, MARTES, MIÉRCOLES, JUEVES, VIERNES, SÁBADO, DOMINGO, PROFESOR**. Conserva celdas vacías por coordenadas y reúne textos que ocupan varias líneas. No agrupa las clases únicamente por docente u hora.
 - **Mi cuenta → Mi tipo de cuenta** permite cambiar entre Alumno y Alumno vendedor, incluso en cuentas antiguas. La aprobación del puesto sigue a cargo del administrador. Volver a Alumno pausa las ventas nuevas y conserva el historial.
@@ -90,4 +99,4 @@ Para actualizar las copias estáticas tras cambiar sus dependencias fijadas: `np
 - **Sin PDF guardado**: se eliminó la opción de conservar originales. La actualización local retira originales anteriores sin borrar las clases.
 - La migración aditiva `003_profiles.sql` incorpora fotos y pausa de puestos. Las migraciones 001 y 002 permanecen intactas.
 
-Consulta [ACTUALIZAR_V3.md](docs/ACTUALIZAR_V3.md) y [ALMACENAMIENTO.md](docs/ALMACENAMIENTO.md). No se cambia la configuración de Render/Aiven ni se necesitan claves nuevas.
+Consulta [ACTUALIZAR_V4.md](docs/ACTUALIZAR_V4.md) y [ALMACENAMIENTO.md](docs/ALMACENAMIENTO.md). No se cambia la configuración de Render/Aiven ni se necesitan claves nuevas.

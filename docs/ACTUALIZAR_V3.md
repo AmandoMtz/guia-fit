@@ -1,4 +1,6 @@
-# Actualizar Guía FIT en GitHub y Render
+# Actualización 3 · referencia histórica
+
+Para el ZIP actual usa [ACTUALIZAR_V4.md](ACTUALIZAR_V4.md).
 
 Este ZIP parte del archivo `guia-fit-main.zip` que compartiste del repositorio `AmandoMtz/guia-fit`. Incluye web, servidor, Flutter, motores locales de lectura y las migraciones. No se han publicado cambios en tus servicios.
 

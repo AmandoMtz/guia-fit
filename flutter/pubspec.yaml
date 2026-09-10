@@ -1,7 +1,7 @@
 name: guia_fit
 description: Guía de espacios de la Facultad de Ingeniería Tampico.
 publish_to: none
-version: 3.0.0+3
+version: 4.0.0+4
 environment:
   sdk: '>=3.8.0 <4.0.0'
 dependencies:

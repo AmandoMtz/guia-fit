@@ -18,6 +18,10 @@
     seed = window.FIT_CATALOG,
     config = window.FIT_CONFIG;
   const paths = {
+    bag: "M5 7h14l1 14H4L5 7zm4 0V5a3 3 0 016 0v2",
+    store: "M3 10h18L19 3H5l-2 7zm1 0v11h16V10M8 21v-7h8v7",
+    refresh: "M20 7v5h-5M4 17v-5h5M6 6a8 8 0 0114 6M18 18A8 8 0 014 12",
+    plus: "M12 4v16M4 12h16",
     food: "M4 3v7m3-7v7m3-7v7M4 7h6m-3 3v11M17 3c-3 4-3 9 1 9h2V3h-3zm3 9v9",
     calendar: "M4 5h16v16H4z M4 10h16M8 3v4m8-4v4M8 14h2m4 0h2m-8 3h2",
     bell: "M5 16h14l-2-3V8a5 5 0 00-10 0v5l-2 3zm5 4h4",
@@ -318,7 +322,7 @@
     const names = {
       food: [
         "Comidas",
-        "Una pausa entre clases, con el sabor de tu comunidad.",
+        "Elige qué comer, sigue tus compras o atiende a tus clientes.",
       ],
       schedule: ["Mi horario", "Tu semana, tus materias y tu próximo salón."],
       notifications: ["Mis avisos", "Novedades de tus pedidos y de tu puesto."],
@@ -352,7 +356,7 @@
     if (state.admin)
       menu.push(
         ["admin", "edit", "Administrar"],
-        ["food-admin", "food", "Vendedores"],
+        ["food-admin", "store", "Revisar vendedores"],
       );
     const current = names[state.view],
       initial = (state.profile?.full_name || state.user?.email || "D")
@@ -431,6 +435,13 @@
         el.textContent = count > 99 ? "99+" : String(count);
         el.hidden = count === 0;
       }
+      if (result.data)
+        await window.FIT_FOOD?.updateNotifications(
+          moduleContext(),
+          result.data,
+        );
+    } catch {
+      // The last known counts remain visible; the next poll or manual refresh retries.
     } finally {
       polling = false;
     }
@@ -453,6 +464,16 @@
       state.route = null;
       state.notice = "";
       state.mode = "login";
+      for (const key of [
+        "foodSummary",
+        "foodTab",
+        "foodFocusOrder",
+        "foodVendor",
+        "foodQuery",
+        "salesFilter",
+        "ordersFilter",
+      ])
+        delete state[key];
       render();
     } catch {
       toast(

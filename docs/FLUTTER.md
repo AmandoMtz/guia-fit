@@ -82,3 +82,9 @@ Consulta `VERIFICACION.md` para las comprobaciones ejecutadas. El correo real, c
 Referencias de OCR: [plugin ML Kit](https://pub.dev/packages/google_mlkit_text_recognition/versions/0.15.0), [modelo latino incluido en Android](https://developers.google.com/ml-kit/vision/text-recognition/v2/android), [Tesseract local](https://github.com/naptha/tesseract.js/blob/master/docs/local-installation.md).
 
 Mi cuenta permite cambiar Alumno/Alumno vendedor y subir, reemplazar o eliminar una foto de perfil. Las fotos de perfil, productos y cuentas usan Aiven a través de la API. Los horarios siguen siendo locales. Consulta `ALMACENAMIENTO.md`.
+
+## Comidas en la entrega 4
+
+La misma API sirve a Explorar, Mis compras, Pedidos recibidos y Mi puesto. Los avisos tienen Ver pedido; la navegación se conserva al pasar de la campana a Comidas. El resumen de dos lotes indica el número total de piezas y el precio completo. El seguimiento muestra qué hacer en cada etapa, y los permisos se validan en el servidor.
+
+No se añadieron dependencias Flutter ni cambios de plataforma. La versión de la app es 4.0.0+4. Recompila tu aplicación para recibir la nueva interfaz.

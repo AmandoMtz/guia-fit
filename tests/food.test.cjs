@@ -266,6 +266,45 @@ test("Comidas: permisos, dinero, pedidos y notificaciones persistentes", async (
     },
   );
   await t.test(
+    "los avisos abren el pedido propio y los contadores separan compras de ventas",
+    async () => {
+      const detail = (
+        await req(seller, "get", "/orders/" + order.id).expect(200)
+      ).body.data;
+      assert.equal(detail.order_role, "seller");
+      assert.equal(detail.buyer_name, "Comprador Uno");
+      assert.equal(
+        (await req(buyer, "get", "/orders/" + order.id).expect(200)).body.data
+          .order_role,
+        "buyer",
+      );
+      await req(stranger, "get", "/orders/" + order.id).expect(404);
+      await req(seller2, "get", "/orders/" + order.id).expect(404);
+      await req(admin, "get", "/orders/" + order.id).expect(404);
+      await req(buyer, "get", "/orders/no-es-un-id").expect(400);
+      const selling = (await req(seller, "get", "/notifications").expect(200))
+        .body.data;
+      const buying = (await req(buyer, "get", "/notifications").expect(200))
+        .body.data;
+      assert.equal(selling.order_summary.seller.requested, 1);
+      assert.deepEqual(selling.order_summary.buyer, {});
+      assert.equal(buying.order_summary.buyer.requested, 1);
+      assert.deepEqual(buying.order_summary.seller, {});
+      assert.equal(
+        selling.items.find((n) => n.order_id === order.id).order_role,
+        "seller",
+      );
+      assert.equal(
+        selling.items.find((n) => n.order_id === order.id).order_status,
+        "requested",
+      );
+      const unrelated = (await req(stranger, "get", "/notifications")).body
+        .data;
+      assert.deepEqual(unrelated.order_summary.buyer, {});
+      assert.deepEqual(unrelated.order_summary.seller, {});
+    },
+  );
+  await t.test(
     "compradores y vendedores ven solo sus pedidos; estados inválidos y accesos ajenos se bloquean",
     async () => {
       assert.equal((await req(stranger, "get", "/orders")).body.data.length, 0);
@@ -323,6 +362,18 @@ test("Comidas: permisos, dinero, pedidos y notificaciones persistentes", async (
     "avisos sobreviven a otra instancia de la API y marcar leídos respeta la cuenta",
     async () => {
       const notes = (await req(seller, "get", "/notifications")).body.data;
+      assert.equal(notes.order_summary.seller.completed, 1);
+      assert.equal(notes.order_summary.seller.cancelled, 1);
+      assert.equal(notes.order_summary.seller.requested, undefined);
+      const buying = (await req(buyer, "get", "/notifications")).body.data;
+      assert.equal(
+        buying.items.find((n) => n.order_id === order.id).order_role,
+        "buyer",
+      );
+      assert.equal(
+        buying.items.find((n) => n.order_id === order.id).order_status,
+        "completed",
+      );
       assert.ok(notes.unread_count >= 3);
       await req(stranger, "patch", "/notifications/read", {
         ids: notes.items.map((n) => n.id),

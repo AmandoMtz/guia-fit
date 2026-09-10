@@ -18,6 +18,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   final _scaffold = GlobalKey<ScaffoldState>();
   Timer? _notificationTimer;
   int _unread = 0;
+  Map<String, dynamic>? _foodNotifications;
+  String _foodTab = 'products';
+  String? _foodFocusId;
+  void _openFood(String tab, String? orderId) => setState(() {
+    _foodTab = tab;
+    _foodFocusId = orderId;
+    _tab = 3;
+  });
   bool _polling = false;
   @override
   void initState() {
@@ -58,7 +66,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     try {
       final data = await c.client!.request("/api/food/notifications");
       if (mounted && c.user?.id == id) {
-        setState(() => _unread = data["unread_count"] as int);
+        setState(() {
+          _unread = data["unread_count"] as int;
+          _foodNotifications = Map<String, dynamic>.from(data);
+        });
       }
     } catch (_) {
     } finally {
@@ -80,7 +91,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     'Mi horario',
     'Mi cuenta',
     'Mis avisos',
-    'Vendedores',
+    'Revisar vendedores',
   ];
   static const _icons = [
     Icons.grid_view_outlined,
@@ -165,9 +176,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           1 => _map(),
           2 => _directions(),
           3 => FoodScreen(
-            key: const ValueKey("food"),
+            key: ValueKey("food-${c.user?.id}"),
             controller: c,
             onChanged: _pollNotifications,
+            initialTab: _foodTab,
+            focusOrderId: _foodFocusId,
+            notificationData: _foodNotifications,
+            onOpenFood: _openFood,
+            onTabChanged: (tab) {
+              _foodTab = tab;
+              _foodFocusId = null;
+            },
           ),
           4 => ScheduleScreen(
             key: ValueKey(c.user?.id),
@@ -182,13 +201,15 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             },
           ),
           6 => FoodScreen(
-            key: const ValueKey("notifications"),
+            key: ValueKey("notifications-${c.user?.id}"),
             controller: c,
             mode: "notifications",
             onChanged: _pollNotifications,
+            notificationData: _foodNotifications,
+            onOpenFood: _openFood,
           ),
           7 => FoodScreen(
-            key: const ValueKey("food-admin"),
+            key: ValueKey("food-admin-${c.user?.id}"),
             controller: c,
             mode: "admin",
             onChanged: _pollNotifications,

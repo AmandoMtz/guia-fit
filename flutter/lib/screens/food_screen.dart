@@ -1,4 +1,6 @@
 import 'dart:math';
+import '../models/food_flow.dart';
+import '../widgets/food_order_card.dart';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
@@ -8,14 +10,14 @@ import '../widgets/common.dart';
 String foodMoney(dynamic cents) =>
     '\$${((cents as num) / 100).toStringAsFixed(2)}';
 String foodUnit(Map p) =>
-    p['sale_unit'] == 'lot' ? 'lote de ${p['units_per_lot']}' : 'unidad';
+    p['sale_unit'] == 'lot' ? 'lote de ${p['units_per_lot']} piezas' : 'unidad';
 String foodStatus(dynamic status) =>
     const {
       'pending': 'En revisión',
       'approved': 'Verificado',
       'suspended': 'Suspendido',
-      'requested': 'Solicitado',
-      'accepted': 'Aceptado',
+      'requested': 'Por confirmar',
+      'accepted': 'En preparación',
       'ready': 'Listo para recoger',
       'completed': 'Entregado',
       'rejected': 'Rechazado',
@@ -35,11 +37,21 @@ class FoodScreen extends StatefulWidget {
   final AppController controller;
   final String mode;
   final VoidCallback? onChanged;
+  final String initialTab;
+  final String? focusOrderId;
+  final Map<String, dynamic>? notificationData;
+  final void Function(String tab, String? orderId)? onOpenFood;
+  final ValueChanged<String>? onTabChanged;
   const FoodScreen({
     super.key,
     required this.controller,
     this.mode = 'food',
     this.onChanged,
+    this.initialTab = 'products',
+    this.focusOrderId,
+    this.notificationData,
+    this.onOpenFood,
+    this.onTabChanged,
   });
   @override
   State<FoodScreen> createState() => _FoodScreenState();
@@ -49,27 +61,109 @@ class _FoodScreenState extends State<FoodScreen> {
   Map<String, dynamic> _catalog = {'vendors': [], 'products': []},
       _mine = {'vendor': null, 'products': []};
   List<dynamic> _orders = [], _notes = [], _vendors = [];
-  String _tab = 'products', _query = '', _vendor = '';
-  bool _loading = true, _busy = false, _sellerOrders = false;
-  String? _error;
+  Map<String, dynamic> _summary = {
+    'buyer': <String, dynamic>{},
+    'seller': <String, dynamic>{},
+  };
+  String _tab = 'products',
+      _query = '',
+      _vendor = '',
+      _ordersFilter = 'active',
+      _salesFilter = 'active';
+  String? _focusOrderId, _error;
+  String _loadedOrderRevision = '';
+  final _search = TextEditingController();
+  bool _loading = true, _busy = false, _dialogOpen = false;
+  int _loadTicket = 0;
   AppController get c => widget.controller;
   Future<dynamic> _api(
     String path, {
     String method = 'GET',
     Map<String, dynamic>? body,
-  }) => c.client!.request('/api/food$path', method: method, body: body);
+  }) async {
+    final owner = c.user?.id;
+    final result = await c.client!.request(
+      '/api/food$path',
+      method: method,
+      body: body,
+    );
+    if (!mounted || c.user?.id != owner) {
+      throw StateError('La sesión cambió. Vuelve a abrir Comidas.');
+    }
+    return result;
+  }
+
   @override
   void initState() {
     super.initState();
+    _tab = widget.initialTab;
+    _focusOrderId = widget.focusOrderId;
+    if (_focusOrderId != null) {
+      _ordersFilter = 'all';
+      _salesFilter = 'all';
+    }
     _load();
   }
 
-  Future<void> _load() async {
+  @override
+  void dispose() {
+    _loadTicket++;
+    _search.dispose();
+    super.dispose();
+  }
+
+  @override
+  void didUpdateWidget(covariant FoodScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.notificationData != null &&
+        !identical(widget.notificationData, oldWidget.notificationData)) {
+      final next = Map<String, dynamic>.from(
+        widget.notificationData!['order_summary'] ?? {},
+      );
+      final changed = next.toString() != _loadedOrderRevision;
+      _summary = next;
+      if (widget.mode == 'notifications') {
+        _notes = widget.notificationData!['items'] ?? [];
+      }
+      if (changed &&
+          ['orders', 'sales'].contains(_tab) &&
+          !_loading &&
+          !_busy &&
+          !_dialogOpen) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _load(silent: true);
+        });
+      }
+    }
+  }
+
+  void _openTab(String tab, {String? orderId, String? filter}) {
+    setState(() {
+      _tab = tab;
+      _focusOrderId = orderId;
+      if (orderId != null) {
+        _ordersFilter = 'all';
+        _salesFilter = 'all';
+      }
+      if (filter != null) {
+        if (tab == 'sales') {
+          _salesFilter = filter;
+        } else {
+          _ordersFilter = filter;
+        }
+      }
+    });
+    widget.onTabChanged?.call(tab);
+    _load();
+  }
+
+  Future<void> _load({bool silent = false}) async {
+    final ticket = ++_loadTicket, owner = c.user?.id, tab = _tab;
     if (c.demo) {
       if (mounted) setState(() => _loading = false);
       return;
     }
-    if (mounted) {
+    if (mounted && !silent) {
       setState(() {
         _loading = true;
         _error = null;
@@ -78,23 +172,59 @@ class _FoodScreenState extends State<FoodScreen> {
     try {
       if (widget.mode == 'notifications') {
         final data = await _api('/notifications');
+        if (!mounted || ticket != _loadTicket) return;
         _notes = data['items'];
+        _summary = Map<String, dynamic>.from(data['order_summary'] ?? {});
       } else if (widget.mode == 'admin') {
-        _vendors = await _api('/admin/vendors');
+        final rows = await _api('/admin/vendors');
+        if (!mounted || ticket != _loadTicket) return;
+        _vendors = rows;
       } else {
         final data = await Future.wait([
           _api('/catalog'),
           _api('/mine'),
-          _api('/orders?role=${_sellerOrders ? 'seller' : 'buyer'}'),
+          _api('/notifications'),
         ]);
+        List<dynamic> rows = [];
+        if (['orders', 'sales'].contains(tab)) {
+          rows = await _api(
+            '/orders?role=${tab == 'sales' ? 'seller' : 'buyer'}',
+          );
+          final focus = _focusOrderId;
+          if (focus != null && !rows.any((o) => o['id'] == focus)) {
+            final order = await _api('/orders/$focus');
+            if (order['order_role'] == (tab == 'sales' ? 'seller' : 'buyer')) {
+              rows = [order, ...rows];
+            }
+          }
+        }
+        if (!mounted || ticket != _loadTicket || c.user?.id != owner) return;
         _catalog = Map<String, dynamic>.from(data[0]);
         _mine = Map<String, dynamic>.from(data[1]);
-        _orders = data[2];
+        _summary = Map<String, dynamic>.from(data[2]['order_summary'] ?? {});
+        _orders = rows;
+        _loadedOrderRevision = _summary.toString();
+        if (_tab == 'sales' && _mine['vendor'] == null) _tab = 'mine';
+        if (_vendor.isNotEmpty &&
+            !(_catalog['vendors'] as List).any((v) => v['id'] == _vendor)) {
+          _vendor = '';
+        }
       }
     } catch (e) {
-      _error = authError(e);
+      if (mounted && ticket == _loadTicket && c.user?.id == owner) {
+        if (!silent) {
+          _error = authError(e);
+        } else {
+          message(
+            context,
+            'No pudimos actualizar los pedidos. Intenta con Actualizar.',
+          );
+        }
+      }
     } finally {
-      if (mounted) setState(() => _loading = false);
+      if (mounted && ticket == _loadTicket && c.user?.id == owner) {
+        setState(() => _loading = false);
+      }
     }
   }
 
@@ -123,7 +253,7 @@ class _FoodScreenState extends State<FoodScreen> {
     child: child,
   );
   Widget _tag(dynamic status) => Chip(
-    label: Text(foodStatus(status), style: const TextStyle(fontSize: 11)),
+    label: Text(foodStatus(status), style: const TextStyle(fontSize: 14)),
     visualDensity: VisualDensity.compact,
     backgroundColor:
         ['approved', 'ready', 'accepted', 'completed'].contains(status)
@@ -150,31 +280,173 @@ class _FoodScreenState extends State<FoodScreen> {
       ],
     ),
   );
-  Widget _tabs() => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 22),
-    child: Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: [
-        for (final entry in {
-          'products': 'Productos',
-          'vendors': 'Vendedores',
-          'orders': 'Mis pedidos',
-          'mine': _mine['vendor'] == null ? 'Quiero vender' : 'Mi puesto',
-        }.entries)
-          ChoiceChip(
-            label: Text(entry.value),
-            selected: _tab == entry.key,
-            onSelected: (_) {
-              setState(() {
-                _tab = entry.key;
-                _sellerOrders = false;
-              });
-              if (_tab == 'orders') _load();
-            },
+  Widget _tabs() => LayoutBuilder(
+    builder: (context, box) {
+      final nav = <(String, IconData, String, String)>[
+        (
+          'products',
+          Icons.restaurant_outlined,
+          'Explorar',
+          'Encuentra qué comer',
+        ),
+        (
+          'orders',
+          Icons.shopping_bag_outlined,
+          'Mis compras',
+          'Lo que tú pediste',
+        ),
+        if (_mine['vendor'] != null)
+          (
+            'sales',
+            Icons.notifications_active_outlined,
+            'Pedidos recibidos',
+            'Lo que piden tus clientes',
           ),
-      ],
-    ),
+        (
+          'mine',
+          Icons.storefront_outlined,
+          _mine['vendor'] == null ? 'Quiero vender' : 'Mi puesto',
+          'Productos y datos del puesto',
+        ),
+      ];
+      final columns = box.maxWidth > 1000
+          ? 4
+          : box.maxWidth < 280
+          ? 1
+          : 2;
+      final width = (box.maxWidth - (columns - 1) * 10) / columns;
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 22),
+        child: Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          children: [
+            for (final item in nav)
+              SizedBox(
+                width: width,
+                child: Semantics(
+                  selected:
+                      _tab == item.$1 ||
+                      (_tab == 'vendors' && item.$1 == 'products'),
+                  child: Material(
+                    color:
+                        _tab == item.$1 ||
+                            (_tab == 'vendors' && item.$1 == 'products')
+                        ? fitNavy
+                        : Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      side: const BorderSide(color: Color(0xFFD8E3E8)),
+                    ),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(12),
+                      onTap: _busy ? null : () => _openTab(item.$1),
+                      child: Padding(
+                        padding: const EdgeInsets.all(14),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Icon(
+                              item.$2,
+                              size: 23,
+                              color:
+                                  _tab == item.$1 ||
+                                      (_tab == 'vendors' &&
+                                          item.$1 == 'products')
+                                  ? Colors.white
+                                  : fitNavy,
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              '${item.$3}${item.$1 == 'sales' && (_summary['seller']?['requested'] ?? 0) > 0
+                                  ? ' (${_summary['seller']['requested']})'
+                                  : item.$1 == 'orders' && foodActiveCount(_summary['buyer'] ?? {}) > 0
+                                  ? ' (${foodActiveCount(_summary['buyer'] ?? {})})'
+                                  : ''}',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                                color:
+                                    _tab == item.$1 ||
+                                        (_tab == 'vendors' &&
+                                            item.$1 == 'products')
+                                    ? Colors.white
+                                    : fitNavy,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              item.$4,
+                              style: TextStyle(
+                                fontSize: 14,
+                                color:
+                                    _tab == item.$1 ||
+                                        (_tab == 'vendors' &&
+                                            item.$1 == 'products')
+                                    ? const Color(0xFFD8E5EC)
+                                    : fitMuted,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      );
+    },
+  );
+  Widget _attention() => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      if ((_summary['seller']?['requested'] ?? 0) > 0)
+        _card(
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '${_summary['seller']['requested']} pedidos esperan tu respuesta',
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text('Revisa y confirma los pedidos nuevos.'),
+              const SizedBox(height: 12),
+              FilledButton.icon(
+                onPressed: () => _openTab('sales', filter: 'requested'),
+                icon: const Icon(Icons.notifications_active_outlined),
+                label: const Text('Atender pedidos'),
+              ),
+            ],
+          ),
+        ),
+      if ((_summary['buyer']?['ready'] ?? 0) > 0)
+        _card(
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '${_summary['buyer']['ready']} compras listas para recoger',
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 12),
+              FilledButton.icon(
+                onPressed: () => _openTab('orders', filter: 'ready'),
+                icon: const Icon(Icons.check_circle_outline),
+                label: const Text('Ver mis compras'),
+              ),
+            ],
+          ),
+        ),
+    ],
   );
   @override
   Widget build(BuildContext context) {
@@ -228,46 +500,12 @@ class _FoodScreenState extends State<FoodScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Container(
-          padding: const EdgeInsets.all(28),
-          decoration: BoxDecoration(
-            color: fitNavy,
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'COMUNIDAD FIT',
-                style: TextStyle(
-                  color: Color(0xFFECBD9A),
-                  letterSpacing: 2,
-                  fontSize: 11,
-                ),
-              ),
-              const SizedBox(height: 12),
-              const Text(
-                'Tu próxima pausa\nsabe bien.',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 32,
-                  fontWeight: FontWeight.w700,
-                  height: 1.1,
-                  letterSpacing: -1,
-                ),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                '${(_catalog['vendors'] as List).length} puestos verificados · ${(_catalog['products'] as List).length} productos',
-                style: const TextStyle(color: Color(0xFFCBDCDF)),
-              ),
-            ],
-          ),
-        ),
         _tabs(),
+        _attention(),
         switch (_tab) {
           'vendors' => _vendorList(),
           'orders' => _orderList(false),
+          'sales' => _orderList(true),
           'mine' => _own(),
           _ => _products(),
         },
@@ -286,18 +524,42 @@ class _FoodScreenState extends State<FoodScreen> {
         .where(
           (p) =>
               (_vendor.isEmpty || p['vendor_id'] == _vendor) &&
-              '${p['name']} ${p['business_name']}'.toLowerCase().contains(
-                _query.toLowerCase(),
-              ),
+              '${p['name']} ${p['business_name']} ${p['description']}'
+                  .toLowerCase()
+                  .contains(_query.toLowerCase()),
         )
         .toList();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        Wrap(
+          spacing: 14,
+          runSpacing: 8,
+          alignment: WrapAlignment.spaceBetween,
+          children: [
+            Text(
+              '¿Qué se te antoja?',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            TextButton.icon(
+              onPressed: () => _openTab('vendors'),
+              icon: const Icon(Icons.storefront_outlined),
+              label: const Text('Ver puestos'),
+            ),
+          ],
+        ),
+        const Padding(
+          padding: EdgeInsets.symmetric(vertical: 16),
+          child: Text(
+            '1. Elige y solicita   ·   2. Espera confirmación   ·   3. Recoge en el puesto',
+            style: TextStyle(fontSize: 14, height: 1.6, color: fitMuted),
+          ),
+        ),
         TextField(
+          controller: _search,
           onChanged: (v) => setState(() => _query = v),
           decoration: const InputDecoration(
-            labelText: '¿Qué se te antoja?',
+            labelText: 'Buscar producto o puesto',
             prefixIcon: Icon(Icons.search),
           ),
         ),
@@ -368,7 +630,7 @@ class _FoodScreenState extends State<FoodScreen> {
                                 p['business_name'],
                                 style: const TextStyle(
                                   color: fitOrange,
-                                  fontSize: 11,
+                                  fontSize: 14,
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
@@ -393,7 +655,7 @@ class _FoodScreenState extends State<FoodScreen> {
                                 'Recoge en: ${p['pickup_location']}',
                                 style: const TextStyle(
                                   color: fitMuted,
-                                  fontSize: 12,
+                                  fontSize: 14,
                                 ),
                               ),
                               const Divider(height: 30),
@@ -417,7 +679,7 @@ class _FoodScreenState extends State<FoodScreen> {
                                       Text(
                                         'MXN / ${foodUnit(p)}',
                                         style: const TextStyle(
-                                          fontSize: 11,
+                                          fontSize: 14,
                                           color: fitMuted,
                                         ),
                                       ),
@@ -431,7 +693,7 @@ class _FoodScreenState extends State<FoodScreen> {
                                     child: Text(
                                       _mine['vendor']?['id'] == p['vendor_id']
                                           ? 'Tu producto'
-                                          : 'Solicitar',
+                                          : 'Pedir',
                                     ),
                                   ),
                                 ],
@@ -468,6 +730,17 @@ class _FoodScreenState extends State<FoodScreen> {
   );
   Widget _vendorList() => Column(
     children: [
+      Align(
+        alignment: Alignment.centerLeft,
+        child: TextButton.icon(
+          onPressed: () {
+            _vendor = '';
+            _openTab('products');
+          },
+          icon: const Icon(Icons.arrow_back),
+          label: const Text('Todos los productos'),
+        ),
+      ),
       if ((_catalog['vendors'] as List).isEmpty)
         _empty(
           'La comunidad está creciendo',
@@ -496,6 +769,9 @@ class _FoodScreenState extends State<FoodScreen> {
                 onPressed: () => setState(() {
                   _vendor = v['id'];
                   _tab = 'products';
+                  _query = '';
+                  _search.clear();
+                  widget.onTabChanged?.call('products');
                 }),
                 icon: const Icon(Icons.arrow_forward),
                 label: const Text('Ver productos'),
@@ -507,158 +783,173 @@ class _FoodScreenState extends State<FoodScreen> {
   );
   Future<void> _order(Map<String, dynamic> p) async {
     final requestId = requestUuid();
-    await showDialog<void>(
-      context: context,
-      builder: (context) => FoodFormDialog(
-        title: 'Solicitar ${p['name']}',
-        intro:
-            '${foodMoney(p['price_cents'])} MXN por ${foodUnit(p)}. Recoge en ${p['pickup_location']}. El vendedor debe aceptar la solicitud. El pago se acuerda al recoger.',
-        fields: const [
-          FoodField('quantity', 'Cantidad de unidades o lotes', number: true),
-          FoodField('note', 'Nota para el vendedor', max: 500, required: false),
-        ],
-        initial: const {'quantity': '1', 'note': ''},
-        priceCents: p['price_cents'] as int,
-        onSave: (v) async {
-          final quantity = int.tryParse(v['quantity'] ?? '');
-          if (quantity == null || quantity < 1 || quantity > 50) {
-            throw Exception('Solicita entre 1 y 50 unidades o lotes.');
-          }
-          await _api(
-            '/orders',
-            method: 'POST',
-            body: {
-              'product_id': p['id'],
-              'quantity': quantity,
-              'note': v['note'],
-              'request_id': requestId,
-              'expected_price_cents': p['price_cents'],
-            },
-          );
-          if (mounted) {
-            setState(() {
-              _tab = 'orders';
-              _sellerOrders = false;
-            });
-            await _load();
+    _dialogOpen = true;
+    try {
+      final id = await showDialog<String>(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => FoodCheckoutDialog(
+          product: p,
+          onSubmit: (quantity, note) async {
+            final order = await _api(
+              '/orders',
+              method: 'POST',
+              body: {
+                'product_id': p['id'],
+                'quantity': quantity,
+                'note': note,
+                'request_id': requestId,
+                'expected_price_cents': p['price_cents'],
+              },
+            );
             widget.onChanged?.call();
-          }
-        },
-      ),
-    );
+            return Map<String, dynamic>.from(order);
+          },
+        ),
+      );
+      if (mounted) {
+        if (id != null) {
+          _openTab('orders', orderId: id);
+        } else {
+          await _load(silent: true);
+        }
+      }
+    } finally {
+      _dialogOpen = false;
+    }
   }
 
-  Widget _orderList(bool seller) => Column(
-    crossAxisAlignment: CrossAxisAlignment.stretch,
-    children: [
-      Row(
-        children: [
-          Expanded(
-            child: Text(
-              seller ? 'Pedidos recibidos' : 'Tus pedidos',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-          ),
-          IconButton(
-            onPressed: _load,
-            tooltip: 'Actualizar pedidos',
-            icon: const Icon(Icons.refresh),
-          ),
-        ],
-      ),
-      const Padding(
-        padding: EdgeInsets.only(bottom: 16),
-        child: Text(
-          'Últimos 300 pedidos. Los avisos se guardan en tu cuenta.',
-          style: TextStyle(color: fitMuted, fontSize: 12),
-        ),
-      ),
-      if (_orders.isEmpty)
-        _empty(
-          'Todavía no hay pedidos',
-          seller
-              ? 'Las solicitudes de tus clientes aparecerán aquí.'
-              : 'Explora los productos de los puestos.',
-        ),
-      for (final o in _orders)
-        _card(
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _tag(o['status']),
-              Text(
-                seller ? o['buyer_name'] : o['business_name'],
-                style: const TextStyle(color: fitOrange, fontSize: 12),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                o['product_name'],
+  Widget _orderList(bool seller) {
+    final filter = seller ? _salesFilter : _ordersFilter;
+    final filters = seller
+        ? {
+            'active': 'En curso',
+            'requested': 'Nuevos',
+            'accepted': 'En preparación',
+            'ready': 'Por entregar',
+            'history': 'Historial',
+            'all': 'Todos',
+          }
+        : {
+            'active': 'En curso',
+            'ready': 'Para recoger',
+            'history': 'Historial',
+            'all': 'Todos',
+          };
+    final rows = foodSortedOrders(
+      _orders.where((o) => foodOrderMatches(o['status'], filter)).toList(),
+      seller,
+    );
+    if (_focusOrderId != null) {
+      final at = rows.indexWhere((o) => o['id'] == _focusOrderId);
+      if (at > 0) rows.insert(0, rows.removeAt(at));
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                seller ? 'Pedidos de tus clientes' : 'Lo que has pedido',
                 style: Theme.of(context).textTheme.titleLarge,
               ),
-              const SizedBox(height: 10),
-              Text(
-                '${o['quantity']} × ${foodUnit(o)} · ${foodMoney(o['total_cents'])} MXN',
-              ),
-              Text(o['pickup_location']),
-              if ((o['note'] as String).isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  child: Text('Nota: ${o['note']}'),
+            ),
+            IconButton(
+              onPressed: _busy ? null : () => _load(silent: true),
+              tooltip: 'Actualizar pedidos',
+              icon: const Icon(Icons.refresh),
+            ),
+          ],
+        ),
+        Text(
+          seller
+              ? 'Confirma, prepara y entrega. Cada cambio avisa al cliente.'
+              : 'Consulta la respuesta del puesto y cuándo puedes recoger.',
+          style: const TextStyle(color: fitMuted),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 18),
+          child: Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final f in filters.entries)
+                ChoiceChip(
+                  label: Text(
+                    '${f.value} (${_orders.where((o) => foodOrderMatches(o['status'], f.key)).length})',
+                  ),
+                  selected: filter == f.key,
+                  onSelected: _busy
+                      ? null
+                      : (_) => setState(() {
+                          if (seller) {
+                            _salesFilter = f.key;
+                          } else {
+                            _ordersFilter = f.key;
+                          }
+                          _focusOrderId = null;
+                        }),
                 ),
-              Text(
-                '#${(o['id'] as String).substring(0, 8)} · ${DateTime.parse(o['created_at']).toLocal().toString().substring(0, 16)}',
-                style: const TextStyle(color: fitMuted, fontSize: 11),
-              ),
-              const SizedBox(height: 14),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  for (final status
-                      in seller
-                          ? (const {
-                                  'requested': ['accepted', 'rejected'],
-                                  'accepted': ['ready', 'rejected'],
-                                  'ready': ['completed'],
-                                }[o['status']] ??
-                                <String>[])
-                          : o['status'] == 'requested'
-                          ? ['cancelled']
-                          : <String>[])
-                    OutlinedButton(
-                      onPressed: _busy
-                          ? null
-                          : () => _action(() async {
-                              if (['rejected', 'cancelled'].contains(status) &&
-                                  !await _confirm(
-                                    '¿Confirmas esta acción para el pedido?',
-                                  )) {
-                                return;
-                              }
-                              await _api(
-                                '/orders/${o['id']}',
-                                method: 'PATCH',
-                                body: {'status': status},
-                              );
-                              await _load();
-                            }),
-                      child: Text(
-                        const {
-                          'accepted': 'Aceptar',
-                          'rejected': 'Rechazar',
-                          'ready': 'Listo para recoger',
-                          'completed': 'Marcar entregado',
-                          'cancelled': 'Cancelar solicitud',
-                        }[status]!,
-                      ),
-                    ),
-                ],
-              ),
             ],
           ),
         ),
-    ],
-  );
+        if (rows.isEmpty) ...[
+          _empty(
+            filter == 'history'
+                ? 'Aún no hay pedidos finalizados'
+                : 'Todo al día por aquí',
+            seller
+                ? 'Los pedidos de tus clientes aparecerán en Nuevos. También recibirás un aviso en la campana.'
+                : 'Aquí aparecerá el seguimiento cuando solicites un producto.',
+          ),
+          OutlinedButton(
+            onPressed: () => _openTab(seller ? 'mine' : 'products'),
+            child: Text(seller ? 'Ver mi puesto' : 'Explorar productos'),
+          ),
+        ],
+        for (final raw in rows)
+          FoodOrderCard(
+            order: Map<String, dynamic>.from(raw),
+            seller: seller,
+            busy: _busy,
+            highlighted: raw['id'] == _focusOrderId,
+            onAction: (status) => _action(() async {
+              final question = status == 'completed'
+                  ? '¿${raw['buyer_name']} ya recibió ${raw['product_name']}?'
+                  : status == 'rejected'
+                  ? '¿Confirmas que no puedes atender ${raw['product_name']}? Se avisará al cliente.'
+                  : status == 'cancelled'
+                  ? '¿Cancelar tu pedido de ${raw['product_name']}?'
+                  : null;
+              if (question != null && !await _confirm(question)) return;
+              await _api(
+                '/orders/${raw['id']}',
+                method: 'PATCH',
+                body: {'status': status},
+              );
+              await _load(silent: true);
+              if (mounted) {
+                message(
+                  context,
+                  status == 'completed'
+                      ? 'Entrega confirmada.'
+                      : 'Pedido actualizado. Se envió el aviso.',
+                );
+              }
+            }),
+          ),
+        const Padding(
+          padding: EdgeInsets.symmetric(vertical: 18),
+          child: Text(
+            'Últimos 300 pedidos, más el que abras desde un aviso. Se actualizan cada 30 segundos mientras la vista está activa.',
+            style: TextStyle(color: fitMuted, fontSize: 14),
+          ),
+        ),
+      ],
+    );
+  }
+
   Future<bool> _confirm(String text) async =>
       await showDialog<bool>(
         context: context,
@@ -688,23 +979,27 @@ class _FoodScreenState extends State<FoodScreen> {
             const Icon(Icons.storefront_outlined, size: 40, color: fitOrange),
             const SizedBox(height: 16),
             Text(
-              'Tu puesto, más cerca de la FIT.',
+              'Empieza con tu puesto',
               style: Theme.of(context).textTheme.headlineSmall,
             ),
-            const SizedBox(height: 16),
-            const Text(
-              '1. Completa los datos reales de tu puesto.\n2. Un administrador verifica tu vínculo con la facultad.\n3. Tus productos disponibles aparecen en Comidas.',
-              style: TextStyle(height: 2, color: fitMuted),
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 18),
+              child: Text(
+                '1. Registra el nombre, punto de entrega y horario.\n2. Prepara productos mientras revisan tu solicitud.\n3. Con el puesto aprobado, atiende tus pedidos.',
+                style: TextStyle(height: 2, color: fitMuted),
+              ),
             ),
-            const SizedBox(height: 20),
             FilledButton(
               onPressed: () => _vendorForm(),
-              child: const Text('Solicitar mi puesto'),
+              child: const Text('Registrar mi puesto'),
             ),
           ],
         ),
       );
     }
+    final editable = ['pending', 'approved'].contains(v['status']),
+        online = v['status'] == 'approved' && v['is_active'] != false;
+    final counts = _summary['seller'] ?? {};
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -715,118 +1010,181 @@ class _FoodScreenState extends State<FoodScreen> {
               _tag(v['status']),
               Text(
                 v['business_name'],
-                style: Theme.of(context).textTheme.titleLarge,
+                style: Theme.of(context).textTheme.headlineSmall,
               ),
-              const SizedBox(height: 10),
-              Text('${v['pickup_location']} · ${v['hours_text']}'),
-              if (v['is_active'] == false)
-                const InfoBanner(
-                  'Tu puesto está pausado. Puedes terminar pedidos pendientes. Activa Alumno vendedor en Mi cuenta para volver a mostrarlo.',
-                ),
-              if (v['status'] != 'approved')
-                InfoBanner(
-                  v['status'] == 'pending'
-                      ? 'Puedes preparar tus productos mientras revisan tu solicitud. Aún no se muestran al público.'
-                      : v['review_source'] ?? 'Contacta al administrador.',
-                ),
-              TextButton(
-                onPressed: v['status'] == 'suspended'
-                    ? null
-                    : () => _vendorForm(Map<String, dynamic>.from(v)),
-                child: const Text('Editar puesto'),
+              const SizedBox(height: 12),
+              Text('Recoge en: ${v['pickup_location']}'),
+              Text(v['hours_text'] ?? ''),
+              const SizedBox(height: 16),
+              Wrap(
+                spacing: 10,
+                runSpacing: 8,
+                children: [
+                  FilledButton.icon(
+                    onPressed: () => _openTab('sales'),
+                    icon: const Icon(Icons.notifications_active_outlined),
+                    label: const Text('Ver pedidos recibidos'),
+                  ),
+                  OutlinedButton(
+                    onPressed: v['status'] == 'suspended'
+                        ? null
+                        : () => _vendorForm(Map<String, dynamic>.from(v)),
+                    child: const Text('Editar puesto'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              InfoBanner(
+                v['is_active'] == false
+                    ? 'Puesto pausado. Puedes terminar pedidos pendientes. Activa Alumno vendedor en Mi cuenta para volver a recibir pedidos.'
+                    : online
+                    ? 'Tus productos disponibles aparecen en Explorar.'
+                    : v['status'] == 'pending'
+                    ? 'Solicitud en revisión. Puedes preparar productos; aparecerán cuando aprueben tu puesto.'
+                    : v['review_source'] ??
+                          'Consulta la revisión de tu solicitud con el administrador.',
               ),
             ],
           ),
         ),
         Wrap(
           spacing: 8,
-          runSpacing: 8,
+          runSpacing: 10,
           children: [
-            ChoiceChip(
-              label: const Text('Mis productos'),
-              selected: !_sellerOrders,
-              onSelected: (_) => setState(() => _sellerOrders = false),
-            ),
-            ChoiceChip(
-              label: const Text('Pedidos recibidos'),
-              selected: _sellerOrders,
-              onSelected: (_) {
-                setState(() => _sellerOrders = true);
-                _load();
-              },
-            ),
+            for (final entry in {
+              'requested': 'Nuevos',
+              'accepted': 'En preparación',
+              'ready': 'Por entregar',
+            }.entries)
+              OutlinedButton(
+                onPressed: () => _openTab('sales', filter: entry.key),
+                child: Text('${counts[entry.key] ?? 0} ${entry.value}'),
+              ),
           ],
         ),
+        const SizedBox(height: 24),
+        Text('Mi menú', style: Theme.of(context).textTheme.titleLarge),
+        const SizedBox(height: 12),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: FilledButton.icon(
+            onPressed: editable ? () => _productForm() : null,
+            icon: const Icon(Icons.add),
+            label: const Text('Agregar producto'),
+          ),
+        ),
         const SizedBox(height: 18),
-        if (_sellerOrders)
-          _orderList(true)
-        else ...[
-          Align(
-            alignment: Alignment.centerLeft,
-            child: FilledButton.icon(
-              onPressed: ['pending', 'approved'].contains(v['status'])
-                  ? () => _productForm()
-                  : null,
-              icon: const Icon(Icons.add),
-              label: const Text('Agregar producto'),
+        if ((_mine['products'] as List).isEmpty)
+          _empty(
+            'Agrega tu primer producto',
+            'Sube una foto, indica el precio por unidad o lote y elige si está disponible.',
+          ),
+        for (final raw in _mine['products'])
+          _card(
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (raw['photo_url'] != null)
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Image.network(
+                      raw['photo_url'],
+                      height: 150,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, e, stack) =>
+                          const Text('Foto no disponible'),
+                    ),
+                  ),
+                const SizedBox(height: 12),
+                Text(
+                  raw['name'],
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+                Text(
+                  '${foodMoney(raw['price_cents'])} MXN por ${foodUnit(raw)}',
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  raw['available'] != true
+                      ? 'Pausado'
+                      : online
+                      ? 'Visible para compradores'
+                      : 'Preparado · puesto sin publicar',
+                  style: const TextStyle(color: fitMuted),
+                ),
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 8,
+                  children: [
+                    OutlinedButton(
+                      onPressed: editable
+                          ? () => _productForm(Map<String, dynamic>.from(raw))
+                          : null,
+                      child: const Text('Editar'),
+                    ),
+                    OutlinedButton(
+                      onPressed: !editable || _busy
+                          ? null
+                          : () => _action(() async {
+                              await _api(
+                                '/products/${raw['id']}',
+                                method: 'PATCH',
+                                body: {
+                                  for (final key in [
+                                    'name',
+                                    'description',
+                                    'photo_id',
+                                    'price_cents',
+                                    'sale_unit',
+                                    'units_per_lot',
+                                  ])
+                                    key: raw[key],
+                                  'available': raw['available'] != true,
+                                },
+                              );
+                              await _load(silent: true);
+                              if (mounted) {
+                                message(
+                                  context,
+                                  raw['available'] == true
+                                      ? 'Producto pausado. Los pedidos anteriores se conservan.'
+                                      : 'Producto disponible si tu puesto está aprobado y activo.',
+                                );
+                              }
+                            }),
+                      child: Text(
+                        raw['available'] == true
+                            ? 'Pausar producto'
+                            : 'Activar producto',
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: _busy
+                          ? null
+                          : () => _action(() async {
+                              if (!await _confirm(
+                                '¿Eliminar ${raw['name']} del menú? Se conservan los pedidos anteriores.',
+                              )) {
+                                return;
+                              }
+                              await _api(
+                                '/products/${raw['id']}',
+                                method: 'DELETE',
+                              );
+                              await _load(silent: true);
+                            }),
+                      child: const Text(
+                        'Eliminar',
+                        style: TextStyle(color: Colors.red),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 18),
-          if ((_mine['products'] as List).isEmpty)
-            _empty(
-              'Prepara tu menú',
-              'Agrega una foto, precio y forma de venta.',
-            ),
-          for (final p in _mine['products'])
-            _card(
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    p['name'],
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  Text('${foodMoney(p['price_cents'])} MXN / ${foodUnit(p)}'),
-                  const SizedBox(height: 10),
-                  Text(
-                    p['available'] ? 'Disponible' : 'Pausado',
-                    style: const TextStyle(color: fitMuted),
-                  ),
-                  Wrap(
-                    spacing: 12,
-                    children: [
-                      TextButton(
-                        onPressed: ['pending', 'approved'].contains(v['status'])
-                            ? () => _productForm(Map<String, dynamic>.from(p))
-                            : null,
-                        child: const Text('Editar'),
-                      ),
-                      TextButton(
-                        onPressed: _busy
-                            ? null
-                            : () => _action(() async {
-                                if (!await _confirm(
-                                  '¿Eliminar este producto del catálogo? Se conservan los pedidos anteriores.',
-                                )) {
-                                  return;
-                                }
-                                await _api(
-                                  '/products/${p['id']}',
-                                  method: 'DELETE',
-                                );
-                                await _load();
-                              }),
-                        child: const Text(
-                          'Eliminar',
-                          style: TextStyle(color: Colors.red),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-        ],
       ],
     );
   }
@@ -892,7 +1250,7 @@ class _FoodScreenState extends State<FoodScreen> {
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
       const Text(
-        'Los avisos se actualizan mientras tienes abierta la aplicación.',
+        'Abre un aviso para ir directamente a su pedido.',
         style: TextStyle(color: fitMuted, height: 1.6),
       ),
       Wrap(
@@ -940,6 +1298,40 @@ class _FoodScreenState extends State<FoodScreen> {
               Text(n['title'], style: Theme.of(context).textTheme.titleMedium),
               const SizedBox(height: 8),
               Text(n['body']),
+              if (n['order_status'] != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(
+                    'Estado actual: ${foodOrderNames[n['order_status']] ?? n['order_status']}',
+                    style: const TextStyle(fontSize: 14, color: fitMuted),
+                  ),
+                ),
+              if (foodNotificationTab(n) != null && widget.onOpenFood != null)
+                FilledButton.icon(
+                  onPressed: _busy
+                      ? null
+                      : () => _action(() async {
+                          if (n['read_at'] == null) {
+                            await _api(
+                              '/notifications/read',
+                              method: 'PATCH',
+                              body: {
+                                'ids': [n['id']],
+                              },
+                            );
+                          }
+                          if (mounted) {
+                            widget.onOpenFood!(
+                              foodNotificationTab(n)!,
+                              n['order_id'] as String?,
+                            );
+                          }
+                        }),
+                  icon: const Icon(Icons.arrow_forward),
+                  label: Text(
+                    n['order_id'] != null ? 'Ver pedido' : 'Ver mi puesto',
+                  ),
+                ),
               const SizedBox(height: 12),
               Text(
                 DateTime.parse(
@@ -1207,6 +1599,251 @@ class _FoodFormDialogState extends State<FoodFormDialog> {
   );
 }
 
+class FoodCheckoutDialog extends StatefulWidget {
+  final Map<String, dynamic> product;
+  final Future<Map<String, dynamic>> Function(int quantity, String note)
+  onSubmit;
+  const FoodCheckoutDialog({
+    super.key,
+    required this.product,
+    required this.onSubmit,
+  });
+  @override
+  State<FoodCheckoutDialog> createState() => _FoodCheckoutDialogState();
+}
+
+class _FoodCheckoutDialogState extends State<FoodCheckoutDialog> {
+  final _form = GlobalKey<FormState>(),
+      _quantity = TextEditingController(text: '1'),
+      _note = TextEditingController();
+  bool _busy = false;
+  String? _error;
+  Map<String, dynamic>? _order;
+  @override
+  void dispose() {
+    _quantity.dispose();
+    _note.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    if (_busy || !_form.currentState!.validate()) return;
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      final order = await widget.onSubmit(
+        int.parse(_quantity.text),
+        _note.text.trim(),
+      );
+      if (mounted) setState(() => _order = order);
+    } catch (e) {
+      if (mounted) setState(() => _error = authError(e));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final p = widget.product, quantity = int.tryParse(_quantity.text);
+    final valid = quantity != null && quantity >= 1 && quantity <= 50;
+    return PopScope(
+      canPop: !_busy,
+      child: AlertDialog(
+        title: Text(
+          _order != null ? 'Solicitud enviada' : 'Pedir ${p['name']}',
+        ),
+        content: SizedBox(
+          width: 520,
+          child: SingleChildScrollView(
+            child: _order != null
+                ? Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(
+                        Icons.check_circle_outline,
+                        color: fitOrange,
+                        size: 44,
+                      ),
+                      const SizedBox(height: 18),
+                      const Text(
+                        'Ahora espera la confirmación',
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      Text(
+                        '${p['business_name']} recibió tu pedido de ${p['name']}.',
+                      ),
+                      const SizedBox(height: 12),
+                      const Text(
+                        'En Mis compras verás cuándo lo acepta y cuándo puedes recogerlo.',
+                      ),
+                    ],
+                  )
+                : Form(
+                    key: _form,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Text(
+                          p['business_name'],
+                          style: const TextStyle(
+                            fontSize: 16,
+                            color: fitOrange,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Text('Recoge en: ${p['pickup_location']}'),
+                        const SizedBox(height: 20),
+                        Text(
+                          p['sale_unit'] == 'lot'
+                              ? '¿Cuántos lotes quieres?'
+                              : '¿Cuántas unidades quieres?',
+                        ),
+                        const SizedBox(height: 10),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            IconButton.filledTonal(
+                              tooltip: 'Quitar uno',
+                              onPressed: _busy || !valid || quantity <= 1
+                                  ? null
+                                  : () => setState(
+                                      () => _quantity.text = '${quantity - 1}',
+                                    ),
+                              icon: const Icon(Icons.remove),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: TextFormField(
+                                controller: _quantity,
+                                enabled: !_busy,
+                                keyboardType: TextInputType.number,
+                                textAlign: TextAlign.center,
+                                decoration: const InputDecoration(
+                                  labelText: 'Cantidad',
+                                ),
+                                onChanged: (_) => setState(() {}),
+                                validator: (v) {
+                                  final n = int.tryParse(v ?? '');
+                                  return n == null || n < 1 || n > 50
+                                      ? 'Entre 1 y 50.'
+                                      : null;
+                                },
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            IconButton.filledTonal(
+                              tooltip: 'Agregar uno',
+                              onPressed: _busy || !valid || quantity >= 50
+                                  ? null
+                                  : () => setState(
+                                      () => _quantity.text = '${quantity + 1}',
+                                    ),
+                              icon: const Icon(Icons.add),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          '${foodMoney(p['price_cents'])} MXN por ${foodUnit(p)}.',
+                          style: const TextStyle(fontSize: 14, color: fitMuted),
+                        ),
+                        const SizedBox(height: 20),
+                        TextFormField(
+                          controller: _note,
+                          enabled: !_busy,
+                          maxLength: 500,
+                          maxLines: 3,
+                          decoration: const InputDecoration(
+                            labelText: 'Nota para el vendedor (opcional)',
+                            hintText: 'Por ejemplo: sin cebolla',
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.all(18),
+                          decoration: BoxDecoration(
+                            color: fitNavy,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Total del pedido',
+                                style: TextStyle(color: Colors.white),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                valid
+                                    ? '${foodMoney((p['price_cents'] as int) * quantity)} MXN'
+                                    : 'Revisa la cantidad',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 23,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              if (valid && p['sale_unit'] == 'lot')
+                                Text(
+                                  '${quantity * (p['units_per_lot'] as int)} piezas en total',
+                                  style: const TextStyle(color: Colors.white),
+                                ),
+                            ],
+                          ),
+                        ),
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 16),
+                          child: Text(
+                            'Espera a que el vendedor confirme. Acuerda el pago al recoger; esta solicitud no realiza ningún cobro.',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: fitMuted,
+                              height: 1.6,
+                            ),
+                          ),
+                        ),
+                        if (_error != null) InfoBanner(_error!, error: true),
+                      ],
+                    ),
+                  ),
+          ),
+        ),
+        actions: _order != null
+            ? [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Seguir explorando'),
+                ),
+                FilledButton(
+                  onPressed: () =>
+                      Navigator.pop(context, _order!['id'] as String),
+                  child: const Text('Ver seguimiento'),
+                ),
+              ]
+            : [
+                TextButton(
+                  onPressed: _busy ? null : () => Navigator.pop(context),
+                  child: const Text('Volver'),
+                ),
+                FilledButton(
+                  onPressed: _busy ? null : _submit,
+                  child: Text(_busy ? 'Enviando…' : 'Solicitar pedido'),
+                ),
+              ],
+      ),
+    );
+  }
+}
+
 class ProductDialog extends StatefulWidget {
   final AppController controller;
   final Map<String, dynamic>? product;
@@ -1373,11 +2010,14 @@ class _ProductDialogState extends State<ProductDialog> {
               const SizedBox(height: 12),
               TextFormField(
                 controller: _price,
+                onChanged: (_) => setState(() {}),
                 keyboardType: const TextInputType.numberWithOptions(
                   decimal: true,
                 ),
-                decoration: const InputDecoration(
-                  labelText: 'Precio en MXN',
+                decoration: InputDecoration(
+                  labelText: _unit == 'lot'
+                      ? 'Precio del lote completo en MXN'
+                      : 'Precio de una unidad en MXN',
                   prefixText: '\$ ',
                 ),
                 validator: (v) {
@@ -1404,6 +2044,7 @@ class _ProductDialogState extends State<ProductDialog> {
                   padding: const EdgeInsets.only(top: 18),
                   child: TextFormField(
                     controller: _units,
+                    onChanged: (_) => setState(() {}),
                     keyboardType: TextInputType.number,
                     decoration: const InputDecoration(
                       labelText: 'Piezas por lote',
@@ -1416,9 +2057,21 @@ class _ProductDialogState extends State<ProductDialog> {
                     },
                   ),
                 ),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                child: Text(
+                  _unit == 'lot'
+                      ? 'El precio corresponde al lote completo de ${_units.text} piezas.'
+                      : 'El precio corresponde a una sola unidad.',
+                  style: const TextStyle(fontSize: 14, color: fitMuted),
+                ),
+              ),
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
-                title: const Text('Disponible para solicitar'),
+                title: const Text('Permitir que los compradores lo pidan'),
+                subtitle: const Text(
+                  'Será visible cuando tu puesto esté aprobado y activo.',
+                ),
                 value: _available,
                 onChanged: _busy ? null : (v) => setState(() => _available = v),
               ),

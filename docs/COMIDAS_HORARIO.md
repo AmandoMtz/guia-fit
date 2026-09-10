@@ -1,4 +1,4 @@
-# Comidas, cuenta y horario personal
+# Comidas, cuenta y horario personal · versión 4
 
 ## Cuenta de alumno y vendedor
 
@@ -9,6 +9,35 @@ Para vender, abre **Comidas → Quiero vender**, completa nombre del puesto, lug
 Un puesto pendiente puede preparar productos. Solo aparecen en el catálogo los puestos aprobados y activos con productos disponibles. Cambiar el nombre o lugar de entrega del puesto requiere una nueva revisión. Cambiar horarios de atención o descripción no la invalida. Editar un puesto pausado no reactiva las ventas.
 
 Puedes volver a **Alumno**: se oculta el puesto y se pausan pedidos nuevos; se conservan productos, aprobación, pedidos y avisos. Puedes terminar los pedidos existentes desde Mi puesto. Reactivar Alumno vendedor permite publicar si el puesto sigue aprobado. Una suspensión administrativa no se evita cambiando de tipo de cuenta.
+
+## Comprar y seguir tu pedido
+
+1. En **Comidas → Explorar**, busca un producto o abre **Ver puestos** para consultar un menú.
+2. Pulsa **Pedir**. Elige cuántas unidades o lotes quieres, revisa el total y añade una nota opcional.
+3. Pulsa **Solicitar pedido**. La confirmación explica que falta la respuesta del vendedor; **Ver seguimiento** abre el pedido enviado.
+4. Consulta **Mis compras**. Los estados visibles son **Por confirmar**, **En preparación**, **Listo para recoger** y **Entregado**. La fila de seguimiento muestra Enviado → Confirmado → Listo → Entregado.
+5. Espera a que esté listo antes de ir al punto de entrega. El pago se acuerda con el vendedor al recoger.
+
+Cancelar solo está disponible antes de la aceptación. Rechazados y cancelados quedan en el historial. El estado En preparación representa que el vendedor aceptó la solicitud; no se inventan tiempos estimados ni una ubicación en tiempo real.
+
+## Vender y atender clientes
+
+**Pedidos recibidos** tiene su propio acceso en Comidas: muestra las solicitudes de tus clientes. **Mis compras** muestra lo que tú compras, aunque también tengas puesto.
+
+- **Nuevos:** Aceptar pedido o No puedo atenderlo.
+- **En preparación:** Avisar: listo para recoger; si no puedes completarlo, Cancelar preparación avisa al comprador.
+- **Por entregar:** Confirmar entrega, con una pregunta antes de marcarla.
+- **Historial:** entregados, cancelados y rechazados.
+
+**Mi puesto** presenta contadores de nuevos, en preparación y por entregar que abren el filtro correspondiente. **Mi menú** permite editar el producto, pausar/activar su disponibilidad y eliminarlo conservando pedidos anteriores. Preparado no significa publicado: se muestra si el puesto sigue pendiente, pausado o suspendido.
+
+Las revisiones administrativas siguen en **Revisar vendedores**. No se conceden permisos nuevos mediante la interfaz.
+
+## Avisos que llevan al pedido
+
+En la campana, pulsa **Ver pedido** para abrir el pedido concreto. La API indica si corresponde a tus compras o a tus ventas; un usuario ajeno, incluso administrador, no puede consultar el detalle privado de otra persona con ese enlace. **Ver mi puesto** abre el resultado de una revisión administrativa.
+
+Los avisos, contadores y cambios de estado se consultan cada 30 segundos con la aplicación activa. También hay **Actualizar**. Los pedidos se actualizan sin cambiar el filtro. La web conserva abiertos los formularios y las confirmaciones. Los contadores abarcan todos tus pedidos; las listas muestran los últimos 300 más el pedido abierto desde un aviso, aunque sea anterior. Los avisos muestran el estado actual del pedido además del mensaje histórico.
 
 ## Productos y pedidos
 

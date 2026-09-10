@@ -312,6 +312,16 @@ function createFoodRouter({ db, siteUrl, administrator, limit }) {
     ).rows;
     res.json({ data: rows });
   });
+  router.get("/orders/:id", async (req, res) => {
+    const row = (
+      await db.query(
+        "select o.*,v.business_name,p.full_name as buyer_name,case when o.buyer_id=$2 then 'buyer' else 'seller' end as order_role from food_orders o join food_vendors v on v.id=o.vendor_id join profiles p on p.id=o.buyer_id where o.id=$1 and (o.buyer_id=$2 or v.user_id=$2)",
+        [id(req.params.id), req.user.id],
+      )
+    ).rows[0];
+    if (!row) throw error(404, "Pedido no encontrado.", "not_found");
+    res.json({ data: row });
+  });
   router.post("/orders", async (req, res) => {
     fields(req.body, [
       "product_id",
@@ -467,7 +477,7 @@ function createFoodRouter({ db, siteUrl, administrator, limit }) {
   router.get("/notifications", async (req, res) => {
     const items = (
       await db.query(
-        "select id,kind,title,body,order_id,read_at,created_at from notifications where user_id=$1 order by created_at desc limit 80",
+        "select n.id,n.kind,n.title,n.body,n.order_id,n.read_at,n.created_at,o.status as order_status,case when o.buyer_id=$1 then 'buyer' when v.user_id=$1 then 'seller' else null end as order_role from notifications n left join food_orders o on o.id=n.order_id and (o.buyer_id=$1 or exists(select 1 from food_vendors owned where owned.id=o.vendor_id and owned.user_id=$1)) left join food_vendors v on v.id=o.vendor_id where n.user_id=$1 order by n.created_at desc limit 80",
         [req.user.id],
       )
     ).rows;
@@ -477,7 +487,19 @@ function createFoodRouter({ db, siteUrl, administrator, limit }) {
         [req.user.id],
       )
     ).rows[0].n;
-    res.json({ data: { items, unread_count: count } });
+    const grouped = (
+      await db.query(
+        "select case when o.buyer_id=$1 then 'buyer' else 'seller' end as order_role,o.status,count(*)::int as total,max(o.updated_at) as updated_at from food_orders o join food_vendors v on v.id=o.vendor_id where o.buyer_id=$1 or v.user_id=$1 group by 1,2",
+        [req.user.id],
+      )
+    ).rows;
+    const order_summary = { buyer: {}, seller: {}, revision: "" };
+    for (const row of grouped) {
+      order_summary[row.order_role][row.status] = row.total;
+      const stamp = new Date(row.updated_at).toISOString();
+      if (stamp > order_summary.revision) order_summary.revision = stamp;
+    }
+    res.json({ data: { items, unread_count: count, order_summary } });
   });
   router.patch("/notifications/read", async (req, res) => {
     fields(req.body, ["ids", "all"]);

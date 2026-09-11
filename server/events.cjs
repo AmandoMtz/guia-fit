@@ -9,6 +9,56 @@ const { createPdf } = require("./pdf.cjs");
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const fail = (status, code, message) => Object.assign(new Error(message), { status, code });
 const clean = (v, max = 2500) => String(v ?? "").trim().slice(0, max);
+const QR_DEFAULT_HOURS = 6;
+const QR_MAX_HOURS = 168;
+function qrDuration(value, fallback = QR_DEFAULT_HOURS) {
+  const raw = value === undefined || value === null || value === "" ? fallback : Number(value);
+  if (!Number.isInteger(raw) || raw < 1 || raw > QR_MAX_HOURS)
+    throw fail(400, "validation_error", `La duración del QR debe ser de 1 a ${QR_MAX_HOURS} horas.`);
+  return raw;
+}
+async function managedEvent(db, id, user) {
+  if (!UUID.test(id)) throw fail(404, "not_found", "Evento no encontrado.");
+  const event = (await db.query("select * from events where id=$1", [id])).rows[0];
+  if (!event) throw fail(404, "not_found", "Evento no encontrado.");
+  if (!(await canManage(db, event, user))) throw fail(403, "forbidden", "No puedes administrar el QR de este evento.");
+  return event;
+}
+function qrPayloadData(siteUrl, tokenRow, eventDay) {
+  const directLink = `${String(siteUrl || "").replace(/\/$/, "")}/?e=${tokenRow.token_value}`;
+  const payload = Buffer.byteLength(directLink, "utf8") <= 53
+    ? directLink
+    : `FIT-EVENT:${tokenRow.token_value}`;
+  return {
+    token: tokenRow.token_value,
+    payload,
+    svg: qrSvg(payload),
+    expires_at: tokenRow.expires_at,
+    duration_hours: Number(tokenRow.duration_hours || QR_DEFAULT_HOURS),
+    active: tokenRow.active === true || tokenRow.active === "t",
+    event_day: eventDay,
+  };
+}
+async function eventDay(db, startsAt) {
+  return (await db.query("select to_char($1::timestamptz at time zone 'America/Monterrey','YYYY-MM-DD') day", [startsAt])).rows[0].day;
+}
+async function currentQr(db, eventId) {
+  return (await db.query("select token_value,expires_at,duration_hours,(expires_at>now()) as active from event_checkin_tokens where event_id=$1", [eventId])).rows[0] || null;
+}
+async function issueQr(db, event, userId, { action = "generate", durationHours } = {}) {
+  const existing = await currentQr(db, event.id);
+  if (!["generate", "extend", "regenerate"].includes(action))
+    throw fail(400, "validation_error", "Acción de QR no válida.");
+  if (action === "extend" && !existing)
+    throw fail(404, "not_found", "Este evento todavía no tiene un QR para extender.");
+  const hours = qrDuration(durationHours, existing?.duration_hours || QR_DEFAULT_HOURS);
+  const preserveToken = !!existing && action !== "regenerate";
+  const token = preserveToken ? existing.token_value : randomBytes(16).toString("base64url");
+  return (await db.query(`insert into event_checkin_tokens(event_id,token_hash,token_value,created_by,expires_at,duration_hours)
+    values($1,$2,$3,$4,now()+($5::int * interval '1 hour'),$5)
+    on conflict(event_id) do update set token_hash=excluded.token_hash,token_value=excluded.token_value,created_by=excluded.created_by,created_at=now(),expires_at=excluded.expires_at,duration_hours=excluded.duration_hours
+    returning token_value,expires_at,duration_hours,(expires_at>now()) as active`, [event.id, hashToken(token), token, userId, hours])).rows[0];
+}
 const isTeacherEmail = (email) => {
   const e = String(email || "").toLowerCase();
   return /@docentes\.uat\.edu\.mx$/.test(e) || (/@uat\.edu\.mx$/.test(e) && !/@alumnos\.uat\.edu\.mx$/.test(e));
@@ -160,24 +210,27 @@ function createEventsRouter({ db, limit, siteUrl }) {
     res.json({ data: {} });
   });
 
+  router.get("/:id/qr/status", async (req, res) => {
+    const event = await managedEvent(db, req.params.id, req.user);
+    const tokenRow = await currentQr(db, event.id);
+    if (!tokenRow)
+      return res.json({ data: { exists: false, active: false, duration_hours: QR_DEFAULT_HOURS, max_duration_hours: QR_MAX_HOURS, event_day: await eventDay(db, event.starts_at) } });
+    res.json({ data: { exists: true, max_duration_hours: QR_MAX_HOURS, ...qrPayloadData(siteUrl, tokenRow, await eventDay(db, event.starts_at)) } });
+  });
+
   router.get("/:id/qr", async (req, res) => {
-    if (!UUID.test(req.params.id)) throw fail(404, "not_found", "Evento no encontrado.");
-    const event = (await db.query("select * from events where id=$1", [req.params.id])).rows[0];
-    if (!event) throw fail(404, "not_found", "Evento no encontrado.");
-    if (!(await canManage(db, event, req.user))) throw fail(403, "forbidden", "No puedes generar el QR de este evento.");
-    let tokenRow = (await db.query("select token_value,expires_at from event_checkin_tokens where event_id=$1 and expires_at>now()", [event.id])).rows[0];
-    if (!tokenRow) {
-      const token = randomBytes(16).toString("base64url");
-      tokenRow = (await db.query(`insert into event_checkin_tokens(event_id,token_hash,token_value,created_by,expires_at)
-        values($1,$2,$3,$4, ((date_trunc('day', $5::timestamptz at time zone 'America/Monterrey') + interval '1 day') at time zone 'America/Monterrey'))
-        on conflict(event_id) do update set token_hash=excluded.token_hash,token_value=excluded.token_value,created_by=excluded.created_by,created_at=now(),expires_at=excluded.expires_at
-        returning token_value,expires_at`, [event.id, hashToken(token), token, req.user.id, event.starts_at])).rows[0];
-    }
-    const directLink = `${String(siteUrl || "").replace(/\/$/, "")}/?e=${tokenRow.token_value}`;
-    const payload = Buffer.byteLength(directLink, "utf8") <= 53
-      ? directLink
-      : `FIT-EVENT:${tokenRow.token_value}`;
-    res.json({ data: { token: tokenRow.token_value, payload, svg: qrSvg(payload), expires_at: tokenRow.expires_at, event_day: (await db.query("select to_char($1::timestamptz at time zone 'America/Monterrey','YYYY-MM-DD') day", [event.starts_at])).rows[0].day } });
+    const event = await managedEvent(db, req.params.id, req.user);
+    let tokenRow = await currentQr(db, event.id);
+    if (!tokenRow || !tokenRow.active)
+      tokenRow = await issueQr(db, event, req.user.id, { action: "generate", durationHours: tokenRow?.duration_hours || QR_DEFAULT_HOURS });
+    res.json({ data: qrPayloadData(siteUrl, tokenRow, await eventDay(db, event.starts_at)) });
+  });
+
+  router.post("/:id/qr", async (req, res) => {
+    const event = await managedEvent(db, req.params.id, req.user);
+    const action = clean(req.body?.action || "generate", 20).toLowerCase();
+    const tokenRow = await issueQr(db, event, req.user.id, { action, durationHours: req.body?.duration_hours });
+    res.json({ data: qrPayloadData(siteUrl, tokenRow, await eventDay(db, event.starts_at)) });
   });
 
   router.post("/checkin", async (req, res) => {

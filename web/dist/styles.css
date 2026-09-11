@@ -4053,3 +4053,42 @@ dialog:has(.chat-dialog) .module-dialog-close {
     padding: 18px;
   }
 }
+
+/* Gestión del QR de eventos: duración configurable y revalidación. */
+.qr-duration-field {
+  max-width: 360px;
+  margin: 18px auto 8px;
+  text-align: left;
+}
+.qr-status-strip {
+  display: grid;
+  gap: 4px;
+  max-width: 520px;
+  margin: 14px auto 0;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  text-align: left;
+}
+.qr-status-strip.active {
+  background: #eaf7ef;
+  border-color: #b8d6c6;
+  color: #286342;
+}
+.qr-status-strip.expired {
+  background: #fff0ed;
+  border-color: #e6beb6;
+  color: #8f3329;
+}
+.qr-status-strip span,
+.qr-status-strip small {
+  color: inherit;
+}
+.event-qr-actions {
+  justify-content: center;
+}
+.qr-empty-notice {
+  max-width: 520px;
+  margin: 18px auto;
+  text-align: left;
+}

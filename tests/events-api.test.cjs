@@ -76,6 +76,23 @@ test('eventos: públicos cerrados, docentes, QR, asistencia y PDF validable', as
     assert.equal(rows[0].email, student.email);
   });
 
+  await t.test('QR permite duración por horas, revalidar el mismo código y regenerarlo', async () => {
+    const initial = (await call(admin, 'get', `/api/events/${studentEvent.id}/qr/status`).expect(200)).body.data;
+    assert.equal(initial.exists, true);
+    assert.equal(initial.duration_hours, 6);
+    await query("update event_checkin_tokens set expires_at=now()-interval '1 minute' where event_id=$1", [studentEvent.id]);
+    const expired = (await call(admin, 'get', `/api/events/${studentEvent.id}/qr/status`).expect(200)).body.data;
+    assert.equal(expired.active, false);
+    const extended = (await call(admin, 'post', `/api/events/${studentEvent.id}/qr`).send({ action: 'extend' }).expect(200)).body.data;
+    assert.equal(extended.token, initial.token);
+    assert.equal(extended.duration_hours, 6);
+    assert.equal(extended.active, true);
+    const regenerated = (await call(admin, 'post', `/api/events/${studentEvent.id}/qr`).send({ action: 'regenerate', duration_hours: 2 }).expect(200)).body.data;
+    assert.notEqual(regenerated.token, initial.token);
+    assert.equal(regenerated.duration_hours, 2);
+    assert.equal(regenerated.active, true);
+  });
+
   await t.test('la verificación se cierra fuera del día del evento', async () => {
     const future = (await call(admin, 'post', '/api/events').send({
       title: 'Evento de mañana', description: '', location: 'Sala 1', audience: 'students', visibility: 'public',

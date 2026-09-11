@@ -80,8 +80,36 @@
     el.textContent = message;
     el.classList.add("show");
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => el.classList.remove("show"), 5000);
+    toastTimer = setTimeout(() => el.classList.remove("show"), 3000);
   }
+  const transientMessageTimers = new WeakMap();
+  function armTransientMessage(el) {
+    if (!el?.isConnected || !state.user || state.demo || !el.textContent.trim()) return;
+    const prior = transientMessageTimers.get(el);
+    if (prior) clearTimeout(prior);
+    const timer = setTimeout(() => {
+      if (!el.isConnected) return;
+      if (el.matches(".field-error[role=alert]")) el.textContent = "";
+      else el.remove();
+      transientMessageTimers.delete(el);
+    }, 3000);
+    transientMessageTimers.set(el, timer);
+  }
+  function scanTransientMessages(root = document) {
+    if (!state.user || state.demo) return;
+    const selector = ".notice.error,.notice.success,.field-error[role=alert]";
+    if (root.nodeType === 1 && root.matches?.(selector)) armTransientMessage(root);
+    root.querySelectorAll?.(selector).forEach(armTransientMessage);
+  }
+  const transientMessageObserver = new MutationObserver((mutations) => {
+    if (!state.user || state.demo) return;
+    for (const mutation of mutations) {
+      const target = mutation.type === "characterData" ? mutation.target.parentElement : mutation.target;
+      if (target) scanTransientMessages(target);
+      for (const node of mutation.addedNodes || []) if (node.nodeType === 1) scanTransientMessages(node);
+    }
+  });
+  transientMessageObserver.observe(document.documentElement, { subtree: true, childList: true, characterData: true });
   function field(name, label, type = "text", auto = "", hint = "") {
     return `<div class="field"><label for="${name}">${label}</label>${type === "password" ? '<div class="password-wrap">' : ""}<input id="${name}" name="${name}" type="${type}" autocomplete="${auto}" ${name === "email" ? 'inputmode="email" maxlength="254"' : name === "full_name" ? 'maxlength="100"' : type === "password" ? 'maxlength="128"' : ""} aria-describedby="${name}-error${hint ? " " + name + "-hint" : ""}">${type === "password" ? `<button class="eye-button" type="button" data-eye="${name}" aria-label="Mostrar contraseña">${icon("eye")}</button></div>` : ""}<span class="field-error" id="${name}-error"></span>${hint ? `<p class="hint" id="${name}-hint">${hint}</p>` : ""}</div>`;
   }
@@ -117,7 +145,7 @@
       ],
       reset: [
         "Nueva contraseña",
-        "Elige una contraseña de al menos 12 caracteres.",
+        "Elige una contraseña de al menos 8 caracteres, con letra, número y carácter especial.",
       ],
       verify: [
         "Revisa tu correo",

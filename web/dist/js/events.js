@@ -95,12 +95,52 @@
     })();
     return d;
   }
-  function showQr(c, event, data) {
-    const d = c.dialog(`<div class="dialog-content event-qr-dialog"><span class="eyebrow">ASISTENCIA POR QR</span><h2>${c.esc(event.title)}</h2><p>Muéstralo durante el evento. La verificación solo funcionará el <strong>${c.esc(dateOnly(event.starts_at))}</strong>.</p><div class="event-qr-image">${data.svg}</div><label class="field">Código alternativo<input id="event-qr-token" value="${c.esc(data.token)}" readonly></label><div class="button-row"><button class="btn secondary" id="copy-event-code">Copiar código</button></div><p class="hint">El QR abre Guía FIT y registra la asistencia después de iniciar sesión. Si reagendas el evento, se genera un QR nuevo.</p></div>`);
-    d.querySelector("#copy-event-code").onclick = async () => {
-      try { await navigator.clipboard.writeText(data.token); c.toast("Código copiado."); }
-      catch { d.querySelector("#event-qr-token").select(); }
+  function qrExpiryText(data) {
+    if (!data?.expires_at) return "Todavía no se ha generado.";
+    return `${data.active ? "Vigente hasta" : "Expiró el"} ${fmt(data.expires_at)}`;
+  }
+  async function qrManager(c, event) {
+    let data = await api(c, `/api/events/${encodeURIComponent(event.id)}/qr/status`);
+    const maxHours = Number(data.max_duration_hours || 168);
+    const d = c.dialog(`<div class="dialog-content event-qr-dialog"><span class="eyebrow">ASISTENCIA POR QR</span><h2>${c.esc(event.title)}</h2><p>La verificación de asistencia solo funcionará el <strong>${c.esc(dateOnly(event.starts_at))}</strong>. Tú decides cuántas horas estará vigente el código.</p><label class="field qr-duration-field">Duración del QR (horas)<input id="event-qr-duration" type="number" min="1" max="${maxHours}" step="1" value="${Number(data.duration_hours || 6)}"><span class="hint">La duración empieza a contar desde el momento en que generas o extiendes el QR. Máximo ${maxHours} horas.</span></label><div id="event-qr-state"></div><p class="field-error" role="alert" id="event-qr-error"></p></div>`);
+    const state = d.querySelector("#event-qr-state"), duration = d.querySelector("#event-qr-duration"), error = d.querySelector("#event-qr-error");
+    const hours = () => {
+      const value = Number(duration.value);
+      if (!Number.isInteger(value) || value < 1 || value > maxHours) throw Error(`Escribe una duración de 1 a ${maxHours} horas.`);
+      return value;
     };
+    const draw = () => {
+      duration.value = Number(data.duration_hours || duration.value || 6);
+      if (!data.exists) {
+        state.innerHTML = `<div class="notice qr-empty-notice"><b>Este evento todavía no tiene QR.</b><br>Elige la duración y genera el código cuando lo necesites.</div><button class="btn full" id="generate-event-qr">Generar QR</button>`;
+        state.querySelector("#generate-event-qr").onclick = () => update("generate");
+        return;
+      }
+      state.innerHTML = `<div class="qr-status-strip ${data.active ? "active" : "expired"}"><b>${data.active ? "QR activo" : "QR expirado"}</b><span>${c.esc(qrExpiryText(data))}</span><small>Duración configurada: ${Number(data.duration_hours || 6)} h</small></div><div class="event-qr-image">${data.svg}</div><label class="field">Código alternativo<input id="event-qr-token" value="${c.esc(data.token)}" readonly></label><div class="button-row event-qr-actions"><button class="btn secondary" id="copy-event-code">Copiar código</button><button class="btn" id="extend-event-qr">${data.active ? "Extender duración" : "Revalidar / extender duración"}</button><button class="btn secondary" id="regenerate-event-qr">Regenerar código</button></div><p class="hint">“Extender duración” conserva exactamente este mismo QR y lo deja vigente desde ahora por las horas indicadas. “Regenerar código” crea un QR nuevo e invalida el anterior.</p>`;
+      state.querySelector("#copy-event-code").onclick = async () => {
+        try { await navigator.clipboard.writeText(data.token); c.toast("Código copiado."); }
+        catch { state.querySelector("#event-qr-token").select(); }
+      };
+      state.querySelector("#extend-event-qr").onclick = () => update("extend");
+      state.querySelector("#regenerate-event-qr").onclick = () => {
+        if (confirm("¿Regenerar el código? El QR anterior dejará de funcionar.")) update("regenerate");
+      };
+    };
+    const update = async (action) => {
+      error.textContent = "";
+      const buttons = [...d.querySelectorAll("button")];
+      buttons.forEach((b) => b.disabled = true);
+      try {
+        data = { exists: true, max_duration_hours: maxHours, ...(await api(c, `/api/events/${encodeURIComponent(event.id)}/qr`, "POST", { action, duration_hours: hours() })) };
+        draw();
+        c.toast(action === "regenerate" ? "QR regenerado." : action === "extend" ? "Duración del QR actualizada." : "QR generado.");
+      } catch (e) {
+        error.textContent = e.message || "No se pudo actualizar el QR.";
+      } finally {
+        [...d.querySelectorAll("button")].forEach((b) => b.disabled = false);
+      }
+    };
+    draw();
   }
   async function attendees(c, event) {
     const rows = await api(c, `/api/events/${encodeURIComponent(event.id)}/attendees`);
@@ -182,7 +222,10 @@
           b.disabled = true; try { await api(c, `/api/events/${event.id}`, "DELETE"); c.toast("Evento eliminado."); await render(c); } catch (e) { c.toast(e.message); b.disabled = false; }
         });
         content.querySelectorAll("[data-event-qr]").forEach((b) => b.onclick = async () => {
-          b.disabled = true; try { const event = events.find((e) => e.id === b.dataset.eventQr), data = await api(c, `/api/events/${event.id}/qr`); showQr(c, event, data); } catch (e) { c.toast(e.message); } finally { b.disabled = false; }
+          b.disabled = true;
+          try { await qrManager(c, events.find((e) => e.id === b.dataset.eventQr)); }
+          catch (e) { c.toast(e.message || "No se pudo abrir el QR del evento."); }
+          finally { b.disabled = false; }
         });
         content.querySelectorAll("[data-event-attendees]").forEach((b) => b.onclick = async () => { b.disabled = true; try { await attendees(c, events.find((e) => e.id === b.dataset.eventAttendees)); } catch (e) { c.toast(e.message); } finally { b.disabled = false; } });
       };

@@ -288,18 +288,35 @@ function createTemporaryFoodChat({ db }) {
 
     let optimized;
     try {
-      optimized = await sharp(file.buffer, { animated: false })
-        .rotate()
-        .resize({
+      // Normalizamos primero y solo redimensionamos cuando realmente hace falta.
+      // Esto evita fallos de libvips/Sharp con PNG muy pequeños o con canales
+      // gris+alfa, y mantiene el resultado en WebP para no guardar el original.
+      const metadata = await sharp(file.buffer, { animated: false, failOn: "none" }).metadata();
+      if (!metadata.width || !metadata.height) throw new Error("Imagen sin dimensiones válidas");
+      let pipeline = sharp(file.buffer, { animated: false, failOn: "none" }).rotate();
+      if (metadata.width > 1280 || metadata.height > 1280) {
+        pipeline = pipeline.resize({
           width: 1280,
           height: 1280,
           fit: "inside",
           withoutEnlargement: true,
-        })
-        .webp({ quality: 78, effort: 4 })
+        });
+      }
+      optimized = await pipeline
+        .toColourspace("srgb")
+        .webp({ quality: 78 })
         .toBuffer();
     } catch {
-      throw chatError(400, "No pudimos procesar esa imagen. Usa JPG, PNG o WebP.");
+      // Segundo intento conservador: sin rotación ni resize. Algunos builds de
+      // Sharp son más estrictos al transformar imágenes PNG mínimas.
+      try {
+        optimized = await sharp(file.buffer, { animated: false, failOn: "none" })
+          .toColourspace("srgb")
+          .webp({ quality: 78 })
+          .toBuffer();
+      } catch {
+        throw chatError(400, "No pudimos procesar esa imagen. Usa JPG, PNG o WebP.");
+      }
     }
     if (!optimized.length || optimized.length > MAX_STORED_IMAGE_BYTES)
       throw chatError(

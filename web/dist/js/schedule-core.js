@@ -264,14 +264,64 @@
     flush();
     return output;
   }
+  // Normaliza el resultado de OCR. Tesseract puede devolver cajas de palabras
+  // o únicamente texto plano según la plataforma/core cargado.
+  function rowsFromOcr(result) {
+    const boxes = Array.isArray(result?.boxes) ? result.boxes : [],
+      boxRows = boxes.length ? rowsFromBoxes(boxes) : [],
+      textRows = String(result?.text || "")
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter(Boolean);
+
+    // Tesseract.js puede devolver blocks parciales y, al mismo tiempo, un
+    // data.text más completo. Antes, con que existiera una sola caja se
+    // descartaba todo el texto plano (incluida a veces la matrícula).
+    // Combinamos ambos caminos y eliminamos duplicados aproximados.
+    if (!boxRows.length) return textRows;
+    if (!textRows.length) return boxRows;
+
+    const key = (line) =>
+      norm(line)
+        .replace(/[|]/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+    const seen = new Set(boxRows.map(key));
+    return [
+      ...boxRows,
+      ...textRows.filter((line) => {
+        const k = key(line);
+        if (!k || seen.has(k)) return false;
+        seen.add(k);
+        return true;
+      }),
+    ];
+  }
   function parse(lines) {
     const text = lines.join("\n"),
       careerMatch = text.match(
         /(?:carrera|programa(?:\s+educativo)?)\s*[:|]\s*([^\n|]+)/i,
       ),
       studentMatch = norm(text).match(
-        /(?:matricula|no\.?\s*(?:de\s*)?control)\s*[:|]?\s*([a-z0-9-]{3,30})/i,
-      );
+        // OCR puede separar la etiqueta y el valor con espacios, barras o signos.
+        /(?:matricula|matr[i1l]cula|no\.?\s*(?:de\s*)?control)[^a-z0-9\n]{0,40}([a-z0-9-]{3,30})/i,
+      ),
+      // Respaldo para OCR que separa los dígitos de la matrícula con espacios
+      // o signos. Exigimos al menos 7 dígitos para no confundir horarios.
+      studentIdFallback = (() => {
+        const normalized = norm(text),
+          label = normalized.match(/(?:matricula|matr[i1l]cula|no\.?\s*(?:de\s*)?control)/i);
+        if (label) {
+          const tail = normalized.slice((label.index || 0) + label[0].length, (label.index || 0) + label[0].length + 90),
+            line = tail.split(/\n/)[0] || "",
+            candidate = line.match(/(?:[a-z0-9][\s|:;,.\-]*){7,30}/i)?.[0] || "",
+            cleaned = candidate.replace(/[^a-z0-9-]/gi, "");
+          if ((cleaned.match(/\d/g) || []).length >= 7) return cleaned.toUpperCase();
+        }
+        const numeric = normalized.match(/(?:\d[\s|:;,.\-]*){8,14}/)?.[0] || "",
+          digits = numeric.replace(/\D/g, "");
+        return digits.length >= 8 && digits.length <= 14 ? digits : "";
+      })();
     const career =
       careerMatch?.[1]?.trim() ||
       lines
@@ -283,7 +333,12 @@
       warnings = [];
     let header = null;
     for (const line of lines) {
-      const cells = line.split(/\s*\|\s*|\t/).map((x) => x.trim()),
+      // Si la fila viene como TSV, los tabuladores consecutivos representan
+      // celdas vacías reales (por ejemplo, días sin clase). No deben colapsarse.
+      const cells = (line.includes("\t")
+          ? line.split("\t")
+          : line.split(/\s*\|\s*|\s{2,}/))
+          .map((x) => x.trim()),
         ns = cells.map(norm);
       if (
         ns.some((x) =>
@@ -401,13 +456,13 @@
     const studentName =
       text
         .match(
-          /(?:nombre(?:\s+del?)?(?:\s+alumno|\s+estudiante)?|alumno|estudiante)\s*[:|]\s*([^\n|]+)/i,
+          /(?:nombre(?:\s+del?)?(?:\s+alumno|\s+estudiante)?|alumno|estudiante)[^\nA-Za-zÁÉÍÓÚÜÑáéíóúüñ]{0,20}\s*([^\n|]+)/i,
         )?.[1]
         ?.trim() || "";
     return {
       career,
       studentName,
-      studentId: studentMatch?.[1]?.toUpperCase() || "",
+      studentId: studentMatch?.[1]?.toUpperCase() || studentIdFallback,
       classes: unique.slice(0, 120),
       warnings: [
         ...new Set([
@@ -434,6 +489,7 @@
     overlaps,
     rowsFromItems,
     rowsFromBoxes,
+    rowsFromOcr,
     parse,
   };
   if (typeof module === "object" && module.exports) module.exports = api;

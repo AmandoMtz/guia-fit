@@ -174,9 +174,11 @@
           canvas.toDataURL("image/png"),
           announce,
         );
-        return result.boxes.length
-          ? S.rowsFromBoxes(result.boxes)
-          : result.text.split("\n");
+        return S.rowsFromOcr
+          ? S.rowsFromOcr(result)
+          : result.boxes.length
+            ? S.rowsFromBoxes(result.boxes)
+            : result.text.split(/\r?\n/).filter(Boolean);
       };
       try {
         const bytes = await file.arrayBuffer(),

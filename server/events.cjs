@@ -40,7 +40,9 @@ function qrPayloadData(siteUrl, tokenRow, eventDay) {
   };
 }
 async function eventDay(db, startsAt) {
-  return (await db.query("select to_char($1::timestamptz at time zone 'America/Monterrey','YYYY-MM-DD') day", [startsAt])).rows[0].day;
+  // `day` puede ser interpretado como palabra reservada por algunos motores
+  // compatibles con PostgreSQL (por ejemplo PGlite). Usamos un alias explícito.
+  return (await db.query("select to_char($1::timestamptz at time zone 'America/Monterrey','YYYY-MM-DD') as event_day", [startsAt])).rows[0].event_day;
 }
 async function currentQr(db, eventId) {
   return (await db.query("select token_value,expires_at,duration_hours,(expires_at>now()) as active from event_checkin_tokens where event_id=$1", [eventId])).rows[0] || null;

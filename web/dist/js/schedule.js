@@ -67,6 +67,10 @@
   function draw(c, host, saved) {
     if (!saved) {
       const teacher = c.state.user?.account_type === "teacher";
+      if (c.state.offline) {
+        host.innerHTML = `<section class="schedule-welcome panel"><div class="calendar-art" aria-hidden="true">${c.icon("calendar")}</div><span class="eyebrow">MODO SIN CONEXIÓN</span><h2>No hay un horario guardado<br>en este dispositivo.</h2><p>Para usar el horario sin internet, primero debes cargarlo y guardarlo mientras tu sesión está disponible en línea.</p><div class="notice">Conéctate a internet, abre <b>Mi horario</b> y guarda tu horario al menos una vez.</div></section>`;
+        return;
+      }
       host.innerHTML = `<section class="schedule-welcome panel"><div class="calendar-art" aria-hidden="true">${c.icon("calendar")}</div><span class="eyebrow">${teacher ? "HORARIO DOCENTE" : "TU SEMANA EN ORDEN"}</span><h2>${teacher ? "Tus clases,<br>sin datos de más." : "Cada clase,<br>en su lugar."}</h2><p>${teacher ? "Carga una imagen/PDF o captura manualmente. Como docente solo necesitas materia, salón, día y hora." : "Sube una imagen o el PDF de tu horario. Revisa tu carrera, matrícula y materias, y organiza tu semana."}</p><div class="button-row"><button class="btn" id="import-pdf">${c.icon("calendar")} Subir imagen o PDF</button><button class="btn secondary" id="manual-schedule">Capturar manualmente</button></div><div class="schedule-steps"><span><b>01</b> Importa tu horario</span><span><b>02</b> Revisa los datos</span><span><b>03</b> Consulta tu semana</span></div><p class="hint">Solo en este dispositivo y navegador. Se guardan los datos estructurados; la app descarta el archivo después de leerlo. Hasta 8 MB y 20 páginas.</p></section>`;
       host.querySelector("#manual-schedule").onclick = () =>
         review(c, blank(c));
@@ -89,8 +93,9 @@
       );
     const subjectCount = new Set(saved.classes.map((x) => S.norm(x.subject)))
       .size;
-    const teacher = saved.accountType === "teacher" || c.state.user?.account_type === "teacher";
-    host.innerHTML = `<section class="schedule-header"><div><span class="eyebrow">${teacher ? "DOCENTE · MI HORARIO" : `${c.esc(saved.studentId)} · MI HORARIO`}</span><h2>${teacher ? c.esc(saved.studentName || c.state.profile?.full_name || "Horario docente") : c.esc(saved.career)}</h2><p class="student-line">${c.esc(c.state.user.email)}</p><p>Revisado por ti el ${new Date(saved.reviewedAt).toLocaleDateString("es-MX")}. No es una validación institucional.</p></div><div class="schedule-numbers"><div><b>${subjectCount}</b><span>materias</span></div><div><b>${Math.round(total / 6) / 10}</b><span>horas / semana</span></div></div></section><div class="schedule-toolbar"><div class="button-row"><button class="btn secondary small" id="week-prev" aria-label="Semana anterior">←</button><strong>${date(0).toLocaleDateString("es-MX", { day: "numeric", month: "short" })} — ${date(6).toLocaleDateString("es-MX", { day: "numeric", month: "short" })}</strong><button class="btn secondary small" id="week-next" aria-label="Semana siguiente">→</button><button class="text-button" id="week-today">Hoy</button></div><div class="button-row"><button class="btn small" id="edit-schedule">Editar horario</button></div></div>${conflicts.length ? '<div class="notice">Hay clases que se superponen. Revisa las horas en Editar horario.</div>' : ""}<details class="subject-table-panel" open><summary>${teacher ? "Mis clases · Materia, salón y horario" : "Mis materias · Tabla de 11 columnas"}</summary>${root.FIT_TIMETABLE.renderSubjects(c, saved)}</details>${root.FIT_TIMETABLE.render(c, saved, monday, conflicts)}<p class="hint">Semana recurrente. No incorpora vacaciones ni cambios oficiales. Guardado solo en este dispositivo; borrar los datos del navegador elimina el horario.</p><div class="button-row"><button class="text-button" id="replace-pdf">Importar otro horario</button><button class="text-button danger" id="delete-schedule">Eliminar horario</button></div>`;
+    const teacher = saved.accountType === "teacher" || c.state.user?.account_type === "teacher",
+      offline = !!c.state.offline;
+    host.innerHTML = `${offline ? '<div class="notice offline-readonly"><b>Horario disponible sin conexión.</b> Puedes consultarlo y cambiar de semana, pero para editarlo o vincular salones necesitas internet.</div>' : ""}<section class="schedule-header"><div><span class="eyebrow">${teacher ? "DOCENTE · MI HORARIO" : `${c.esc(saved.studentId)} · MI HORARIO`}</span><h2>${teacher ? c.esc(saved.studentName || c.state.profile?.full_name || "Horario docente") : c.esc(saved.career)}</h2><p class="student-line">${c.esc(c.state.user.email)}</p><p>Revisado por ti el ${new Date(saved.reviewedAt).toLocaleDateString("es-MX")}. No es una validación institucional.</p></div><div class="schedule-numbers"><div><b>${subjectCount}</b><span>materias</span></div><div><b>${Math.round(total / 6) / 10}</b><span>horas / semana</span></div></div></section><div class="schedule-toolbar"><div class="button-row"><button class="btn secondary small" id="week-prev" aria-label="Semana anterior">←</button><strong>${date(0).toLocaleDateString("es-MX", { day: "numeric", month: "short" })} — ${date(6).toLocaleDateString("es-MX", { day: "numeric", month: "short" })}</strong><button class="btn secondary small" id="week-next" aria-label="Semana siguiente">→</button><button class="text-button" id="week-today">Hoy</button></div>${offline ? "" : '<div class="button-row"><button class="btn small" id="edit-schedule">Editar horario</button></div>'}</div>${conflicts.length ? `<div class="notice">Hay clases que se superponen.${offline ? "" : " Revisa las horas en Editar horario."}</div>` : ""}<details class="subject-table-panel" open><summary>${teacher ? "Mis clases · Materia, salón y horario" : "Mis materias · Tabla de 11 columnas"}</summary>${root.FIT_TIMETABLE.renderSubjects(c, saved)}</details>${root.FIT_TIMETABLE.render(c, saved, monday, conflicts)}<p class="hint">Semana recurrente. No incorpora vacaciones ni cambios oficiales. Guardado solo en este dispositivo; borrar los datos del navegador elimina el horario.</p>${offline ? "" : '<div class="button-row"><button class="text-button" id="replace-pdf">Importar otro horario</button><button class="text-button danger" id="delete-schedule">Eliminar horario</button></div>'}`;
     host.querySelector("#week-prev").onclick = () => {
       c.state.scheduleWeek = week - 1;
       draw(c, host, saved);
@@ -103,28 +108,30 @@
       c.state.scheduleWeek = 0;
       draw(c, host, saved);
     };
-    host.querySelector("#edit-schedule").onclick = () =>
-      review(c, structuredClone(saved));
-    button(c, host.querySelector("#replace-pdf"), () => importPdf(c));
-    button(c, host.querySelector("#delete-schedule"), async () => {
-      if (!confirm("¿Eliminar de este dispositivo los datos de tu horario?"))
-        return;
-      await storage("delete", saved.userId);
-      c.toast("Horario eliminado de este dispositivo.");
-      c.render();
-    });
-    host
-      .querySelectorAll("[data-table-edit]")
-      .forEach(
-        (b) =>
-          (b.onclick = () =>
-            review(c, structuredClone(saved), false, b.dataset.tableEdit)),
-      );
-    host
-      .querySelectorAll("[data-class-place]")
-      .forEach(
-        (b) => (b.onclick = () => c.navigate("route", b.dataset.classPlace)),
-      );
+    if (!offline) {
+      host.querySelector("#edit-schedule").onclick = () =>
+        review(c, structuredClone(saved));
+      button(c, host.querySelector("#replace-pdf"), () => importPdf(c));
+      button(c, host.querySelector("#delete-schedule"), async () => {
+        if (!confirm("¿Eliminar de este dispositivo los datos de tu horario?"))
+          return;
+        await storage("delete", saved.userId);
+        c.toast("Horario eliminado de este dispositivo.");
+        c.render();
+      });
+      host
+        .querySelectorAll("[data-table-edit]")
+        .forEach(
+          (b) =>
+            (b.onclick = () =>
+              review(c, structuredClone(saved), false, b.dataset.tableEdit)),
+        );
+      host
+        .querySelectorAll("[data-class-place]")
+        .forEach(
+          (b) => (b.onclick = () => c.navigate("route", b.dataset.classPlace)),
+        );
+    }
   }
   async function imageCanvas(blob) {
     const url = URL.createObjectURL(blob);

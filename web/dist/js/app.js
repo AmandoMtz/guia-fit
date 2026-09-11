@@ -73,6 +73,8 @@
     arrived: false,
     dataError: "",
     pendingEventToken: new URLSearchParams(location.search).get("e"),
+    offline: false,
+    offlineSyncedAt: null,
   };
   let toastTimer;
   function toast(message) {
@@ -309,14 +311,53 @@
       }
     }
   }
-  async function openSession() {
+  function saveOfflineSession() {
+    if (state.user?.account_type !== "student") {
+      window.FIT_OFFLINE?.clearSession?.();
+      state.offlineSyncedAt = null;
+      return;
+    }
+    if (window.FIT_OFFLINE?.saveSession({
+      user: state.user,
+      profile: state.profile,
+      verification: state.verification,
+    })) {
+      state.offlineSyncedAt = new Date().toISOString();
+    }
+  }
+  async function cacheStudentEvents() {
+    if (!client || state.offline || state.user?.account_type !== "student") return;
+    const result = await client.request("/api/events");
+    if (!result.error && Array.isArray(result.data))
+      window.FIT_OFFLINE?.saveEvents(state.user.id, result.data);
+  }
+  function restoreOfflineSession() {
+    const saved = window.FIT_OFFLINE?.getSession?.();
+    if (!saved?.user || saved.user.account_type !== "student") return false;
+    state.user = saved.user;
+    state.profile = saved.profile;
+    state.verification = saved.verification;
+    state.admin = false;
+    state.demo = false;
+    state.offline = true;
+    state.offlineSyncedAt = saved.syncedAt || null;
+    state.pendingEventToken = null;
+    state.dataError = "";
+    if (!["schedule", "events"].includes(state.view)) state.view = "schedule";
+    render();
+    return true;
+  }
+  async function openSession({ preserveView = false } = {}) {
     const { data, error } = await client.auth.getUser();
     if (error || !data.user) throw error || new Error("Sesión no disponible");
     state.user = data.user;
     state.demo = false;
-    state.view = state.pendingEventToken ? "events" : "directory";
+    state.offline = false;
+    if (!preserveView)
+      state.view = state.pendingEventToken ? "events" : "directory";
     state.admin = false;
     await loadData();
+    await cacheStudentEvents();
     render();
   }
   async function loadData() {
@@ -348,6 +389,7 @@
       : "";
     state.places = responses[3].error ? [] : responses[3].data || [];
     state.edges = responses[4].error ? [] : responses[4].data || [];
+    if (!responses[0].error) saveOfflineSession();
   }
   function shell() {
     const names = {
@@ -377,16 +419,21 @@
         "Actualiza el directorio y los recorridos comprobados.",
       ],
     };
-    const menu = [
-      ["directory", "grid", "Directorio"],
-      ["map", "map", "Mapa del campus"],
-      ["route", "route", "Cómo llegar"],
-      ["food", "food", "Comidas"],
-      ...(state.user ? [["events", "calendar", state.user.account_type === "teacher" ? "Eventos docentes" : "Eventos"]] : []),
-      ["schedule", "calendar", "Mi horario"],
-      ["profile", "user", "Mi cuenta"],
-    ];
-    if (state.admin)
+    const menu = state.offline
+      ? [
+          ["schedule", "calendar", "Mi horario"],
+          ["events", "calendar", "Eventos guardados"],
+        ]
+      : [
+          ["directory", "grid", "Directorio"],
+          ["map", "map", "Mapa del campus"],
+          ["route", "route", "Cómo llegar"],
+          ["food", "food", "Comidas"],
+          ...(state.user ? [["events", "calendar", state.user.account_type === "teacher" ? "Eventos docentes" : "Eventos"]] : []),
+          ["schedule", "calendar", "Mi horario"],
+          ["profile", "user", "Mi cuenta"],
+        ];
+    if (state.admin && !state.offline)
       menu.push(
         ["admin", "edit", "Administrar"],
         ["food-admin", "store", "Revisar vendedores"],
@@ -396,7 +443,7 @@
         .charAt(0)
         .toUpperCase();
     $("#app").innerHTML =
-      `<div class="shell"><header class="topbar app-top">${brand()}<div class="top-actions"><span class="app-title">Guía FIT</span>${state.user ? `<button class="notification-bell" data-view="notifications" aria-label="Mis avisos">${icon("bell")}<span id="notification-count" hidden></span></button>` : ""}${profileAvatar(initial)}<button class="btn ghost small" id="logout">${icon("exit")}${state.demo ? "Salir de demo" : "Cerrar sesión"}</button></div></header><div class="workspace"><nav class="sidebar" aria-label="Navegación principal"><div class="eyebrow">EXPLORA LA FIT</div>${menu.map(([id, i, label]) => `<button class="nav-item ${state.view === id ? "active" : ""}" data-view="${id}" ${state.view === id ? 'aria-current="page"' : ""}>${icon(i)}${label}</button>`).join("")}<p class="sidebar-note">Facultad de Ingeniería Tampico<br>Universidad Autónoma de Tamaulipas</p></nav><main class="content" id="main"><div class="page-head"><div><span class="eyebrow muted">GUÍA DEL CAMPUS</span><h1>${current[0]}</h1><p>${current[1]}</p></div>${state.demo ? '<span class="badge pending">Modo demostración</span>' : badge(state.verification?.status === "verified")}</div>${state.demo ? '<div class="notice">Demostración: no has iniciado sesión. Los lugares proceden del croquis; sus recorridos todavía deben verificarse.</div>' : ""}${state.dataError ? `<div class="notice error" role="alert">${esc(state.dataError)} <button id="retry-data" class="text-button">Reintentar</button></div>` : ""}<div id="view"></div></main></div></div>`;
+      `<div class="shell"><header class="topbar app-top">${brand()}<div class="top-actions"><span class="app-title">Guía FIT</span>${state.user && !state.offline ? `<button class="notification-bell" data-view="notifications" aria-label="Mis avisos">${icon("bell")}<span id="notification-count" hidden></span></button>` : ""}${profileAvatar(initial)}<button class="btn ghost small" id="logout">${icon("exit")}${state.demo ? "Salir de demo" : state.offline ? "Salir del modo offline" : "Cerrar sesión"}</button></div></header><div class="workspace"><nav class="sidebar" aria-label="Navegación principal"><div class="eyebrow">EXPLORA LA FIT</div>${menu.map(([id, i, label]) => `<button class="nav-item ${state.view === id ? "active" : ""}" data-view="${id}" ${state.view === id ? 'aria-current="page"' : ""}>${icon(i)}${label}</button>`).join("")}<p class="sidebar-note">Facultad de Ingeniería Tampico<br>Universidad Autónoma de Tamaulipas</p></nav><main class="content" id="main"><div class="page-head"><div><span class="eyebrow muted">GUÍA DEL CAMPUS</span><h1>${current[0]}</h1><p>${current[1]}</p></div>${state.demo ? '<span class="badge pending">Modo demostración</span>' : badge(state.verification?.status === "verified")}</div>${state.demo ? '<div class="notice">Demostración: no has iniciado sesión. Los lugares proceden del croquis; sus recorridos todavía deben verificarse.</div>' : ""}${state.offline ? `<div class="offline-banner" role="status"><b>Modo sin conexión</b><span>Solo puedes consultar el horario guardado en este dispositivo y los eventos sincronizados antes de perder la red.${state.offlineSyncedAt ? ` Última sincronización: ${esc(new Date(state.offlineSyncedAt).toLocaleString("es-MX"))}.` : ""}</span></div>` : ""}${state.dataError ? `<div class="notice error" role="alert">${esc(state.dataError)} <button id="retry-data" class="text-button">Reintentar</button></div>` : ""}<div id="view"></div></main></div></div>`;
     document.querySelectorAll("[data-view]").forEach(
       (b) =>
         (b.onclick = () => {
@@ -458,7 +505,7 @@
   }
   let polling = false;
   async function pollNotifications() {
-    if (polling || !state.user || state.demo || document.hidden || !client)
+    if (polling || !state.user || state.demo || state.offline || document.hidden || !client)
       return;
     polling = true;
     const userId = state.user.id;
@@ -486,21 +533,29 @@
   }
   setInterval(pollNotifications, 30000);
   document.addEventListener("visibilitychange", () => {
-    if (!document.hidden) pollNotifications();
+    if (!document.hidden) {
+      pollNotifications();
+      cacheStudentEvents();
+    }
   });
+  setInterval(cacheStudentEvents, 5 * 60 * 1000);
   async function signOut() {
     try {
       window.FIT_FOOD?.disconnect?.();
-      if (client && !state.demo) {
+      const priorUserId = state.user?.id;
+      if (client && !state.demo && !state.offline) {
         const { error } = await client.auth.signOut();
         if (error) throw error;
       }
+      window.FIT_OFFLINE?.clearUser?.(priorUserId);
       state.user = null;
       state.demo = false;
       state.admin = false;
       state.profile = null;
       state.verification = null;
       state.route = null;
+      state.offline = false;
+      state.offlineSyncedAt = null;
       state.notice = "";
       state.mode = "login";
       for (const key of [
@@ -706,7 +761,7 @@
       (state.profile?.full_name || state.user?.email || "D")
         .slice(0, 1)
         .toUpperCase();
-    const url = state.profile?.photo_updated_at
+    const url = !state.offline && state.profile?.photo_updated_at
       ? `${client.base}/api/profile/photo?v=${encodeURIComponent(state.profile.photo_updated_at)}`
       : "";
     return `<span class="avatar profile-avatar ${large ? "large" : ""}" aria-hidden="true"><span>${esc(letter)}</span>${url ? `<img src="${esc(url)}" alt="">` : ""}</span>`;
@@ -1165,13 +1220,71 @@
       }
     };
   }
+  let reconnecting = false;
+  async function reconnectFromOffline() {
+    if (reconnecting || !state.offline || !client || !navigator.onLine) return;
+    reconnecting = true;
+    const priorView = state.view;
+    try {
+      const session = await client.auth.getSession();
+      if (session.data?.session) {
+        state.offline = false;
+        state.view = ["schedule", "events"].includes(priorView) ? priorView : "schedule";
+        await openSession({ preserveView: true });
+        toast("Conexión recuperada. La información volvió a sincronizarse.");
+      } else if (!session.error || session.error.status === 401) {
+        window.FIT_OFFLINE?.clearSession?.();
+        state.user = null;
+        state.profile = null;
+        state.verification = null;
+        state.offline = false;
+        state.mode = "login";
+        state.notice = "La sesión terminó. Conéctate e inicia sesión de nuevo.";
+        authView();
+      }
+    } catch {
+      state.offline = true;
+    } finally {
+      reconnecting = false;
+    }
+  }
+  function bindConnectionEvents() {
+    window.addEventListener("offline", () => {
+      if (state.user?.account_type !== "student" || state.demo) return;
+      saveOfflineSession();
+      state.offline = true;
+      if (!["schedule", "events"].includes(state.view)) state.view = "schedule";
+      render();
+      toast("Sin conexión. Entraste en modo de consulta offline.");
+    });
+    window.addEventListener("online", reconnectFromOffline);
+  }
   async function init() {
     authView();
     if (location.protocol === "file:") return;
+    if ("serviceWorker" in navigator)
+      window.addEventListener("load", () =>
+        navigator.serviceWorker.register("/sw.js").catch(() => {}),
+      );
+    bindConnectionEvents();
     const api = new window.FIT_CLIENT(config.apiBaseUrl || "");
-    const status = await api.request("/api/config");
-    if (!status.data?.enabled) return;
     client = api;
+    if (!navigator.onLine) {
+      if (restoreOfflineSession()) return;
+      state.notice = "No hay conexión y todavía no existe una sesión offline guardada en este dispositivo.";
+      state.authError = true;
+      authView();
+      return;
+    }
+    const status = await api.request("/api/config");
+    if (status.error?.code === "network_error") {
+      if (restoreOfflineSession()) return;
+      state.notice = "No hay conexión y todavía no existe una sesión offline guardada en este dispositivo.";
+      state.authError = true;
+      authView();
+      return;
+    }
+    if (!status.data?.enabled) return;
     const link = await client.processLink();
     if (link?.flow === "recovery") {
       state.mode = "reset";
@@ -1186,8 +1299,10 @@
     }
     client.auth.onAuthStateChange((event) => {
       if (event === "SIGNED_OUT" && state.user) {
+        window.FIT_OFFLINE?.clearUser?.(state.user.id);
         state.user = null;
         state.admin = false;
+        state.offline = false;
         state.mode = "login";
         render();
       }
@@ -1196,11 +1311,14 @@
     if (session.data?.session) {
       try {
         await openSession();
-      } catch {
+      } catch (error) {
+        if (error?.code === "network_error" && restoreOfflineSession()) return;
         state.notice = "No pudimos recuperar tu sesión.";
         state.authError = true;
         authView();
       }
+    } else if (session.error?.code === "network_error" && restoreOfflineSession()) {
+      return;
     } else {
       authView();
     }

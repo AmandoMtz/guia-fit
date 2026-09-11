@@ -637,7 +637,7 @@ function createApp({
     express.static(path.join(__dirname, "../web/dist"), {
       index: "index.html",
       setHeaders: (res, file) => {
-        if (file.endsWith(".html") || file.endsWith("config.js"))
+        if (file.endsWith(".html") || file.endsWith("config.js") || file.endsWith("sw.js"))
           res.set("Cache-Control", "no-cache");
       },
     }),

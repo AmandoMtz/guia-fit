@@ -195,12 +195,28 @@
       finally { b.disabled = false; }
     };
   }
+  function renderOffline(c, host, accountType) {
+    const cached = root.FIT_OFFLINE?.getEvents?.(c.state.user?.id);
+    const events = Array.isArray(cached?.events) ? cached.events : [];
+    const visible = events.filter((e) =>
+      accountType === "student" ? e.audience === "students" : false,
+    );
+    const synced = cached?.syncedAt
+      ? new Date(cached.syncedAt).toLocaleString("es-MX")
+      : "sin registro";
+    host.innerHTML = `<section class="events-intro panel offline-events-head"><div><span class="eyebrow">MODO SIN CONEXIÓN</span><h2>Eventos guardados</h2><p>Esta es la última lista sincronizada antes de perder la conexión. Última actualización: <b>${c.esc(synced)}</b>.</p></div></section><div class="notice">En modo offline solo puedes consultar los eventos guardados. Registrar asistencia con QR, validar documentos y actualizar la lista requiere conexión.</div><div class="event-grid">${visible.length ? visible.map((e) => eventCard(c, { ...e, checkin_open: false, can_manage: false }, accountType)).join("") : '<div class="empty">No había eventos guardados para tu cuenta en la última sincronización.</div>'}</div>`;
+  }
+
   async function render(c) {
     const host = c.$("#view");
     if (c.state.demo || !c.state.user) {
       host.innerHTML = '<section class="panel"><h2>Eventos de la facultad</h2><p>Inicia sesión para consultar los eventos dirigidos a tu cuenta.</p></section>'; return;
     }
     const accountType = c.state.user.account_type || "other";
+    if (c.state.offline) {
+      renderOffline(c, host, accountType);
+      return;
+    }
     if (accountType === "other") {
       host.innerHTML = `<section class="panel"><h2>Cuenta institucional no identificada</h2><p>Los eventos se separan entre alumnos y docentes usando el correo institucional.</p><div class="notice">Alumno: <b>a##########@alumnos.uat.edu.mx</b><br>Docente: <b>@uat.edu.mx</b> o <b>@docentes.uat.edu.mx</b></div><p class="hint">Si tu correo institucional usa otro formato, administración puede revisar la regla antes de habilitar este módulo.</p></section>`; return;
     }
@@ -210,6 +226,7 @@
         api(c, "/api/events"), api(c, "/api/events/attendance/me"), api(c, "/api/events/options"),
       ]);
       if (!host.isConnected) return;
+      if (accountType === "student") root.FIT_OFFLINE?.saveEvents?.(c.state.user.id, events);
       const canCreate = accountType === "admin" || accountType === "teacher";
       const current = c.state.eventsTab || "events";
       host.innerHTML = `${tabs(c, current, accountType, canCreate)}<div id="event-tab-content"></div>`;
@@ -266,6 +283,11 @@
         };
       }
     } catch (e) {
+      if (accountType === "student" && (e?.code === "network_error" || !navigator.onLine) && root.FIT_OFFLINE?.getEvents?.(c.state.user.id)) {
+        c.state.offline = true;
+        c.render();
+        return;
+      }
       host.innerHTML = `<div class="notice error">${c.esc(e.message || "No se pudieron cargar los eventos.")}</div>`;
     }
   }

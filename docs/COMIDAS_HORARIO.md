@@ -84,3 +84,11 @@ El resultado incluye **tabla de materias de 11 columnas** y **vista semanal por 
 **Editar horario** permite cambiar datos del alumno y las clases. **Eliminar horario** quita únicamente el registro de la cuenta activa en ese dispositivo. No modifica su perfil en Aiven ni el horario de otra cuenta.
 
 La actualización limpia originales guardados por versiones anteriores conservando las clases. Los detalles de privacidad, sincronización, fotos y espacio están en [ALMACENAMIENTO.md](ALMACENAMIENTO.md).
+
+## Horario de docentes (V5)
+
+Cuando la sesión se identifica como docente por `@uat.edu.mx` o `@docentes.uat.edu.mx`, la **web** cambia Mi horario a un formulario simplificado. Cada bloque conserva únicamente **Materia, Salón, Día, Hora de inicio y Hora de fin**; el nombre del docente se toma del perfil y no se le pide grupo, carrera ni matrícula.
+
+El lector web acepta la tabla estudiantil ya soportada y además intenta reconocer formatos docentes con encabezados **Materia**, **Lunes–Domingo** y **Aula**, incluso si contienen columnas como **G, Clave, Sit, F.F., Hrs. Semana, Hrs. Mat. o Hrs. Nom.**. Esas columnas se ignoran. Como con cualquier OCR, el docente revisa el resultado antes de guardarlo.
+
+El horario docente sigue siendo local al dispositivo: el PDF o imagen se procesa y se descarta, y Aiven no recibe el horario estructurado.

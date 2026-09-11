@@ -8,6 +8,8 @@ const { transaction } = require("./db.cjs");
 const S = require("./security.cjs");
 const { createFoodRouter } = require("./food.cjs");
 const { createProfileRouter } = require("./profile.cjs");
+const { createEventsRouter, createPublicEventsRouter } = require("./events.cjs");
+const { accountType } = require("./account.cjs");
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const generic =
   "Si corresponde a una cuenta válida, recibirás un correo con los siguientes pasos.";
@@ -132,6 +134,7 @@ function createApp({
         "La sesión terminó. Inicia sesión de nuevo.",
       );
     req.user = rows[0];
+    req.user.account_type = accountType(req.user.email, req.user.role);
     req.sessionHash = S.hashToken(token);
     next();
   }
@@ -263,6 +266,7 @@ function createApp({
         email: user.email,
         email_confirmed_at: user.email_confirmed_at,
         food_seller_intent: user.food_seller_intent,
+        account_type: accountType(user.email, user.role),
       },
     };
     if (req.get("X-FIT-Client") === "mobile") payload.sessionToken = token;
@@ -418,7 +422,7 @@ function createApp({
         });
       const sql =
         table === "profiles"
-          ? "select p.id,p.full_name,p.student_id,p.updated_at,f.updated_at as photo_updated_at,u.food_seller_intent from profiles p join users u on u.id=p.id left join profile_photos f on f.user_id=p.id where p.id=$1"
+          ? "select p.id,p.full_name,p.student_id,p.career,p.updated_at,f.updated_at as photo_updated_at,u.food_seller_intent from profiles p join users u on u.id=p.id left join profile_photos f on f.user_id=p.id where p.id=$1"
           : "select user_id,status,verified_at from institutional_verifications where user_id=$1";
       return res.json({ data: (await db.query(sql, [req.user.id])).rows });
     }
@@ -437,22 +441,29 @@ function createApp({
   app.patch("/api/data/profiles", async (req, res) => {
     if (req.query.id && req.query.id !== req.user.id)
       throw fail(403, "forbidden", "No puedes modificar ese perfil.");
-    const { full_name, student_id } = req.body || {};
+    const { full_name, student_id, career } = req.body || {};
     if (
-      Object.keys(req.body).some(
-        (k) => !["full_name", "student_id"].includes(k),
+      Object.keys(req.body || {}).some(
+        (k) => !["full_name", "student_id", "career"].includes(k),
       ) ||
       !S.nameValid(full_name) ||
       (student_id !== null &&
         (typeof student_id !== "string" ||
           student_id.trim().length < 1 ||
-          student_id.length > 64))
+          student_id.length > 64)) ||
+      (career !== null && career !== undefined &&
+        (typeof career !== "string" || career.trim().length < 2 || career.trim().length > 160))
     )
       throw fail(400, "validation_error", "Revisa el nombre y la matrícula.");
-    const { rows } = await db.query(
-      "update profiles set full_name=$1,student_id=$2 where id=$3 returning id,full_name,student_id",
-      [full_name.trim(), student_id, req.user.id],
-    );
+    const { rows } = career === undefined
+      ? await db.query(
+          "update profiles set full_name=$1,student_id=$2 where id=$3 returning id,full_name,student_id,career",
+          [full_name.trim(), student_id, req.user.id],
+        )
+      : await db.query(
+          "update profiles set full_name=$1,student_id=$2,career=$3 where id=$4 returning id,full_name,student_id,career",
+          [full_name.trim(), student_id, career == null ? null : career.trim(), req.user.id],
+        );
     res.json({ data: rows });
   });
   const columns = {
@@ -611,7 +622,9 @@ function createApp({
         .json({ data: { url: origin + "/api/photos/" + rows[0].id } });
     },
   );
+  app.use("/api/events", createPublicEventsRouter({ db, limit }));
   app.use("/api/profile", authenticate, createProfileRouter({ db, limit }));
+  app.use("/api/events", authenticate, createEventsRouter({ db, limit, siteUrl }));
   app.use(
     "/api/food",
     authenticate,

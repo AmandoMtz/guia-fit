@@ -53,3 +53,13 @@ from photos;
 ```
 
 Las cifras de bytes de fotos no incluyen índices, versiones anteriores de filas pendientes de mantenimiento ni otros datos de la base. Estos SELECT no borran ni modifican registros.
+
+## Eventos, QR y documentos validables (V5)
+
+Los eventos **sí se guardan en Aiven** porque deben ser compartidos entre cuentas y dispositivos. `events` conserva título, descripción, lugar, audiencia, visibilidad, fechas y creador; `event_careers` limita eventos estudiantiles cerrados a una o varias carreras y `event_teacher_invites` registra las cuentas docentes invitadas a eventos cerrados.
+
+La asistencia confirmada por QR se registra en `event_attendance` una sola vez por usuario y evento. Los QR no dependen de un proveedor externo: el servidor genera el SVG. El token asociado queda en `event_checkin_tokens` y solo es aceptado en la fecha del evento según `America/Monterrey`; al reagendar se invalida para obligar a generar uno nuevo.
+
+Los PDF generados no almacenan el archivo PDF en PostgreSQL. `event_documents` conserva únicamente el código aleatorio de validación y los metadatos mínimos del reporte para que Guía FIT pueda confirmar posteriormente que el código fue emitido por el sistema.
+
+La carrera que un alumno escribe en **Mi cuenta** se guarda en `profiles.career` y se utiliza para filtrar eventos cerrados. La coincidencia ignora mayúsculas y espacios de borde, pero conviene usar un nombre institucional uniforme para evitar variantes innecesarias.

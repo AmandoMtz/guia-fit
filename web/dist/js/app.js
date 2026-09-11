@@ -72,6 +72,7 @@
     accessible: false,
     arrived: false,
     dataError: "",
+    pendingEventToken: new URLSearchParams(location.search).get("e"),
   };
   let toastTimer;
   function toast(message) {
@@ -285,7 +286,7 @@
     if (error || !data.user) throw error || new Error("Sesión no disponible");
     state.user = data.user;
     state.demo = false;
-    state.view = "directory";
+    state.view = state.pendingEventToken ? "events" : "directory";
     state.admin = false;
     await loadData();
     render();
@@ -327,6 +328,7 @@
         "Elige qué comer, sigue tus compras o atiende a tus clientes.",
       ],
       schedule: ["Mi horario", "Tu semana, tus materias y tu próximo salón."],
+      events: ["Eventos", "Actividades, reuniones y asistencias verificadas de la facultad."],
       notifications: ["Mis avisos", "Novedades de tus pedidos y de tu puesto."],
       "food-admin": [
         "Revisar vendedores",
@@ -352,6 +354,7 @@
       ["map", "map", "Mapa del campus"],
       ["route", "route", "Cómo llegar"],
       ["food", "food", "Comidas"],
+      ...(state.user ? [["events", "calendar", state.user.account_type === "teacher" ? "Eventos docentes" : "Eventos"]] : []),
       ["schedule", "calendar", "Mi horario"],
       ["profile", "user", "Mi cuenta"],
     ];
@@ -392,6 +395,7 @@
       "food-admin": () => window.FIT_FOOD.render(moduleContext()),
       notifications: () => window.FIT_FOOD.render(moduleContext()),
       schedule: () => window.FIT_SCHEDULE.render(moduleContext()),
+      events: () => window.FIT_EVENTS.render(moduleContext()),
     })[state.view]();
     document.querySelectorAll(".place-image img").forEach(
       (img) =>
@@ -479,6 +483,8 @@
         "foodQuery",
         "salesFilter",
         "ordersFilter",
+        "eventsTab",
+        "eventCheckinBusy",
       ])
         delete state[key];
       render();
@@ -677,6 +683,117 @@
       : "";
     return `<span class="avatar profile-avatar ${large ? "large" : ""}" aria-hidden="true"><span>${esc(letter)}</span>${url ? `<img src="${esc(url)}" alt="">` : ""}</span>`;
   }
+  function cropProfilePhoto(file) {
+    return new Promise((resolve, reject) => {
+      const objectUrl = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => {
+        const d = dialog(
+          `<div class="photo-crop-dialog"><div class="dialog-head"><div><span class="eyebrow">FOTO DE PERFIL</span><h2>Ajusta tu foto</h2></div><button class="close" data-close type="button" aria-label="Cancelar">${icon("close")}</button></div><p class="hint">Arrastra la imagen para acomodarla y usa el control para acercar o alejar. El recorte final será cuadrado.</p><div class="photo-crop-stage"><canvas id="profile-crop-canvas" width="512" height="512" aria-label="Vista previa del recorte"></canvas><span class="photo-crop-guide" aria-hidden="true"></span></div><label class="field photo-zoom">Acercar imagen<input id="profile-crop-zoom" type="range" min="1" max="3" step="0.01" value="1"></label><div class="button-row photo-crop-actions"><button class="text-button" id="profile-crop-reset" type="button">Centrar</button><button class="btn" id="profile-crop-save" type="button">Usar esta foto</button></div></div>`,
+        );
+        const canvas = d.querySelector("#profile-crop-canvas");
+        const ctx = canvas.getContext("2d");
+        const zoomInput = d.querySelector("#profile-crop-zoom");
+        const size = 512;
+        const baseScale = Math.max(size / img.naturalWidth, size / img.naturalHeight);
+        let zoom = 1;
+        let offsetX = 0;
+        let offsetY = 0;
+        let dragging = false;
+        let lastX = 0;
+        let lastY = 0;
+        let settled = false;
+
+        const clamp = () => {
+          const width = img.naturalWidth * baseScale * zoom;
+          const height = img.naturalHeight * baseScale * zoom;
+          const maxX = Math.max(0, (width - size) / 2);
+          const maxY = Math.max(0, (height - size) / 2);
+          offsetX = Math.max(-maxX, Math.min(maxX, offsetX));
+          offsetY = Math.max(-maxY, Math.min(maxY, offsetY));
+          return { width, height };
+        };
+        const draw = () => {
+          const { width, height } = clamp();
+          ctx.clearRect(0, 0, size, size);
+          ctx.drawImage(
+            img,
+            (size - width) / 2 + offsetX,
+            (size - height) / 2 + offsetY,
+            width,
+            height,
+          );
+        };
+        const point = (event) => {
+          const r = canvas.getBoundingClientRect();
+          return {
+            x: (event.clientX - r.left) * (size / r.width),
+            y: (event.clientY - r.top) * (size / r.height),
+          };
+        };
+        const finish = (value) => {
+          if (settled) return;
+          settled = true;
+          URL.revokeObjectURL(objectUrl);
+          if (d.open) d.close();
+          resolve(value);
+        };
+
+        canvas.addEventListener("pointerdown", (event) => {
+          dragging = true;
+          canvas.setPointerCapture(event.pointerId);
+          const p = point(event);
+          lastX = p.x;
+          lastY = p.y;
+          canvas.classList.add("dragging");
+        });
+        canvas.addEventListener("pointermove", (event) => {
+          if (!dragging) return;
+          const p = point(event);
+          offsetX += p.x - lastX;
+          offsetY += p.y - lastY;
+          lastX = p.x;
+          lastY = p.y;
+          draw();
+        });
+        const stopDrag = () => {
+          dragging = false;
+          canvas.classList.remove("dragging");
+        };
+        canvas.addEventListener("pointerup", stopDrag);
+        canvas.addEventListener("pointercancel", stopDrag);
+        zoomInput.addEventListener("input", () => {
+          zoom = Number(zoomInput.value) || 1;
+          draw();
+        });
+        d.querySelector("#profile-crop-reset").onclick = () => {
+          zoom = 1;
+          offsetX = 0;
+          offsetY = 0;
+          zoomInput.value = "1";
+          draw();
+        };
+        d.querySelector("#profile-crop-save").onclick = () => {
+          draw();
+          canvas.toBlob(
+            (blob) => {
+              if (!blob) return reject(new Error("No se pudo preparar la imagen."));
+              finish(blob);
+            },
+            "image/webp",
+            0.9,
+          );
+        };
+        d.addEventListener("close", () => finish(null));
+        draw();
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(objectUrl);
+        reject(new Error("No se pudo abrir la imagen seleccionada."));
+      };
+      img.src = objectUrl;
+    });
+  }
   function profileView() {
     if (state.demo) {
       $("#view").innerHTML =
@@ -690,21 +807,23 @@
     }
     const p = state.profile || {};
     $("#view").innerHTML =
-      `<section class="profile-hero"><div>${profileAvatar(null, true)}<div><span class="eyebrow">TU ESPACIO EN LA FIT</span><h2>${esc(p.full_name || "Mi cuenta")}</h2><p>${p.food_seller_intent ? "Alumno vendedor" : "Alumno"}</p></div></div><form id="profile-photo-form"><label class="field">Foto de perfil<input type="file" id="profile-photo" accept="image/jpeg,image/png,image/webp" required></label><div class="button-row"><button class="btn small" type="submit">Guardar foto</button>${p.photo_updated_at ? '<button class="text-button" type="button" id="delete-avatar">Quitar foto</button>' : ""}</div><p class="hint">JPG, PNG o WebP; hasta 5 MB. Se guarda una copia optimizada en tu cuenta.</p></form></section><div class="profile-grid"><section class="panel"><h2>Mis datos</h2><form id="profile-form">${field("full_name", "Nombre completo", "text", "name")}<div class="field"><label>Correo electrónico</label><p>${esc(state.user.email)}</p></div>${field("student_id", "Matrícula (opcional)", "text", "off", "Se validará únicamente con una fuente institucional autorizada.")}<button class="btn">Guardar cambios</button><p class="hint" style="margin-top:16px">Modificar el nombre o la matrícula devuelve su validación institucional al estado pendiente.</p></form></section><section class="panel"><h2>Estado de tu cuenta</h2><p class="hint">Identificador para revisión institucional:<br><span style="overflow-wrap:anywhere">${esc(state.user.id)}</span></p><div class="status-item">${badge(!!state.user.email_confirmed_at)}<p>Correo electrónico</p></div><div class="status-item">${badge(state.verification?.status === "verified")}<p>Vinculación con la facultad</p><p class="hint">${state.verification?.status === "verified" ? "Confirmada por un administrador con una fuente autorizada." : "Pendiente de contrastar tus datos con una fuente institucional autorizada."}</p></div><p class="hint" style="margin-top:20px">Tu nombre y tu matrícula no se consideran auténticos únicamente por haberlos escrito en el formulario.</p></section></div>`;
+      `<section class="profile-hero"><div>${profileAvatar(null, true)}<div><span class="eyebrow">TU ESPACIO EN LA FIT</span><h2>${esc(p.full_name || "Mi cuenta")}</h2><p>${state.user.account_type === "teacher" ? "Docente" : state.user.account_type === "admin" ? "Administrador" : state.user.account_type === "student" ? (p.food_seller_intent ? "Alumno vendedor" : "Alumno") : "Cuenta externa"}</p></div></div><form id="profile-photo-form"><label class="field">Foto de perfil<input type="file" id="profile-photo" accept="image/jpeg,image/png,image/webp" required></label><div class="button-row"><button class="btn small" type="submit">Ajustar y guardar foto</button>${p.photo_updated_at ? '<button class="text-button" type="button" id="delete-avatar">Quitar foto</button>' : ""}</div><p class="hint">Puedes mover, acercar y recortar la imagen antes de guardarla. JPG, PNG o WebP; hasta 5 MB.</p></form></section><div class="profile-grid"><section class="panel"><h2>Mis datos</h2><form id="profile-form">${field("full_name", "Nombre completo", "text", "name")}<div class="field"><label>Correo electrónico</label><p>${esc(state.user.email)}</p><span class="account-detected ${esc(state.user.account_type || "other")}">${state.user.account_type === "teacher" ? "Cuenta docente detectada por dominio institucional" : state.user.account_type === "student" ? "Cuenta de alumno detectada por matrícula institucional" : state.user.account_type === "admin" ? "Cuenta administradora" : "Dominio institucional no clasificado"}</span></div>${state.user.account_type === "student" ? field("student_id", "Matrícula (opcional)", "text", "off", "Se validará únicamente con una fuente institucional autorizada.") + field("career", "Carrera / programa académico", "text", "off", "Se usa para mostrarte eventos cerrados dirigidos a tu carrera.") : ""}<button class="btn">Guardar cambios</button><p class="hint" style="margin-top:16px">Los docentes se identifican por correos <b>@uat.edu.mx</b> o <b>@docentes.uat.edu.mx</b>. Los alumnos usan el formato <b>a…@alumnos.uat.edu.mx</b>.</p></form></section><section class="panel"><h2>Estado de tu cuenta</h2><p class="hint">Identificador para revisión institucional:<br><span style="overflow-wrap:anywhere">${esc(state.user.id)}</span></p><div class="status-item">${badge(!!state.user.email_confirmed_at)}<p>Correo electrónico</p></div><div class="status-item">${badge(state.verification?.status === "verified")}<p>Vinculación con la facultad</p><p class="hint">${state.verification?.status === "verified" ? "Confirmada por un administrador con una fuente autorizada." : "Pendiente de contrastar tus datos con una fuente institucional autorizada."}</p></div><p class="hint" style="margin-top:20px">La clasificación alumno/docente proviene del formato del correo institucional; la verificación institucional sigue siendo un proceso separado.</p></section></div>`;
     $("#view").insertAdjacentHTML(
       "beforeend",
-      `<section class="panel account-mode-panel"><div><span class="eyebrow">UNA CUENTA, MÁS POSIBILIDADES</span><h2>Mi tipo de cuenta</h2><p>Activa tu espacio de ventas cuando lo necesites. Conservas tu acceso de alumno y tus pedidos.</p></div><form id="account-mode-form"><label class="field">Usar mi cuenta como<select name="mode"><option value="student" ${!p.food_seller_intent ? "selected" : ""}>Alumno</option><option value="student_seller" ${p.food_seller_intent ? "selected" : ""}>Alumno vendedor</option></select></label><button class="btn" type="submit">Guardar tipo de cuenta</button><button class="text-button" id="go-my-shop" type="button">${p.food_seller_intent ? "Configurar mi puesto" : "Ver Comidas"} →</button><p class="hint">El puesto necesita aprobación antes de publicar. Si vuelves a Alumno, se oculta tu puesto y se pausan nuevos pedidos; puedes terminar los que ya recibiste.</p></form></section><section class="panel storage-summary"><h2>¿Dónde se guardan mis datos?</h2><div><p><b>En tu cuenta</b><br>Perfil, foto, tipo de cuenta, puesto, productos, pedidos y avisos.</p><p><b>Chat de Comidas</b><br>Mensajes e imágenes son temporales y expiran a las 12 h; no se guardan en Aiven. Solo el pedido confirmado permanece.</p><p><b>Solo en este dispositivo</b><br>Nombre, matrícula, carrera y clases de tu horario. Otra cuenta no ve tu tabla.</p><p><b>Archivo del horario</b><br>Se procesa y se descarta. No se guarda el PDF ni la imagen en el servidor o en la app.</p></div><p class="hint">El horario no se sincroniza entre dispositivos. Borrar los datos del navegador elimina la tabla local.</p></section>`,
+      `${state.user.account_type === "student" ? `<section class="panel account-mode-panel"><div><span class="eyebrow">UNA CUENTA, MÁS POSIBILIDADES</span><h2>Mi tipo de cuenta</h2><p>Activa tu espacio de ventas cuando lo necesites. Conservas tu acceso de alumno y tus pedidos.</p></div><form id="account-mode-form"><label class="field">Usar mi cuenta como<select name="mode"><option value="student" ${!p.food_seller_intent ? "selected" : ""}>Alumno</option><option value="student_seller" ${p.food_seller_intent ? "selected" : ""}>Alumno vendedor</option></select></label><button class="btn" type="submit">Guardar tipo de cuenta</button><button class="text-button" id="go-my-shop" type="button">${p.food_seller_intent ? "Configurar mi puesto" : "Ver Comidas"} →</button><p class="hint">El puesto necesita aprobación antes de publicar. Si vuelves a Alumno, se oculta tu puesto y se pausan nuevos pedidos; puedes terminar los que ya recibiste.</p></form></section>` : `<section class="panel account-role-panel"><span class="eyebrow">ROL INSTITUCIONAL</span><h2>${state.user.account_type === "teacher" ? "Cuenta docente" : state.user.account_type === "admin" ? "Cuenta administradora" : "Cuenta sin clasificación institucional"}</h2><p>${state.user.account_type === "teacher" ? "Tu correo te habilita el horario simplificado para docentes y la creación de eventos exclusivos para docentes." : state.user.account_type === "admin" ? "Puedes administrar eventos para alumnos, generar códigos QR y descargar listas de asistencia verificadas." : "Las funciones de eventos se habilitan al reconocer un correo institucional de alumno o docente."}</p></section>`}<section class="panel storage-summary"><h2>¿Dónde se guardan mis datos?</h2><div><p><b>En tu cuenta</b><br>Perfil, foto, carrera, eventos, asistencias, puesto, productos, pedidos y avisos.</p><p><b>Chat de Comidas</b><br>Mensajes e imágenes son temporales y expiran a las 12 h; no se guardan en Aiven. Solo el pedido confirmado permanece.</p><p><b>Solo en este dispositivo</b><br>Los datos estructurados de tu horario. Otra cuenta no ve tu tabla local.</p><p><b>Archivo del horario</b><br>Se procesa y se descarta. No se guarda el PDF ni la imagen original.</p></div><p class="hint">El horario no se sincroniza entre dispositivos. Los eventos y asistencias verificadas sí quedan asociados a la cuenta.</p></section>`,
     );
     const refreshProfile = async () => {
       const owner = state.user?.id;
       const name = $("#full_name")?.value,
-        student = $("#student_id")?.value;
+        student = $("#student_id")?.value,
+        career = $("#career")?.value;
       await loadData();
       if (state.user?.id !== owner) return;
       render();
       if (state.view === "profile") {
         $("#full_name").value = name ?? "";
-        $("#student_id").value = student ?? "";
+        if ($("#student_id")) $("#student_id").value = student ?? "";
+        if ($("#career")) $("#career").value = career ?? "";
       }
     };
     const profileAction = async (b, path, method, body, notice) => {
@@ -723,7 +842,7 @@
         b.disabled = false;
       }
     };
-    $("#profile-photo-form").onsubmit = (e) => {
+    $("#profile-photo-form").onsubmit = async (e) => {
       e.preventDefault();
       const file = $("#profile-photo").files[0];
       if (!file) return;
@@ -734,15 +853,22 @@
         toast("Usa una imagen JPG, PNG o WebP de hasta 5 MB.");
         return;
       }
-      const body = new FormData();
-      body.append("file", file);
-      profileAction(
-        e.currentTarget.querySelector("[type=submit]"),
-        "/api/profile/photo",
-        "POST",
-        body,
-        "Foto de perfil actualizada.",
-      );
+      const button = e.currentTarget.querySelector("[type=submit]");
+      try {
+        const cropped = await cropProfilePhoto(file);
+        if (!cropped) return;
+        const body = new FormData();
+        body.append("file", cropped, "perfil.webp");
+        await profileAction(
+          button,
+          "/api/profile/photo",
+          "POST",
+          body,
+          "Foto de perfil actualizada.",
+        );
+      } catch (error) {
+        toast(error.message || "No se pudo preparar la foto.");
+      }
     };
     if ($("#delete-avatar"))
       $("#delete-avatar").onclick = (e) =>
@@ -753,7 +879,7 @@
           undefined,
           "Foto de perfil eliminada.",
         );
-    $("#account-mode-form").onsubmit = (e) => {
+    if ($("#account-mode-form")) $("#account-mode-form").onsubmit = (e) => {
       e.preventDefault();
       profileAction(
         e.currentTarget.querySelector("[type=submit]"),
@@ -763,24 +889,27 @@
         "Tipo de cuenta actualizado.",
       );
     };
-    $("#go-my-shop").onclick = () => {
+    if ($("#go-my-shop")) $("#go-my-shop").onclick = () => {
       state.foodTab = p.food_seller_intent ? "mine" : "products";
       state.view = "food";
       render();
     };
     $("#full_name").value = p.full_name || "";
-    $("#student_id").value = p.student_id || "";
+    if ($("#student_id")) $("#student_id").value = p.student_id || "";
+    if ($("#career")) $("#career").value = p.career || "";
     $("#profile-form").onsubmit = async (e) => {
       e.preventDefault();
       const form = e.currentTarget,
         b = $("button", form);
       if (b.disabled) return;
       const full_name = $("#full_name").value.trim(),
-        student_id = $("#student_id").value.trim();
+        student_id = $("#student_id")?.value.trim() || "",
+        career = $("#career")?.value.trim() || "";
       if (
         full_name.length < 2 ||
         full_name.length > 100 ||
-        student_id.length > 64
+        student_id.length > 64 ||
+        career.length > 160
       ) {
         toast("Revisa el nombre y la matrícula (máximo 64 caracteres).");
         return;
@@ -789,7 +918,7 @@
       try {
         const { error } = await client
           .from("profiles")
-          .update({ full_name, student_id: student_id || null })
+          .update({ full_name, student_id: student_id || null, career: career || null })
           .eq("id", state.user.id);
         if (error) throw error;
         await loadData();

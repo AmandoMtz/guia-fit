@@ -1,8 +1,8 @@
-# Guía FIT 4 · Comidas más claras
+# Guía FIT 5 · Docentes, horarios y eventos
 
-Web responsiva y aplicación Flutter/Dart para encontrar espacios, comprar comida en la facultad y organizar el horario personal. Conserva acceso, registro, confirmación de correo, recuperación, perfiles, mapa y logotipos originales de UAT/FIT.
+Web responsiva y aplicación Flutter/Dart para encontrar espacios, comprar comida en la facultad y organizar el horario personal. La web/API añade clasificación de alumnos y docentes por correo institucional, horario simplificado para docentes, recorte de foto de perfil y eventos con QR, asistencia y PDF validable. Conserva acceso, registro, confirmación de correo, recuperación, perfiles, mapa y logotipos originales de UAT/FIT.
 
-**¿Ya lo tienes en GitHub y Render? Empieza por `docs/ACTUALIZAR_V4.md`.** Esta entrega mejora Comidas sin cambiar el esquema de la base de datos.
+**¿Ya lo tienes en GitHub y Render? Empieza por `docs/ACTUALIZAR_V5.md`.** Esta entrega agrega la migración aditiva `004_events.sql`; no modifica las migraciones anteriores.
 
 ## Empezar
 
@@ -29,11 +29,21 @@ Web responsiva y aplicación Flutter/Dart para encontrar espacios, comprar comid
 
 - Login con pestañas de registro, ver/ocultar contraseña, validación de campos, mensajes de carga y recuperación.
 - Confirmación obligatoria de correo; contraseñas con hash scrypt; sesiones web en cookies HttpOnly; almacenamiento seguro del token en móvil.
-- Perfil con matrícula opcional. Un administrador contrasta identidad con una fuente institucional; editar nombre o matrícula invalida esa revisión.
+- Perfil con matrícula opcional y carrera para alumnos. El tipo se detecta por correo: `a...@alumnos.uat.edu.mx` para alumno y `@uat.edu.mx` / `@docentes.uat.edu.mx` para docente; el rol `admin` de la base tiene prioridad.
+- Foto de perfil web con recorte previo: mover, acercar y encuadrar antes de enviar la imagen optimizada al servidor.
 - Directorio con búsqueda y filtros, ficha por espacio, fotografía opcional, croquis ampliable con marcadores y navegación por tramos.
 - Recorridos con **Anterior**, **Siguiente**, **Llegué** y reinicio. Filtrado por accesibilidad verificada. No incluye GPS interior ni detecta automáticamente la llegada.
 - Panel web para agregar/editar salones, fotografías, tramos y revisar perfiles. Web y Flutter incluyen revisión de vendedores para administradores.
 - Fotos de entrada en JPG/PNG/WebP, máximo 5 MB, almacenadas en Aiven para conservarlas cuando Render reinicie.
+
+## Docentes y eventos de la facultad
+
+- **Horario docente**: una cuenta docente puede subir imagen/PDF o capturar manualmente. La revisión solicita únicamente materia, salón, día y hora. El lector reconoce también tablas docentes con columnas administrativas adicionales y descarta las que no se necesitan.
+- **Eventos para alumnos**: solo administradores pueden crear, modificar, reagendar o eliminar. Pueden ser públicos para todos los alumnos o cerrados para una o varias carreras.
+- **Eventos para docentes**: cualquier docente puede crear eventos docentes públicos o cerrados invitando cuentas docentes registradas. El creador puede editar, reagendar y eliminar sus eventos; administración también puede gestionarlos.
+- **QR de asistencia**: el organizador genera un QR desde Guía FIT. El servidor solo acepta la verificación en la fecha del evento usando la zona `America/Monterrey`; un mismo usuario queda registrado una sola vez por evento.
+- **Historial y PDF**: cada asistente puede consultar sus eventos verificados y generar un PDF. Los organizadores pueden descargar la lista de asistentes. Cada PDF recibe un código aleatorio `FIT-AAAA-XXXXXXXXXXXX` que puede validarse contra el registro del servidor.
+- **Privacidad de públicos cerrados**: un alumno solo ve un evento dirigido a la carrera guardada en su perfil; un docente solo ve eventos docentes públicos, propios o aquellos donde fue invitado.
 
 ## Comidas: del antojo a la entrega
 
@@ -60,7 +70,7 @@ Consulta `docs/COMIDAS_HORARIO.md` para el uso y los límites de la importación
 
 El croquis permite identificar nueve espacios, pero no informa todos los salones, pisos o caminos transitables. Se cargan como **pendientes de comprobar**, sin inventar numeraciones ni conexiones. El recorrido demostrativo usa nombres ficticios y nunca se publica como ruta real. Para habilitar recorridos reales, un administrador debe revisar y registrar puntos y tramos con fuente y fecha. Consulta **docs/DATOS_DEL_CAMPUS.md**.
 
-Confirmar un correo solo acredita el acceso a ese buzón. No se presupone ningún dominio oficial ni integración con registros privados de UAT. La revisión institucional es manual y está restringida a administradores.
+Confirmar un correo solo acredita el acceso a ese buzón. Para organizar la interfaz, esta versión aplica las reglas de dominio solicitadas para alumno/docente; eso no constituye por sí mismo una verificación laboral o académica. La revisión institucional del perfil sigue siendo un proceso separado y restringido a administradores.
 
 ## Carpetas
 
@@ -99,6 +109,7 @@ Para actualizar las copias estáticas tras cambiar sus dependencias fijadas: `np
 - **Mi cuenta → Mi tipo de cuenta** permite cambiar entre Alumno y Alumno vendedor, incluso en cuentas antiguas. La aprobación del puesto sigue a cargo del administrador. Volver a Alumno pausa las ventas nuevas y conserva el historial.
 - **Foto de perfil**: subir, reemplazar o quitar en web y Flutter. El servidor valida y convierte a WebP de hasta 512 × 512; guarda una sola imagen por cuenta. La foto personal solo se consulta desde la sesión de esa cuenta.
 - **Sin PDF guardado**: se eliminó la opción de conservar originales. La actualización local retira originales anteriores sin borrar las clases.
-- La migración aditiva `003_profiles.sql` incorpora fotos y pausa de puestos. Las migraciones 001 y 002 permanecen intactas.
+- La migración aditiva `003_profiles.sql` incorpora fotos y pausa de puestos.
+- La migración aditiva `004_events.sql` incorpora carrera del perfil, eventos, públicos cerrados, invitaciones docentes, QR, asistencias y códigos de validación. Las migraciones 001–003 permanecen intactas.
 
-Consulta [ACTUALIZAR_V4.md](docs/ACTUALIZAR_V4.md) y [ALMACENAMIENTO.md](docs/ALMACENAMIENTO.md). No se cambia el esquema de Aiven ni se necesitan claves nuevas. El chat temporal usa memoria del proceso de Render: un reinicio o nuevo despliegue puede cerrar conversaciones activas antes de las 12 horas, precisamente porque no se persisten.
+Consulta [ACTUALIZAR_V5.md](docs/ACTUALIZAR_V5.md) y [ALMACENAMIENTO.md](docs/ALMACENAMIENTO.md). Esta versión sí añade tablas/columnas mediante `004_events.sql`, pero no necesita claves externas nuevas. El chat temporal usa memoria del proceso de Render: un reinicio o nuevo despliegue puede cerrar conversaciones activas antes de las 12 horas, precisamente porque no se persisten.

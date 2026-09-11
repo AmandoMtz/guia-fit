@@ -88,3 +88,7 @@ Mi cuenta permite cambiar Alumno/Alumno vendedor y subir, reemplazar o eliminar 
 La misma API sirve a Explorar, Mis compras, Pedidos recibidos y Mi puesto. Los avisos tienen Ver pedido; la navegación se conserva al pasar de la campana a Comidas. El resumen de dos lotes indica el número total de piezas y el precio completo. El seguimiento muestra qué hacer en cada etapa, y los permisos se validan en el servidor.
 
 No se añadieron dependencias Flutter ni cambios de plataforma. La versión de la app es 4.0.0+4. Recompila tu aplicación para recibir la nueva interfaz.
+
+## Compatibilidad con la entrega 5
+
+El backend V5 devuelve campos adicionales como `account_type` y `career`; el cliente Flutter existente ignora los campos JSON que no utiliza y continúa siendo compatible con acceso, perfil, Comidas y horario previo. La interfaz nueva de **Eventos**, el recorte interactivo de foto y el horario docente simplificado de esta entrega están implementados en `web/dist/`. No se añadió un paquete móvil de cámara/QR ni se afirma paridad de esas pantallas en Flutter V5.

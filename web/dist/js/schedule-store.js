@@ -1,7 +1,7 @@
 /* Un registro por cuenta. Solo datos estructurados; nunca archivos ni texto OCR. */
 (function (root) {
   function clean(value) {
-    const keys = ["userId", "career", "studentId", "studentName", "reviewedAt"];
+    const keys = ["userId", "career", "studentId", "studentName", "reviewedAt", "accountType"];
     const classKeys = [
       "id",
       "subject",

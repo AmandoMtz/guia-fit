@@ -47,3 +47,19 @@ No se realizó inspección visual de la web con navegador. No se compiló ni fir
 Las horas y campos incompletos requieren corrección. La revisión del alumno no equivale a una verificación institucional. Los avisos de pedidos son internos a la app, no push con la aplicación cerrada.
 
 El ZIP contiene web, servidor, Flutter, plataformas, librerías estáticas, modelos de OCR, configuración de ejemplo, pruebas y documentación. Excluye credenciales, certificados, node_modules, SDK, compilaciones y datos reales de alumnos.
+
+---
+
+# Comprobaciones de la actualización 5
+
+Revisión de la entrega 5: 10 de septiembre de 2026.
+
+Se añadieron pruebas focalizadas para las reglas nuevas. `tests/events-core.test.cjs` comprueba la clasificación alumno/docente/admin, la generación local del QR y la inclusión del código especial en los PDF. `tests/schedule-fit.test.cjs` añade un caso de horario docente con columnas **G, Clave, Materia, Sit, F.F., Lunes–Domingo, Hrs. y Aula**: el lector ignora las columnas administrativas y genera únicamente los bloques de materia, aula, día y hora. Esas pruebas focalizadas completaron **12/12** correctamente en esta revisión.
+
+También se comprobó la sintaxis de todos los archivos propios `server/*.cjs`, `web/dist/js/*.js` y `tests/*.cjs` con `node --check`. El QR generado para `https://castoresfit.com/?e=...` fue decodificado correctamente con un lector QR independiente durante la revisión.
+
+Esta versión **sí cambia de forma aditiva el esquema** mediante `004_events.sql`: añade `profiles.career` y las tablas de eventos, públicos cerrados, invitaciones docentes, tokens QR, asistencias y documentos validables. No modifica las migraciones 001–003 ya aplicadas.
+
+En el entorno de preparación del ZIP no se completó una reinstalación completa de `node_modules`, por lo que aquí no se vuelve a afirmar el total histórico de la suite que depende de PGlite/Sharp/Tesseract. Después de descomprimir, ejecuta `npm ci` y `npm test` antes del despliegue. Las pruebas focalizadas anteriores no dependen de esos módulos descargados.
+
+La interfaz nueva de **Eventos**, el recorte interactivo de foto y el horario docente simplificado se implementaron en la web que sirve Render. La API de eventos queda disponible para futuras pantallas móviles. La aplicación Flutter incluida conserva los módulos previos; no se afirma paridad de interfaz de Eventos en esta entrega.

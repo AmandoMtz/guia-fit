@@ -124,7 +124,7 @@
     for (const b of words.sort((a, b) => a.y0 - b.y0 || a.x0 - b.x0)) {
       const center = (b.y0 + b.y1) / 2;
       let r = rows.find(
-        (x) => Math.abs(x.y - center) < Math.max(5, (b.y1 - b.y0) * 0.48),
+        (x) => Math.abs(x.y - center) < Math.max(9, (b.y1 - b.y0) * 0.8),
       );
       if (!r) {
         r = { y: center, items: [] };
@@ -133,6 +133,7 @@
       r.items.push(b);
     }
     let bounds = null,
+      teacherSpans = null,
       pending = null,
       lastY = null;
     const output = [];
@@ -152,6 +153,7 @@
         heads.every((x, i) => !i || x > heads[i - 1])
       ) {
         flush();
+        teacherSpans = null;
         bounds = heads.slice(0, -1).map((x, i) => (x + heads[i + 1]) / 2);
         // Las columnas de días son regulares; los encabezados de materia y profesor pueden estar centrados en celdas anchas.
         const gaps = heads
@@ -163,6 +165,55 @@
         bounds[1] = heads[2] - (heads[3] - heads[2]) / 2;
         bounds[9] = heads[9] + step / 2;
         output.push(fitColumns.join(" | "));
+        lastY = r.y;
+        continue;
+      }
+      // Formato de carga docente: Materia + Lunes…Domingo + Aula, aunque
+      // existan columnas administrativas adicionales (Clave, Sit, Hrs., etc.).
+      // Solo conservamos lo que el docente necesita y descartamos lo demás.
+      const subjectHead = xs.find((x) => /^(materia|asignatura)$/.test(norm(x.text).replace(/[.:]/g, "").trim()));
+      const roomHead = xs.find((x) => /^(aula|salon)$/.test(norm(x.text).replace(/[.:]/g, "").trim()));
+      const dayHeads = Array.from({ length: 7 }, (_, i) =>
+        xs.find((x) => dayOf(x.text) === i + 1),
+      );
+      if (subjectHead && roomHead && dayHeads.every(Boolean)) {
+        flush();
+        bounds = null;
+        const centers = xs
+          .map((x) => (x.x0 + x.x1) / 2)
+          .sort((a, b) => a - b)
+          .filter((x, i, a) => !i || Math.abs(x - a[i - 1]) > 3);
+        const targets = [subjectHead, ...dayHeads, roomHead];
+        teacherSpans = targets.map((x) => {
+          const center = (x.x0 + x.x1) / 2;
+          const prior = [...centers].reverse().find((v) => v < center - 3);
+          const next = centers.find((v) => v > center + 3);
+          return {
+            left: prior == null ? -Infinity : (prior + center) / 2,
+            right: next == null ? Infinity : (center + next) / 2,
+          };
+        });
+        output.push(["MATERIA", ...days.map((x) => x.toUpperCase()), "AULA"].join(" | "));
+        lastY = r.y;
+        continue;
+      }
+      if (teacherSpans) {
+        const cells = Array(9).fill("");
+        for (const x of xs) {
+          const center = (x.x0 + x.x1) / 2;
+          const col = teacherSpans.findIndex((span) => center >= span.left && center < span.right);
+          if (col >= 0) cells[col] += (cells[col] ? " " : "") + x.text.trim();
+        }
+        const anyTime = cells.slice(1, 8).some((x) => /\d/.test(x));
+        if (cells[0]) flush();
+        const continuation = pending && r.y - lastY < Math.max(28, (xs[0]?.y1 - xs[0]?.y0 || 8) * 3);
+        if (!pending && (cells[0] || anyTime)) pending = cells;
+        else if (continuation && (cells.some(Boolean)))
+          pending = pending.map((v, i) => [v, cells[i]].filter(Boolean).join(" "));
+        else if (cells.some(Boolean) && (cells[0] || anyTime)) {
+          flush();
+          pending = cells;
+        }
         lastY = r.y;
         continue;
       }

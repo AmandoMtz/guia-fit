@@ -1,11 +1,12 @@
 /* App shell sin conexión. Las respuestas /api nunca se guardan aquí. */
-const CACHE = "guia-fit-shell-v1";
+const CACHE = "guia-fit-shell-v2";
 const SHELL = [
   "/",
   "/index.html",
   "/styles.css",
   "/config.js",
   "/assets/logos.png",
+  "/assets/croquis.png",
   "/js/api.js",
   "/js/catalog.js",
   "/js/core.js",
@@ -14,7 +15,6 @@ const SHELL = [
   "/js/food.js",
   "/js/schedule-core.js",
   "/js/schedule-store.js",
-  "/vendor/tesseract/tesseract.min.js",
   "/js/ocr.js",
   "/js/timetable.js",
   "/js/schedule.js",
@@ -24,10 +24,16 @@ const SHELL = [
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches
-      .open(CACHE)
-      .then((cache) => cache.addAll(SHELL))
-      .then(() => self.skipWaiting()),
+    caches.open(CACHE).then(async (cache) => {
+      // Un recurso opcional no debe impedir que se instale todo el modo offline.
+      await Promise.allSettled(
+        SHELL.map(async (path) => {
+          const response = await fetch(path, { cache: "reload" });
+          if (response.ok) await cache.put(path, response);
+        }),
+      );
+      await self.skipWaiting();
+    }),
   );
 });
 
@@ -36,7 +42,11 @@ self.addEventListener("activate", (event) => {
     caches
       .keys()
       .then((keys) =>
-        Promise.all(keys.filter((key) => key.startsWith("guia-fit-shell-") && key !== CACHE).map((key) => caches.delete(key))),
+        Promise.all(
+          keys
+            .filter((key) => key.startsWith("guia-fit-shell-") && key !== CACHE)
+            .map((key) => caches.delete(key)),
+        ),
       )
       .then(() => self.clients.claim()),
   );
@@ -58,20 +68,32 @@ self.addEventListener("fetch", (event) => {
           }
           return response;
         })
-        .catch(() => caches.match("/index.html")),
+        .catch(async () => (await caches.match("/index.html")) || caches.match("/")),
     );
     return;
   }
 
   event.respondWith(
-    fetch(request)
-      .then((response) => {
+    caches.match(request).then((cached) => {
+      if (cached) {
+        // Refresca en segundo plano cuando sí hay red, sin bloquear la apertura offline.
+        event.waitUntil(
+          fetch(request)
+            .then((response) => {
+              if (response.ok && response.type === "basic")
+                return caches.open(CACHE).then((cache) => cache.put(request, response));
+            })
+            .catch(() => {}),
+        );
+        return cached;
+      }
+      return fetch(request).then((response) => {
         if (response.ok && response.type === "basic") {
           const copy = response.clone();
           caches.open(CACHE).then((cache) => cache.put(request, copy));
         }
         return response;
-      })
-      .catch(() => caches.match(request)),
+      });
+    }),
   );
 });

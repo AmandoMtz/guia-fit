@@ -75,6 +75,7 @@
     pendingEventToken: new URLSearchParams(location.search).get("e"),
     offline: false,
     offlineSyncedAt: null,
+    networkUnavailable: false,
   };
   let toastTimer;
   function toast(message) {
@@ -135,6 +136,11 @@
   }
   function authView() {
     const mode = state.mode;
+    const savedOffline = window.FIT_OFFLINE?.getSession?.();
+    const offlineAccess =
+      mode === "login" &&
+      !!savedOffline?.user &&
+      (state.networkUnavailable || !navigator.onLine);
     const titles = {
       login: [
         "Bienvenido a Guía FIT",
@@ -156,7 +162,7 @@
     };
     const [title, sub] = titles[mode];
     $("#app").innerHTML =
-      `<header class="topbar">${brand()}<span class="top-label">GUÍA DEL CAMPUS</span></header><div class="auth-layout"><aside class="auth-aside"><div class="eyebrow">${icon("pin")} FACULTAD DE INGENIERÍA TAMPICO</div><h1>Tu campus.<br>Tu camino.<br><span class="accent">A un paso.</span></h1><p class="intro">Encuentra tu salón, organiza tus clases y descubre qué comer en la facultad.</p><div class="campus-teaser"><img src="assets/croquis.png" alt="Croquis de la Facultad de Ingeniería Tampico proporcionado como referencia"><span class="teaser-label">Explora los espacios de la FIT</span></div><div class="aside-bottom">Universidad Autónoma de Tamaulipas · Tampico</div></aside><main class="auth-main" id="main"><div class="auth-card"><div class="icon-circle">${icon(mode === "login" ? "lock" : "user")}</div><h2>${title}</h2><p class="muted">${sub}</p>${["login", "register"].includes(mode) ? `<div class="auth-tabs" aria-label="Opciones de acceso"><button class="${mode === "login" ? "active" : ""}" data-mode="login">Iniciar sesión</button><button class="${mode === "register" ? "active" : ""}" data-mode="register">Crear cuenta</button></div>` : ""}${!client ? '<div class="notice">El registro todavía no está habilitado. Puedes explorar la demostración.</div>' : ""}<div id="form-message" role="alert">${state.notice ? `<div class="notice ${state.authError ? "error" : "success"}">${esc(state.notice)}</div>` : ""}</div><form id="auth-form" novalidate>${mode === "register" ? field("full_name", "Nombre completo", "text", "name") : ""}${mode !== "reset" ? field("email", "Correo electrónico", "email", "email") : ""}${["login", "register", "reset"].includes(mode) ? field("password", mode === "reset" ? "Nueva contraseña" : "Contraseña", "password", mode === "login" ? "current-password" : "new-password", mode !== "login" ? "Usa 8 caracteres, con letra, número y carácter especial." : "") : ""}${["register", "reset"].includes(mode) ? field("confirm", "Confirmar contraseña", "password", "new-password") : ""}${mode === "register" ? '<label class="seller-option"><input type="checkbox" name="seller"><span><strong>Quiero vender comida</strong><small>Después podrás solicitar tu puesto en la facultad.</small></span></label>' : ""}${mode === "login" ? '<div class="auth-links"><button class="text-button" type="button" data-mode="recover">Olvidé mi contraseña</button></div>' : ""}<button class="btn full" type="submit">${{ login: "Iniciar sesión", register: "Crear cuenta", recover: "Enviar enlace", reset: "Guardar contraseña", verify: "Reenviar verificación" }[mode]} ${icon("arrow")}</button></form>${mode === "login" ? '<button class="text-button" data-mode="verify">Reenviar correo de verificación</button>' : ""}${!["login", "register"].includes(mode) ? '<button class="text-button" data-mode="login">Volver al inicio de sesión</button>' : ""}<div class="or">Explora el proyecto</div><button class="btn secondary full" id="demo-button">${icon("map")} Explorar demostración</button><p class="auth-foot">La verificación del correo y la validación institucional se realizan por separado.</p></div></main></div>`;
+      `<header class="topbar">${brand()}<span class="top-label">GUÍA DEL CAMPUS</span></header><div class="auth-layout"><aside class="auth-aside"><div class="eyebrow">${icon("pin")} FACULTAD DE INGENIERÍA TAMPICO</div><h1>Tu campus.<br>Tu camino.<br><span class="accent">A un paso.</span></h1><p class="intro">Encuentra tu salón, organiza tus clases y descubre qué comer en la facultad.</p><div class="campus-teaser"><img src="assets/croquis.png" alt="Croquis de la Facultad de Ingeniería Tampico proporcionado como referencia"><span class="teaser-label">Explora los espacios de la FIT</span></div><div class="aside-bottom">Universidad Autónoma de Tamaulipas · Tampico</div></aside><main class="auth-main" id="main"><div class="auth-card"><div class="icon-circle">${icon(mode === "login" ? "lock" : "user")}</div><h2>${title}</h2><p class="muted">${sub}</p>${["login", "register"].includes(mode) ? `<div class="auth-tabs" aria-label="Opciones de acceso"><button class="${mode === "login" ? "active" : ""}" data-mode="login">Iniciar sesión</button><button class="${mode === "register" ? "active" : ""}" data-mode="register">Crear cuenta</button></div>` : ""}${!client ? '<div class="notice">El registro todavía no está habilitado. Puedes explorar la demostración.</div>' : ""}${offlineAccess ? `<div class="offline-login-card"><span class="eyebrow">MODO SIN CONEXIÓN</span><h3>Acceso guardado en este dispositivo</h3><p>Puedes entrar como <b>${esc(savedOffline.profile?.full_name || savedOffline.user.email || "Alumno")}</b> para consultar únicamente tu horario y los eventos guardados.</p><button class="btn secondary full" type="button" id="offline-login">Entrar sin conexión</button><p class="hint">No se validan credenciales contra el servidor mientras no haya internet.</p></div>` : ""}<div id="form-message" role="alert">${state.notice ? `<div class="notice ${state.authError ? "error" : "success"}">${esc(state.notice)}</div>` : ""}</div><form id="auth-form" novalidate>${mode === "register" ? field("full_name", "Nombre completo", "text", "name") : ""}${mode !== "reset" ? field("email", "Correo electrónico", "email", "email") : ""}${["login", "register", "reset"].includes(mode) ? field("password", mode === "reset" ? "Nueva contraseña" : "Contraseña", "password", mode === "login" ? "current-password" : "new-password", mode !== "login" ? "Usa 8 caracteres, con letra, número y carácter especial." : "") : ""}${["register", "reset"].includes(mode) ? field("confirm", "Confirmar contraseña", "password", "new-password") : ""}${mode === "register" ? '<label class="seller-option"><input type="checkbox" name="seller"><span><strong>Quiero vender comida</strong><small>Después podrás solicitar tu puesto en la facultad.</small></span></label>' : ""}${mode === "login" ? '<div class="auth-links"><button class="text-button" type="button" data-mode="recover">Olvidé mi contraseña</button></div>' : ""}<button class="btn full" type="submit">${{ login: "Iniciar sesión", register: "Crear cuenta", recover: "Enviar enlace", reset: "Guardar contraseña", verify: "Reenviar verificación" }[mode]} ${icon("arrow")}</button></form>${mode === "login" ? '<button class="text-button" data-mode="verify">Reenviar correo de verificación</button>' : ""}${!["login", "register"].includes(mode) ? '<button class="text-button" data-mode="login">Volver al inicio de sesión</button>' : ""}<div class="or">Explora el proyecto</div><button class="btn secondary full" id="demo-button">${icon("map")} Explorar demostración</button><p class="auth-foot">La verificación del correo y la validación institucional se realizan por separado.</p></div></main></div>`;
     $('[data-mode="' + mode + '"]')?.setAttribute("aria-current", "page");
     document.querySelectorAll("[data-mode]").forEach(
       (b) =>
@@ -181,6 +187,12 @@
           );
         }),
     );
+    const offlineLogin = $("#offline-login");
+    if (offlineLogin)
+      offlineLogin.onclick = () => {
+        if (!restoreOfflineSession())
+          showMessage("No hay una sesión offline válida guardada en este dispositivo.", true);
+      };
     $("#demo-button").onclick = () => {
       if (state.busy) return;
       state.demo = true;
@@ -229,6 +241,14 @@
     }
     if (Object.keys(errors).length) {
       $("#" + Object.keys(errors)[0]).focus();
+      return;
+    }
+    if (mode === "login" && (state.networkUnavailable || !navigator.onLine)) {
+      if (restoreOfflineSession()) return;
+      showMessage(
+        "Sin internet solo puedes entrar si esta cuenta ya se había guardado en este dispositivo.",
+        true,
+      );
       return;
     }
     if (!client) {
@@ -331,6 +351,13 @@
     if (!result.error && Array.isArray(result.data))
       window.FIT_OFFLINE?.saveEvents(state.user.id, result.data);
   }
+  async function cacheStudentSchedule() {
+    if (state.offline || state.user?.account_type !== "student") return;
+    try {
+      const saved = await window.FIT_SCHEDULE_STORE?.operation?.("get", state.user.id);
+      if (saved) window.FIT_OFFLINE?.saveSchedule?.(state.user.id, saved);
+    } catch {}
+  }
   function restoreOfflineSession() {
     const saved = window.FIT_OFFLINE?.getSession?.();
     if (!saved?.user || saved.user.account_type !== "student") return false;
@@ -340,6 +367,7 @@
     state.admin = false;
     state.demo = false;
     state.offline = true;
+    state.networkUnavailable = true;
     state.offlineSyncedAt = saved.syncedAt || null;
     state.pendingEventToken = null;
     state.dataError = "";
@@ -353,11 +381,12 @@
     state.user = data.user;
     state.demo = false;
     state.offline = false;
+    state.networkUnavailable = false;
     if (!preserveView)
       state.view = state.pendingEventToken ? "events" : "directory";
     state.admin = false;
     await loadData();
-    await cacheStudentEvents();
+    await Promise.all([cacheStudentEvents(), cacheStudentSchedule()]);
     render();
   }
   async function loadData() {
@@ -555,6 +584,7 @@
       state.verification = null;
       state.route = null;
       state.offline = false;
+      state.networkUnavailable = false;
       state.offlineSyncedAt = null;
       state.notice = "";
       state.mode = "login";
@@ -1229,6 +1259,7 @@
       const session = await client.auth.getSession();
       if (session.data?.session) {
         state.offline = false;
+        state.networkUnavailable = false;
         state.view = ["schedule", "events"].includes(priorView) ? priorView : "schedule";
         await openSession({ preserveView: true });
         toast("Conexión recuperada. La información volvió a sincronizarse.");
@@ -1253,34 +1284,48 @@
       if (state.user?.account_type !== "student" || state.demo) return;
       saveOfflineSession();
       state.offline = true;
+      state.networkUnavailable = true;
       if (!["schedule", "events"].includes(state.view)) state.view = "schedule";
       render();
       toast("Sin conexión. Entraste en modo de consulta offline.");
     });
-    window.addEventListener("online", reconnectFromOffline);
+    window.addEventListener("online", () => {
+      if (state.offline) {
+        reconnectFromOffline();
+        return;
+      }
+      if (state.networkUnavailable && !state.user) {
+        state.networkUnavailable = false;
+        state.notice = "Conexión recuperada. Ya puedes iniciar sesión normalmente.";
+        state.authError = false;
+        authView();
+      }
+    });
   }
   async function init() {
     authView();
     if (location.protocol === "file:") return;
     if ("serviceWorker" in navigator)
-      window.addEventListener("load", () =>
-        navigator.serviceWorker.register("/sw.js").catch(() => {}),
-      );
+      navigator.serviceWorker.register("/sw.js").catch(() => {});
     bindConnectionEvents();
     const api = new window.FIT_CLIENT(config.apiBaseUrl || "");
     client = api;
     if (!navigator.onLine) {
-      if (restoreOfflineSession()) return;
-      state.notice = "No hay conexión y todavía no existe una sesión offline guardada en este dispositivo.";
-      state.authError = true;
+      state.networkUnavailable = true;
+      state.notice = window.FIT_OFFLINE?.getSession?.()
+        ? "No hay conexión. Usa el acceso sin conexión guardado en este dispositivo."
+        : "No hay conexión y todavía no existe una sesión offline guardada en este dispositivo.";
+      state.authError = !window.FIT_OFFLINE?.getSession?.();
       authView();
       return;
     }
     const status = await api.request("/api/config");
     if (status.error?.code === "network_error") {
-      if (restoreOfflineSession()) return;
-      state.notice = "No hay conexión y todavía no existe una sesión offline guardada en este dispositivo.";
-      state.authError = true;
+      state.networkUnavailable = true;
+      state.notice = window.FIT_OFFLINE?.getSession?.()
+        ? "No pudimos contactar al servidor. Puedes entrar con los datos guardados en este dispositivo."
+        : "No hay conexión y todavía no existe una sesión offline guardada en este dispositivo.";
+      state.authError = !window.FIT_OFFLINE?.getSession?.();
       authView();
       return;
     }
@@ -1312,12 +1357,26 @@
       try {
         await openSession();
       } catch (error) {
-        if (error?.code === "network_error" && restoreOfflineSession()) return;
+        if (error?.code === "network_error") {
+          state.networkUnavailable = true;
+          state.notice = window.FIT_OFFLINE?.getSession?.()
+            ? "No pudimos validar la sesión en línea. Puedes entrar con la copia guardada en este dispositivo."
+            : "No hay conexión y no existe una sesión offline guardada.";
+          state.authError = !window.FIT_OFFLINE?.getSession?.();
+          authView();
+          return;
+        }
         state.notice = "No pudimos recuperar tu sesión.";
         state.authError = true;
         authView();
       }
-    } else if (session.error?.code === "network_error" && restoreOfflineSession()) {
+    } else if (session.error?.code === "network_error") {
+      state.networkUnavailable = true;
+      state.notice = window.FIT_OFFLINE?.getSession?.()
+        ? "No pudimos validar la sesión en línea. Puedes entrar con la copia guardada en este dispositivo."
+        : "No hay conexión y no existe una sesión offline guardada.";
+      state.authError = !window.FIT_OFFLINE?.getSession?.();
+      authView();
       return;
     } else {
       authView();

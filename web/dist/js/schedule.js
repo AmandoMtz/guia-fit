@@ -2,8 +2,35 @@
   "use strict";
   const S = root.FIT_SCHEDULE_CORE;
   let pdfLibrary;
-  const storage = (method, key, value) =>
-    root.FIT_SCHEDULE_STORE.operation(method, key, value);
+  async function storage(method, key, value) {
+    if (method === "get") {
+      let localError = null;
+      try {
+        const saved = await root.FIT_SCHEDULE_STORE.operation("get", key);
+        if (saved) {
+          root.FIT_OFFLINE?.saveSchedule?.(key, saved);
+          return saved;
+        }
+      } catch (error) {
+        localError = error;
+      }
+      const fallback = root.FIT_OFFLINE?.getSchedule?.(key)?.schedule || null;
+      if (fallback) return fallback;
+      if (localError) throw localError;
+      return null;
+    }
+    if (method === "put") {
+      const result = await root.FIT_SCHEDULE_STORE.operation("put", key, value);
+      root.FIT_OFFLINE?.saveSchedule?.(key, value);
+      return result;
+    }
+    if (method === "delete") {
+      const result = await root.FIT_SCHEDULE_STORE.operation("delete", key);
+      root.FIT_OFFLINE?.clearSchedule?.(key);
+      return result;
+    }
+    return root.FIT_SCHEDULE_STORE.operation(method, key, value);
+  }
   async function pdfjs() {
     if (!pdfLibrary) {
       pdfLibrary = await import("../vendor/pdfjs/pdf.mjs");

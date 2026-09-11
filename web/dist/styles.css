@@ -4117,6 +4117,19 @@ dialog:has(.chat-dialog) .module-dialog-close {
 .offline-readonly {
   margin-bottom: 18px;
 }
+.offline-login-card {
+  margin: 16px 0;
+  padding: 16px;
+  border: 1px solid #d6c79a;
+  border-radius: 16px;
+  background: #fff8dc;
+}
+.offline-login-card h3 {
+  margin: 6px 0 8px;
+}
+.offline-login-card p {
+  margin: 0 0 12px;
+}
 .offline-card-label {
   font-size: 0.78rem;
   color: var(--muted);

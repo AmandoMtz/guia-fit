@@ -3,6 +3,7 @@
   "use strict";
   const SESSION_KEY = "fit-offline-session-v1";
   const EVENTS_PREFIX = "fit-offline-events-v1:";
+  const SCHEDULE_PREFIX = "fit-offline-schedule-v1:";
   const MAX_SESSION_AGE = 7 * 24 * 60 * 60 * 1000;
 
   const clone = (value) => JSON.parse(JSON.stringify(value));
@@ -66,6 +67,22 @@
       can_manage: false,
       attendance_count: 0,
       invitees: [],
+    };
+  }
+
+
+  function cleanSchedule(value) {
+    if (!value?.userId || !Array.isArray(value.classes)) return null;
+    const keys = ["userId", "career", "studentId", "studentName", "reviewedAt", "accountType"];
+    const classKeys = [
+      "id", "subject", "teacher", "classroom", "group", "day", "start", "end", "place_id",
+    ];
+    return {
+      version: 1,
+      ...Object.fromEntries(keys.map((k) => [k, value[k] ?? null])),
+      classes: value.classes.map((row) =>
+        Object.fromEntries(classKeys.map((k) => [k, row?.[k] ?? null])),
+      ),
     };
   }
 
@@ -144,10 +161,48 @@
       }
     }
 
+    function saveSchedule(userId, schedule) {
+      if (!storage || !userId) return false;
+      const cleaned = cleanSchedule(schedule);
+      if (!cleaned || String(cleaned.userId) !== String(userId)) return false;
+      const record = {
+        version: 1,
+        userId: String(userId),
+        syncedAt: new Date(now()).toISOString(),
+        schedule: cleaned,
+      };
+      try {
+        storage.setItem(SCHEDULE_PREFIX + userId, JSON.stringify(record));
+        return true;
+      } catch {
+        return false;
+      }
+    }
+
+    function getSchedule(userId) {
+      if (!storage || !userId) return null;
+      try {
+        const record = safeParse(storage.getItem(SCHEDULE_PREFIX + userId));
+        if (!record || record.userId !== String(userId) || !record.schedule) return null;
+        return clone(record);
+      } catch {
+        return null;
+      }
+    }
+
+    function clearSchedule(userId) {
+      try {
+        if (userId) storage?.removeItem(SCHEDULE_PREFIX + userId);
+      } catch {}
+    }
+
     function clearUser(userId) {
       clearSession();
       try {
-        if (userId) storage?.removeItem(EVENTS_PREFIX + userId);
+        if (userId) {
+          storage?.removeItem(EVENTS_PREFIX + userId);
+          storage?.removeItem(SCHEDULE_PREFIX + userId);
+        }
       } catch {}
     }
 
@@ -157,6 +212,9 @@
       clearSession,
       saveEvents,
       getEvents,
+      saveSchedule,
+      getSchedule,
+      clearSchedule,
       clearUser,
       MAX_SESSION_AGE,
     };

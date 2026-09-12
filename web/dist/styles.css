@@ -4139,3 +4139,104 @@ dialog:has(.chat-dialog) .module-dialog-close {
     flex-direction: column;
   }
 }
+
+
+/* Identidad visual FIT · rojo institucional y mascota de Guía FIT */
+.guide-mark {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: #6f1026;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+.guide-mark-icon {
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: #fff;
+  border: 1px solid #ead9de;
+  box-shadow: 0 6px 18px #4b09171f;
+}
+.guide-mark-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.guide-mark.compact {
+  gap: 8px;
+  letter-spacing: 0;
+  font-size: 0.92rem;
+  color: var(--navy);
+}
+.guide-mark.compact .guide-mark-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 11px;
+  box-shadow: none;
+}
+.teacher-register-hint {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin: -4px 0 14px;
+  padding: 11px 13px;
+  border: 1px solid #e7c4cd;
+  border-radius: 12px;
+  background: #fff6f8;
+  color: #6f1026;
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+.teacher-register-hint span { color: #6e5960; }
+
+/* Portada: rojo Facultad de Ingeniería con difuminado profundo. */
+.auth-layout {
+  background:
+    radial-gradient(circle at 12% 16%, #d4476473 0, transparent 34%),
+    radial-gradient(circle at 82% 112%, #2f020f99 0, transparent 48%),
+    linear-gradient(135deg, #4b0917 0%, #741027 46%, #96122f 100%);
+}
+.auth-aside .accent { color: #ffd0d9; }
+.auth-aside .eyebrow { color: #fff1f4; }
+.auth-aside .intro { color: #f4dfe4; }
+.auth-aside .aside-bottom {
+  color: #ead2d8;
+  border-color: #f3c9d255;
+}
+.campus-teaser { box-shadow: 0 20px 55px #26020d80; }
+.teaser-label {
+  background: #5f0b20;
+  border-color: #a84860;
+}
+.auth-card > .icon-circle {
+  background: linear-gradient(140deg, #fff2f5, #f8dbe2);
+  color: #8a102b;
+  border-color: #e6b7c3;
+}
+.auth-card .btn:not(.secondary) {
+  background: linear-gradient(110deg, #7b0d29, #b31c3d);
+  box-shadow: 0 8px 20px #7b0d2929;
+}
+.auth-card .btn:not(.secondary):hover {
+  background: linear-gradient(110deg, #650a22, #941630);
+}
+.auth-tabs .active { color: #7b0d29; }
+.auth-card .field input:focus {
+  border-color: #8d1230;
+  box-shadow: 0 0 0 3px #8d123012;
+}
+@media (max-width: 760px) {
+  .auth-layout {
+    background:
+      radial-gradient(circle at 100% 0, #c33d5b66 0, transparent 58%),
+      linear-gradient(145deg, #4b0917 0%, #7b0d29 58%, #96122f 100%);
+  }
+  .guide-mark-text { display: none; }
+  .guide-mark-icon { width: 42px; height: 42px; }
+}

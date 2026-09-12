@@ -252,6 +252,10 @@
           : (result.error.message || "No pude responder en este momento. Inténtalo de nuevo."),
       });
     } else {
+      const foot = host?.querySelector(".fit-chat-foot");
+      if (foot) foot.textContent = result.data?.fallback_reason
+        ? "Modo básico: la conversación con IA no está disponible ahora. Puedes seguir usando la ayuda local."
+        : "Te ayudo con Guía FIT. No compartas contraseñas ni códigos de acceso.";
       messages.push({ role: "assistant", content: result.data?.reply || "No pude generar una respuesta." });
       if (result.data?.escalate) {
         messages.push({

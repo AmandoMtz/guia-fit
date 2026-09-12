@@ -320,3 +320,46 @@ test('defensa de tono filtra respuestas ofensivas del proveedor', () => {
   assert.doesNotMatch(gentleOutput({reply:'Cállate, idiota',category:'casual',escalate:false}).reply, /callate|cállate|idiota/i);
   assert.equal(gentleOutput({reply:'Abre Mi horario.'}).reply, 'Abre Mi horario.');
 });
+
+test('IA tiene prioridad incluso cuando hay una respuesta local conocida', async () => {
+  const {resolveAnswer} = require('../server/chatbot.cjs');
+  let called = 0;
+  const chatbot = {provider:'test-ai', async complete(input) {called++; assert.match(input.system,/Crear cuenta/); return {text:JSON.stringify({reply:'Te acompaño paso a paso con tu registro.',category:'system'})};}};
+  const response = await resolveAnswer({message:'como me registro',context:{},chatbot});
+  assert.equal(called,1);
+  assert.equal(response.provider,'test-ai');
+  assert.match(response.answer.reply,/Te acompaño/);
+});
+
+test('conversación emocional usa IA e historial y conserva respaldo natural', async () => {
+  const {resolveAnswer} = require('../server/chatbot.cjs');
+  const history = [{role:'user',content:'estoy triste'},{role:'assistant',content:'¿Quieres contarme qué pasó?'}];
+  const chatbot = {provider:'test-ai', async complete(input) {assert.deepEqual(input.messages.slice(0,2),history); return {text:'{"reply":"Siento que tu día haya sido difícil. ¿Qué ocurrió en clase?","category":"casual"}'};}};
+  const result = await resolveAnswer({message:'me fue mal en clase',context:{},history,chatbot});
+  assert.equal(result.provider,'test-ai');
+  const local = await resolveAnswer({message:'estoy triste',context:{}});
+  assert.equal(local.fallbackReason,'not_configured');
+  assert.match(local.answer.reply,/Quieres contarme/);
+  assert.doesNotMatch(local.answer.reply,/registro|Mi horario/);
+});
+
+test('errores de proveedor, cuota y tono vuelven a ayuda local', async () => {
+  const {resolveAnswer} = require('../server/chatbot.cjs');
+  for (const [status,reason] of [[429,'quota'],[403,'credentials'],[500,'provider_error']]) {
+    const result = await resolveAnswer({message:'estoy triste',context:{},chatbot:{async complete(){throw Object.assign(new Error('fixture'),{status});}}});
+    assert.equal(result.fallbackReason,reason);
+    assert.match(result.answer.reply,/Quieres contarme/);
+  }
+  for (const text of ['{"reply":"Eres un idiota"}', '{"wrong":"format"}', '{"reply":""}']) {
+    const result = await resolveAnswer({message:'como me registro',context:{},chatbot:{async complete(){return {text};}}});
+    assert.equal(result.provider,'local-rules');
+    assert.match(result.answer.reply,/Crear cuenta/);
+  }
+});
+
+test('insultos y relatos de maltrato conservan respuesta controlada', async () => {
+  const {resolveAnswer} = require('../server/chatbot.cjs');
+  const chatbot = {async complete(){assert.fail('No debe consultar al proveedor en este caso');}};
+  assert.match((await resolveAnswer({message:'idiota',context:{},chatbot})).answer.reply,/respeto/);
+  assert.equal((await resolveAnswer({message:'me amenazaron',context:{},chatbot})).answer.escalate,true);
+});

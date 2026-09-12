@@ -44,3 +44,19 @@ powershell -ExecutionPolicy Bypass -File .\ACTUALIZAR_FIT.ps1
 ```
 
 El script clona main en una carpeta nueva, copia los archivos de esta actualización y hace commit y push. Conserva el historial de Git. Después espera el despliegue en Render y recarga con Ctrl+F5.
+
+## Conversación con IA como primera opción
+
+El proveedor recibe cada consulta normal, el historial temporal de la sesión (hasta 16 mensajes) y los datos autorizados del turno. La orientación local ayuda a describir pasos del sistema sin sustituir la respuesta conversacional. Los insultos y casos de seguridad mantienen una respuesta local controlada. Ante un error, falta de clave, respuesta vacía, formato inválido o lenguaje ofensivo detectado, vuelve a la ayuda local. No hay entrenamiento automático.
+
+### Activar en Render
+
+1. Ejecuta ACTUALIZAR_FIT.ps1 desde PowerShell y espera el despliegue.
+2. En las variables de entorno del servicio configura GEMINI_API_KEY con tu clave real, exclusivamente en el servidor. Nunca la pegues en el chat, código del navegador ni GitHub.
+3. CHATBOT_MODEL es opcional. Si tienes un valor antiguo no disponible, elimínalo para utilizar la selección predeterminada del servidor. La disponibilidad del modelo depende del proveedor.
+4. Guarda las variables y espera el reinicio/despliegue. Recarga con Ctrl+F5.
+5. Prueba “estoy triste”, luego “me fue mal en clase”, y después una pregunta de Guía FIT.
+
+Si aparece “Modo básico”, revisa el registro del servicio: `chatbot fallback` informa `credentials` (rechazo de credenciales/permisos), `quota` (cuota), `timeout` (tiempo agotado) o `provider_error` (otro fallo). Sin clave, la API indica `fallback_reason: not_configured`. La ruta de estado solo confirma configuración, no que el proveedor haya aceptado la clave. La respuesta de cada mensaje informa `source: ai` cuando la llamada fue exitosa.
+
+No se pudo verificar la configuración del servicio desplegado ni hacer una llamada real con la clave del propietario. Pasaron 19 pruebas del chatbot, incluidas prioridad de IA, historial, respuestas emocionales, errores del proveedor y control del tono, con proveedor simulado.

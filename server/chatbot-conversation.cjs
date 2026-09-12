@@ -11,6 +11,9 @@ function conversation(message) {
   if (/\b(me (insultaron|insultan|amenazaron|amenazan|acosan|acosa|dijeron|dijo)|sufro acoso|me quiero (morir|matar)|hacerme dano)\b/.test(q)) return {answer:result('Lamento que estés pasando por esto. Mereces un trato respetuoso. Si estás en peligro, busca un lugar seguro y pide ayuda inmediata a una persona de confianza o al personal de la facultad. Para dar seguimiento a lo ocurrido, conviene hablar con el personal responsable.', 'human_support', true)};
   if (/\b(emergencia|acoso|amenaza|riesgo)\b/.test(q)) return null;
   if (hasRudeLanguage(message) || /\b(insultame|insulta|humillame|respondeme (grosero|con groserias)|dime groserias)\b/.test(q)) return {abusive:true};
+  if (/^(?:estoy|me siento|ando) (?:muy |un poco )?(?:triste|deprimido|deprimida|solo|sola|desanimado|desanimada)(?: hoy| ultimamente)?$/.test(q)) return {answer:result('Lamento que te sientas así. ¿Quieres contarme qué pasó o qué te está preocupando?')};
+  if (/^(?:estoy|me siento|ando) (?:muy |un poco )?(?:nervioso|nerviosa|ansioso|ansiosa|estresado|estresada|preocupado|preocupada)$/.test(q)) return {answer:result('Suena a que estás pasando un momento difícil. Podemos ir con calma. ¿Qué es lo que más te preocupa ahora?')};
+  if (/^(?:estoy|me siento) (?:muy )?(?:feliz|contento|contenta|emocionado|emocionada)$/.test(q)) return {answer:result('¡Qué bueno! ¿Qué pasó para que te sientas así?')};
   // Solo coincidencias de mensaje completo para no ocultar una pregunta útil.
   if (/^(?:yo )?(?:te amo|te quiero|tqm|tkm|te adoro)(?: mucho| castor| amigo)?$/.test(q)) return {answer:result('¡Gracias por el cariño! Me alegra poder acompañarte y ayudarte.')};
   if (/^(?:hola )?(?:como estas|como te va|todo bien)(?: castor| amigo)?$/.test(q)) return {answer:result('¡Hola! Estoy listo para ayudarte. ¿Cómo va tu día?')};

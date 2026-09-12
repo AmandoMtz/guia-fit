@@ -29,3 +29,18 @@ git push origin main
 ```
 
 Si Render tiene despliegue automático, espera a que termine. Si no, inicia un despliegue manual del último commit. Recarga la página con Ctrl+F5.
+
+## Fondo blanco y conversación gentil
+
+El fondo principal de la aplicación ahora es blanco. Se conservan los acentos rojos.
+Se añadieron respuestas sociales locales, aclaraciones que usan el tema anterior, atención respetuosa ante insultos y detección prioritaria de relatos de maltrato. Las instrucciones de Gemini exigen un trato amable y la salida pasa por un filtro adicional de expresiones ofensivas conocidas. Este filtro no constituye una garantía absoluta para todas las frases que un modelo pueda generar.
+
+Validación: las 15 pruebas del chatbot pasaron. No se realizó una llamada a Gemini real.
+
+Para instalar, abre PowerShell en la carpeta extraída y ejecuta:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\ACTUALIZAR_FIT.ps1
+```
+
+El script clona main en una carpeta nueva, copia los archivos de esta actualización y hace commit y push. Conserva el historial de Git. Después espera el despliegue en Render y recarga con Ctrl+F5.

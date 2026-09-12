@@ -286,3 +286,37 @@ test('calcula día y próxima clase con hora de Tampico y semana recurrente', ()
   assert.match(localAnswer('clases mañana', context, {authenticated:true}).reply, /Álgebra/);
   assert.match(localAnswer('clases viernes', context, {authenticated:true}).reply, /No encuentro clases/);
 });
+
+test('conversa con afecto, agradecimientos y disculpas sin una lista genérica', () => {
+  for (const message of ['te amo','te quiero mucho','tqm','gracias amigo','perdón','cómo estás']) {
+    const answer = localAnswer(message, {});
+    assert.equal(answer.handled, true);
+    assert.equal(answer.category, 'casual');
+    assert.doesNotMatch(answer.reply, /Mi horario, Eventos|No pude usar/);
+  }
+  assert.match(localAnswer('te amo pero como me registro', {}).reply, /Crear cuenta/);
+});
+
+test('pide respeto sin insultar y conserva la ayuda concreta', () => {
+  for (const message of ['eres un pendejo','idiota','insúltame','respondeme con groserias','vete al carajo']) {
+    const answer = localAnswer(message, {});
+    assert.match(answer.reply, /respeto/);
+    assert.doesNotMatch(answer.reply, /pendejo|idiota|carajo/i);
+  }
+  const answer = localAnswer('idiota como recupero mi contraseña', {});
+  assert.match(answer.reply, /respeto/);
+  assert.match(answer.reply, /Olvidé mi contraseña/);
+});
+
+test('no regaña a quien relata maltrato y usa contexto ante frustración', () => {
+  const answer = localAnswer('me dijeron pendejo y me amenazaron', {});
+  assert.equal(answer.escalate, true);
+  assert.doesNotMatch(answer.reply, /Te pido que/);
+  assert.match(localAnswer('no entiendo', {}, {history:[{role:'user',content:'mi horario'}]}).reply, /cargar tu horario/);
+});
+
+test('defensa de tono filtra respuestas ofensivas del proveedor', () => {
+  const {gentleOutput} = require('../server/chatbot-conversation.cjs');
+  assert.doesNotMatch(gentleOutput({reply:'Cállate, idiota',category:'casual',escalate:false}).reply, /callate|cállate|idiota/i);
+  assert.equal(gentleOutput({reply:'Abre Mi horario.'}).reply, 'Abre Mi horario.');
+});

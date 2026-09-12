@@ -1,4 +1,5 @@
 const express = require("express");
+const { conversation, gentleOutput, TONE_RULES } = require("./chatbot-conversation.cjs");
 const { understand } = require("./chatbot-understanding.cjs");
 const { accountType } = require("./account.cjs");
 
@@ -188,6 +189,7 @@ async function buildContext(db, user, deviceContext = {}) {
 function systemPrompt(context) {
   return `Eres Castor FIT, el asistente virtual de Guía FIT para la Facultad de Ingeniería Tampico (UAT).
 
+${TONE_RULES}
 PERSONALIDAD
 - Responde en español, con tono amable, cercano, paciente y claro.
 - Sé breve por defecto, pero explica paso a paso cuando haga falta.
@@ -250,6 +252,7 @@ ESTADO DE LA CONVERSACIÓN
 - Puedes ayudar con: qué es Guía FIT, cómo registrarse o iniciar sesión, cuentas institucionales de docentes, recuperación de acceso, espacios verificados, eventos públicos y comida disponible incluida en el contexto.
 - NO tienes acceso al horario personal, perfil, pedidos, asistencias ni información privada. Si preguntan por algo personal, explica con amabilidad que debe iniciar sesión para consultarlo.
 
+${TONE_RULES}
 PERSONALIDAD
 - Responde en español, con tono amable, cercano, paciente y claro.
 - Interpreta errores de escritura y mensajes incompletos con buena intención.
@@ -330,6 +333,23 @@ function dateTimeMx(value) {
 }
 
 function localAnswer(message, context, options = {}) {
+  const social = conversation(message);
+  if (social?.answer) return social.answer;
+  if (social?.abusive) {
+    // Conserva la pregunta útil; las reglas locales no reproducen el insulto.
+    const useful = localAnswerCore(message, context, { ...options, fallback: false });
+    const prefix = "Estoy aquí para ayudarte. Te pido que conversemos con respeto.";
+    return { reply: prefix + " " + (useful.handled && useful.category === "system" ? useful.reply : "Dime qué necesitas resolver y lo vemos paso a paso."), category: "system", escalate: false, handled: true };
+  }
+  if (social?.clarify) {
+    const previous = (options.history || []).filter(m => m.role === "user").slice(-1)[0]?.content || "";
+    const topic = /contrase|acceso|sesion|registro|correo/i.test(previous) ? "¿Qué aviso aparece al intentar acceder o registrarte?" : /horario|clase/i.test(previous) ? "¿El problema ocurre al cargar tu horario o al consultar una clase?" : /comida|pedido/i.test(previous) ? "¿El problema ocurre al abrir Comidas, crear el pedido o enviar un mensaje?" : "¿Qué estabas intentando hacer y en qué paso te quedaste?";
+    return { reply: "Vamos paso a paso, con gusto te ayudo. " + topic, category: "system", escalate: false, handled: true };
+  }
+  return localAnswerCore(message, context, options);
+}
+
+function localAnswerCore(message, context, options = {}) {
   const { authenticated = false, fallback = false } = options;
   const interpreted = understand(message, context, options);
   if (interpreted.answer) return interpreted.answer;
@@ -543,7 +563,7 @@ function createPublicChatbotRouter({ db, limit, chatbot }) {
     if (!answer.handled && chatbot) {
       try {
         const output = await chatbot.complete({ system: publicSystemPrompt(context), messages });
-        answer = parseModelReply(output.text);
+        answer = gentleOutput(parseModelReply(output.text));
         if (!answer.reply) throw new Error("Respuesta vacía del asistente");
         provider = chatbot.provider || "unknown";
         model = output.model || chatbot.model || null;
@@ -555,6 +575,7 @@ function createPublicChatbotRouter({ db, limit, chatbot }) {
       answer = localAnswer(message, context, { authenticated: false, fallback: true, history: prior });
     }
 
+    answer = gentleOutput(answer);
     saveHistory(key, [...messages, { role: "assistant", content: answer.reply }]);
     await writeChatLog(db, { message, answer, provider, model, started });
     res.json({ data: { reply: answer.reply, category: answer.category, escalate: answer.escalate, source: provider === "local-rules" ? "local" : "ai" } });
@@ -616,7 +637,7 @@ function createChatbotRouter({ db, limit, chatbot }) {
     if (!answer.handled && chatbot) {
       try {
         const output = await chatbot.complete({ system: systemPrompt(context), messages });
-        answer = parseModelReply(output.text);
+        answer = gentleOutput(parseModelReply(output.text));
         if (!answer.reply) throw new Error("Respuesta vacía del asistente");
         provider = chatbot.provider || "unknown";
         model = output.model || chatbot.model || null;
@@ -628,6 +649,7 @@ function createChatbotRouter({ db, limit, chatbot }) {
       answer = localAnswer(message, context, { authenticated: true, fallback: true, history: prior });
     }
 
+    answer = gentleOutput(answer);
     saveHistory(key, [...messages, { role: "assistant", content: answer.reply }]);
     await writeChatLog(db, {
       userId: req.user.id,

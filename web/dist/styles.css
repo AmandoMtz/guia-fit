@@ -424,7 +424,7 @@ img {
   line-height: 1.55;
 }
 .shell {
-  background: var(--soft);
+  background: #fff;
   min-height: 100svh;
 }
 .app-top {

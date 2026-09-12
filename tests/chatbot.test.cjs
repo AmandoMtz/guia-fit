@@ -105,7 +105,7 @@ test("cliente Gemini usa la API del nivel gratuito sin exponer la clave en el cu
       ok: true,
       async json() {
         return {
-          modelVersion: "gemini-2.5-flash",
+          modelVersion: "gemini-2.5-flash-lite",
           candidates: [{ content: { parts: [{ text: '{"reply":"Hola desde Gemini","category":"casual","escalate":false}' }] } }],
           usageMetadata: { promptTokenCount: 10, candidatesTokenCount: 8 },
         };
@@ -115,7 +115,7 @@ test("cliente Gemini usa la API del nivel gratuito sin exponer la clave en el cu
   try {
     const client = createGeminiClient({ GEMINI_API_KEY: "clave-de-prueba" });
     assert.equal(client.provider, "google-gemini");
-    assert.equal(client.model, "gemini-2.5-flash");
+    assert.equal(client.model, "gemini-2.5-flash-lite");
     const result = await client.complete({
       system: "Eres Castor FIT",
       messages: [
@@ -124,7 +124,7 @@ test("cliente Gemini usa la API del nivel gratuito sin exponer la clave en el cu
         { role: "user", content: "mi horario" },
       ],
     });
-    assert.match(request.url, /gemini-2\.5-flash:generateContent$/);
+    assert.match(request.url, /gemini-2\.5-flash-lite:generateContent$/);
     assert.equal(request.options.headers["x-goog-api-key"], "clave-de-prueba");
     assert.ok(!request.options.body.includes("clave-de-prueba"));
     assert.equal(request.body.systemInstruction.parts[0].text, "Eres Castor FIT");
@@ -134,4 +134,84 @@ test("cliente Gemini usa la API del nivel gratuito sin exponer la clave en el cu
   } finally {
     global.fetch = previousFetch;
   }
+});
+
+test("cliente Gemini cambia a Flash-Lite si el modelo configurado no está disponible", async () => {
+  const previousFetch = global.fetch;
+  const calls = [];
+  global.fetch = async (url) => {
+    calls.push(String(url));
+    if (String(url).includes("gemini-2.5-flash:generateContent")) {
+      return {
+        ok: false,
+        status: 404,
+        async json() { return { error: { status: "NOT_FOUND", message: "model unavailable" } }; },
+      };
+    }
+    return {
+      ok: true,
+      status: 200,
+      async json() {
+        return {
+          modelVersion: "gemini-2.5-flash-lite",
+          candidates: [{ content: { parts: [{ text: '{"reply":"Fallback listo","category":"system","escalate":false}' }] } }],
+        };
+      },
+    };
+  };
+  try {
+    const client = createGeminiClient({ GEMINI_API_KEY: "clave-de-prueba", CHATBOT_MODEL: "gemini-2.5-flash" });
+    const result = await client.complete({ system: "Eres Castor FIT", messages: [{ role: "user", content: "hola" }] });
+    assert.equal(calls.length, 2);
+    assert.match(calls[0], /gemini-2\.5-flash:generateContent$/);
+    assert.match(calls[1], /gemini-2\.5-flash-lite:generateContent$/);
+    assert.match(result.text, /Fallback listo/);
+  } finally {
+    global.fetch = previousFetch;
+  }
+});
+
+test("Castor FIT también atiende visitantes desde la pantalla de inicio sin exponer datos privados", async () => {
+  const engine = new PGlite();
+  for (const file of fs.readdirSync(path.join(root, "backend/migrations")).sort()) {
+    if (file.endsWith(".sql"))
+      await engine.exec(fs.readFileSync(path.join(root, "backend/migrations", file), "utf8"));
+  }
+  const query = (sql, params) => engine.query(sql, params);
+  const db = { query, connect: async () => ({ query, release() {} }) };
+  const creator = randomUUID();
+  await query("insert into users(id,email,password_hash,email_confirmed_at) values($1,$2,'fixture',now())", [creator, "admin@uat.edu.mx"]);
+  await query("insert into profiles(id,full_name) values($1,'Admin Prueba')", [creator]);
+  await query(`insert into events(title,description,location,audience,visibility,starts_at,ends_at,created_by)
+    values('Evento público FIT','Información pública','Auditorio','students','public',now()+interval '1 hour',now()+interval '3 hours',$1)`, [creator]);
+
+  const calls = [];
+  const chatbot = {
+    provider: "test-provider",
+    model: "test-model",
+    async complete(input) {
+      calls.push(input);
+      return {
+        model: "test-model",
+        text: JSON.stringify({ reply: "Puedes registrarte desde Crear cuenta. También veo el Evento público FIT.", category: "system", escalate: false }),
+      };
+    },
+  };
+  const api = request(createApp({ db, siteUrl: "https://castoresfit.com", chatbot }));
+  const guestId = "visitante_prueba_123456";
+  const reply = await api.post("/api/chatbot/public/message").send({
+    guest_id: guestId,
+    message: "hola, todavía no tengo cuenta, qué puedo hacer?",
+  }).expect(200);
+  assert.match(reply.body.data.reply, /registrarte/i);
+  assert.match(calls[0].system, /TODAVÍA NO ha iniciado sesión/);
+  assert.match(calls[0].system, /Evento público FIT/);
+  assert.doesNotMatch(calls[0].system, /student_id|password_hash|fit_session/i);
+
+  const history = await api.get("/api/chatbot/public/history").query({ guest_id: guestId }).expect(200);
+  assert.equal(history.body.data.messages.length, 2);
+  const logs = (await query("select * from chatbot_logs where user_id is null order by id")).rows;
+  assert.equal(logs.length, 1);
+  assert.equal(logs[0].account_type, "other");
+  await engine.close();
 });

@@ -118,4 +118,4 @@ Consulta [ACTUALIZAR_V5.md](docs/ACTUALIZAR_V5.md) y [ALMACENAMIENTO.md](docs/AL
 
 El proyecto incluye un chatbot contextual accesible desde la mascota de Guía FIT. Usa Gemini desde el backend, mantiene historial temporal por sesión y combina el mensaje con datos reales de eventos, comidas, pedidos, espacios y el horario local del alumno.
 
-Configura `GEMINI_API_KEY` en Render. El modelo puede ajustarse con `CHATBOT_MODEL` (por defecto `gemini-2.5-flash`). El nivel gratuito de Gemini puede usarse sin habilitar facturación mientras el proyecto se mantenga dentro de sus límites. Consulta `docs/CHATBOT_CASTOR_FIT.md`.
+Configura `GEMINI_API_KEY` en Render. El modelo puede ajustarse con `CHATBOT_MODEL` (por defecto `gemini-2.5-flash-lite`). El nivel gratuito de Gemini puede usarse sin habilitar facturación mientras el proyecto se mantenga dentro de sus límites. Consulta `docs/CHATBOT_CASTOR_FIT.md`.

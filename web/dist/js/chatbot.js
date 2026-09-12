@@ -9,12 +9,34 @@
   let loadedFor = null;
   let messages = [];
   let nudgeTimer = null;
+  let audience = null;
 
-  const greeting = {
-    role: "assistant",
-    content:
-      "Hola, soy Castor FIT. Puedo ayudarte con tu horario, eventos, comidas, pedidos y espacios de la facultad. ¿Qué necesitas?",
-  };
+  function isGuest() { return !ctx?.state?.user; }
+  function greeting() {
+    return isGuest()
+      ? {
+          role: "assistant",
+          content: "Hola, soy Castor FIT. Puedo orientarte antes de iniciar sesión: registro, acceso, eventos públicos, comida y espacios de la facultad. ¿En qué te ayudo?",
+        }
+      : {
+          role: "assistant",
+          content: "Hola, soy Castor FIT. Puedo ayudarte con tu horario, eventos, comidas, pedidos y espacios de la facultad. ¿Qué necesitas?",
+        };
+  }
+  function guestSessionId() {
+    try {
+      let id = sessionStorage.getItem("fit_chat_guest_id");
+      if (!id) {
+        const bytes = new Uint8Array(18);
+        crypto.getRandomValues(bytes);
+        id = Array.from(bytes, (x) => x.toString(16).padStart(2, "0")).join("");
+        sessionStorage.setItem("fit_chat_guest_id", id);
+      }
+      return id;
+    } catch {
+      return "guest_" + Math.random().toString(36).slice(2) + Date.now().toString(36);
+    }
+  }
 
   function esc(value) {
     return String(value ?? "").replace(/[&<>"']/g, (c) => ({
@@ -51,10 +73,15 @@
         <div class="fit-chat-body">
           <div class="fit-chat-messages" data-chat-messages aria-live="polite"></div>
           <div class="fit-chat-quick" data-chat-quick>
-            <button type="button" data-chat-prompt="¿Qué clases tengo y cuál es mi próximo horario?">Mi horario</button>
-            <button type="button" data-chat-prompt="¿Qué eventos tengo disponibles?">Eventos</button>
-            <button type="button" data-chat-prompt="¿Qué comida está disponible y dónde la recojo?">Comidas</button>
-            <button type="button" data-chat-prompt="Tengo un problema y necesito orientación de una persona.">Necesito apoyo</button>
+            ${isGuest()
+              ? `<button type="button" data-chat-prompt="¿Cómo puedo registrarme en Guía FIT?">Cómo registrarme</button>
+                 <button type="button" data-chat-prompt="Soy docente, ¿cómo me registro con mi cuenta institucional?">Soy docente</button>
+                 <button type="button" data-chat-prompt="¿Qué eventos públicos hay disponibles?">Eventos</button>
+                 <button type="button" data-chat-prompt="¿Qué comida está disponible en la facultad?">Comidas</button>`
+              : `<button type="button" data-chat-prompt="¿Qué clases tengo y cuál es mi próximo horario?">Mi horario</button>
+                 <button type="button" data-chat-prompt="¿Qué eventos tengo disponibles?">Eventos</button>
+                 <button type="button" data-chat-prompt="¿Qué comida está disponible y dónde la recojo?">Comidas</button>
+                 <button type="button" data-chat-prompt="Tengo un problema y necesito orientación de una persona.">Necesito apoyo</button>`}
           </div>
         </div>
         <form class="fit-chat-form" data-chat-form>
@@ -123,7 +150,7 @@
   }
 
   function open() {
-    if (!ctx?.state?.user || ctx.state.demo || ctx.state.offline || !navigator.onLine) {
+    if (!ctx?.client || ctx.state.demo || ctx.state.offline || !navigator.onLine) {
       ctx?.toast?.("Castor FIT necesita conexión a internet para responder.");
       return;
     }
@@ -135,7 +162,7 @@
   function renderMessages(typing = false) {
     if (!host) return;
     const box = host.querySelector("[data-chat-messages]");
-    const visible = messages.length ? messages : [greeting];
+    const visible = messages.length ? messages : [greeting()];
     box.innerHTML = visible.map((message) => {
       const who = message.role === "user" ? "user" : "assistant";
       return `<div class="fit-chat-message ${who}"><div class="fit-chat-bubble">${esc(message.content).replace(/\n/g, "<br>")}</div></div>`;
@@ -144,9 +171,15 @@
   }
 
   async function loadHistory() {
-    if (!ctx?.client || !ctx.state.user || loadedFor === ctx.state.user.id) return;
-    loadedFor = ctx.state.user.id;
-    const result = await ctx.client.request("/api/chatbot/history");
+    if (!ctx?.client) return;
+    const guest = isGuest();
+    const identity = guest ? "guest:" + guestSessionId() : "user:" + ctx.state.user.id;
+    if (loadedFor === identity) return;
+    loadedFor = identity;
+    const path = guest
+      ? "/api/chatbot/public/history?guest_id=" + encodeURIComponent(guestSessionId())
+      : "/api/chatbot/history";
+    const result = await ctx.client.request(path);
     if (!result.error && Array.isArray(result.data?.messages) && result.data.messages.length) {
       messages = result.data.messages.map((m) => ({
         role: m.role === "user" ? "user" : "assistant",
@@ -196,10 +229,14 @@
     renderMessages(true);
     const sendButton = host.querySelector("[data-chat-send]");
     if (sendButton) sendButton.disabled = true;
-    const result = await ctx.client.request("/api/chatbot/message", "POST", {
-      message: text,
-      device_context: await deviceContext(),
-    });
+    const guest = isGuest();
+    const result = await ctx.client.request(
+      guest ? "/api/chatbot/public/message" : "/api/chatbot/message",
+      "POST",
+      guest
+        ? { message: text, guest_id: guestSessionId() }
+        : { message: text, device_context: await deviceContext() },
+    );
     if (result.error) {
       const unavailable = result.error.code === "chatbot_unavailable";
       messages.push({
@@ -224,8 +261,11 @@
   }
 
   function mount(nextCtx) {
+    const nextAudience = nextCtx?.state?.user ? "user" : "guest";
+    if (host && audience !== nextAudience) unmount();
     ctx = nextCtx;
-    if (!ctx?.state?.user || ctx.state.demo || ctx.state.offline) {
+    audience = nextAudience;
+    if (!ctx?.client || ctx.state.demo || ctx.state.offline || !navigator.onLine) {
       unmount();
       return;
     }
@@ -238,6 +278,7 @@
     busy = false;
     loadedFor = null;
     messages = [];
+    audience = null;
     clearTimeout(nudgeTimer);
     host?.remove();
     host = null;

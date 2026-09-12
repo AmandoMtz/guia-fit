@@ -1,7 +1,7 @@
 const { createPool } = require("./db.cjs");
 const { createMailer } = require("./mail.cjs");
 const { createApp } = require("./app.cjs");
-const { createAnthropicClient } = require("./chatbot.cjs");
+const { createGeminiClient } = require("./chatbot.cjs");
 const { migrate } = require("./migrate.cjs");
 (async () => {
   const db = createPool(),
@@ -19,7 +19,7 @@ const { migrate } = require("./migrate.cjs");
     siteUrl,
     production,
     corsOrigins: (process.env.CORS_ORIGINS || "").split(",").filter(Boolean),
-    chatbot: createAnthropicClient(),
+    chatbot: createGeminiClient(),
   });
   const server = app.listen(Number(process.env.PORT || 3000), "0.0.0.0", () =>
     console.log(

@@ -205,7 +205,7 @@
       messages.push({
         role: "assistant",
         content: unavailable
-          ? "El asistente inteligente todavía no está configurado en el servidor. Un administrador debe agregar la clave de Claude en Render."
+          ? "El asistente inteligente todavía no está configurado en el servidor. Un administrador debe agregar la clave de Gemini en Render."
           : (result.error.message || "No pude responder en este momento. Inténtalo de nuevo."),
       });
     } else {

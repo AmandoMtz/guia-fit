@@ -6,6 +6,7 @@ const { randomUUID } = require("node:crypto");
 const { PGlite } = require("@electric-sql/pglite");
 const request = require("supertest");
 const { createApp } = require("../server/app.cjs");
+const { createGeminiClient } = require("../server/chatbot.cjs");
 const { hashToken } = require("../server/security.cjs");
 
 const root = path.resolve(__dirname, "..");
@@ -91,4 +92,46 @@ test("Castor FIT no finge IA si falta la clave/proveedor", async () => {
   const response = await api.post("/api/chatbot/message").set("Authorization", "Bearer " + token).send({ message: "hola" }).expect(503);
   assert.equal(response.body.error.code, "chatbot_unavailable");
   await engine.close();
+});
+
+
+test("cliente Gemini usa la API del nivel gratuito sin exponer la clave en el cuerpo", async () => {
+  assert.equal(createGeminiClient({}), null);
+  const previousFetch = global.fetch;
+  let request;
+  global.fetch = async (url, options) => {
+    request = { url, options, body: JSON.parse(options.body) };
+    return {
+      ok: true,
+      async json() {
+        return {
+          modelVersion: "gemini-2.5-flash",
+          candidates: [{ content: { parts: [{ text: '{"reply":"Hola desde Gemini","category":"casual","escalate":false}' }] } }],
+          usageMetadata: { promptTokenCount: 10, candidatesTokenCount: 8 },
+        };
+      },
+    };
+  };
+  try {
+    const client = createGeminiClient({ GEMINI_API_KEY: "clave-de-prueba" });
+    assert.equal(client.provider, "google-gemini");
+    assert.equal(client.model, "gemini-2.5-flash");
+    const result = await client.complete({
+      system: "Eres Castor FIT",
+      messages: [
+        { role: "user", content: "hola" },
+        { role: "assistant", content: "qué tal" },
+        { role: "user", content: "mi horario" },
+      ],
+    });
+    assert.match(request.url, /gemini-2\.5-flash:generateContent$/);
+    assert.equal(request.options.headers["x-goog-api-key"], "clave-de-prueba");
+    assert.ok(!request.options.body.includes("clave-de-prueba"));
+    assert.equal(request.body.systemInstruction.parts[0].text, "Eres Castor FIT");
+    assert.deepEqual(request.body.contents.map((x) => x.role), ["user", "model", "user"]);
+    assert.equal(request.body.generationConfig.responseMimeType, "application/json");
+    assert.match(result.text, /Hola desde Gemini/);
+  } finally {
+    global.fetch = previousFetch;
+  }
 });

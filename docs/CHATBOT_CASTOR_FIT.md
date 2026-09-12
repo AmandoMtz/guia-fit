@@ -6,8 +6,10 @@ El chatbot se abre desde la mascota de Guía FIT en la barra superior o desde el
 
 Agrega estas variables de entorno al servicio web:
 
-- `ANTHROPIC_API_KEY`: clave privada de Claude. Nunca debe enviarse al navegador ni subirse a Git.
-- `CHATBOT_MODEL`: por defecto `claude-sonnet-5`.
+- `GEMINI_API_KEY`: clave privada creada en Google AI Studio. Nunca debe enviarse al navegador ni subirse a Git.
+- `CHATBOT_MODEL`: por defecto `gemini-2.5-flash`. Este modelo dispone de nivel gratuito sujeto a límites de uso de Google.
+
+No es necesario habilitar facturación para usar el nivel gratuito disponible. Si se supera el límite gratuito, Castor FIT mostrará un error temporal en lugar de generar cargos automáticamente, salvo que el proyecto se cambie expresamente a un nivel con facturación.
 
 Después de guardar las variables, vuelve a desplegar el servicio. `AUTO_MIGRATE=true` aplica `006_chatbot.sql` automáticamente.
 
@@ -25,3 +27,8 @@ Después de guardar las variables, vuelve a desplegar el servicio. `AUTO_MIGRATE
 ## Privacidad
 
 El contexto enviado al modelo evita correo, matrícula y otros identificadores directos. No se almacena el prompt del sistema ni claves/tokens en `chatbot_logs`.
+
+
+## Nota sobre el nivel gratuito de Gemini
+
+Google indica que el nivel gratuito de determinados modelos puede utilizar las entradas y salidas para mejorar sus productos. Guía FIT minimiza los datos enviados al modelo y no incluye correo ni matrícula en el contexto, pero antes de usarlo con información institucional real conviene revisar la política de privacidad aplicable.

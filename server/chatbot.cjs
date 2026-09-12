@@ -15,46 +15,63 @@ function cleanText(value, max = USER_MESSAGE_MAX) {
   return String(value).replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, "").trim().slice(0, max);
 }
 
-function createAnthropicClient(env = process.env) {
-  const apiKey = String(env.ANTHROPIC_API_KEY || "").trim();
+function createGeminiClient(env = process.env) {
+  const apiKey = String(env.GEMINI_API_KEY || "").trim();
   if (!apiKey) return null;
-  const model = String(env.CHATBOT_MODEL || "claude-sonnet-5").trim();
+  const model = String(env.CHATBOT_MODEL || "gemini-2.5-flash").trim();
   return {
-    provider: "anthropic",
+    provider: "google-gemini",
     model,
     async complete({ system, messages }) {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), 22000);
       try {
-        const response = await fetch("https://api.anthropic.com/v1/messages", {
-          method: "POST",
-          headers: {
-            "content-type": "application/json",
-            "x-api-key": apiKey,
-            "anthropic-version": "2023-06-01",
+        const contents = (Array.isArray(messages) ? messages : []).map((message) => ({
+          role: message?.role === "assistant" ? "model" : "user",
+          parts: [{ text: cleanText(message?.content, ASSISTANT_MESSAGE_MAX) }],
+        }));
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
+          {
+            method: "POST",
+            headers: {
+              "content-type": "application/json",
+              "x-goog-api-key": apiKey,
+            },
+            body: JSON.stringify({
+              systemInstruction: { parts: [{ text: system }] },
+              contents,
+              generationConfig: {
+                maxOutputTokens: 850,
+                temperature: 0.35,
+                responseMimeType: "application/json",
+              },
+            }),
+            signal: controller.signal,
           },
-          body: JSON.stringify({
-            model,
-            max_tokens: 850,
-            system,
-            messages,
-          }),
-          signal: controller.signal,
-        });
+        );
         const payload = await response.json().catch(() => ({}));
         if (!response.ok) {
           const error = new Error("El proveedor del asistente no respondió correctamente.");
           error.status = response.status;
-          error.providerCode = payload?.error?.type;
+          error.providerCode = payload?.error?.status || payload?.error?.code;
           throw error;
         }
-        const text = (payload.content || [])
-          .filter((part) => part?.type === "text")
-          .map((part) => part.text)
+        const text = (payload.candidates?.[0]?.content?.parts || [])
+          .map((part) => part?.text || "")
           .join("\n")
           .trim();
-        if (!text) throw new Error("El proveedor devolvió una respuesta vacía.");
-        return { text, model: payload.model || model, usage: payload.usage || null };
+        if (!text) {
+          const reason = payload.candidates?.[0]?.finishReason || payload.promptFeedback?.blockReason;
+          const error = new Error(reason ? `Gemini no devolvió texto (${reason}).` : "El proveedor devolvió una respuesta vacía.");
+          error.providerCode = reason || "empty_response";
+          throw error;
+        }
+        return {
+          text,
+          model: payload.modelVersion || model,
+          usage: payload.usageMetadata || null,
+        };
       } finally {
         clearTimeout(timer);
       }
@@ -264,7 +281,7 @@ function createChatbotRouter({ db, limit, chatbot }) {
 }
 
 module.exports = {
-  createAnthropicClient,
+  createGeminiClient,
   createChatbotRouter,
   buildContext,
   parseModelReply,

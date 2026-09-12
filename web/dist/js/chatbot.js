@@ -10,6 +10,7 @@
   let messages = [];
   let nudgeTimer = null;
   let audience = null;
+  let generation = 0;
 
   function isGuest() { return !ctx?.state?.user; }
   function greeting() {
@@ -89,7 +90,7 @@
           <textarea id="fit-chat-input" data-chat-input rows="1" maxlength="1200" placeholder="Escribe tu mensaje…" autocomplete="off"></textarea>
           <button type="submit" data-chat-send aria-label="Enviar mensaje">${ctx?.icon?.("send") || "→"}</button>
         </form>
-        <p class="fit-chat-foot">Las dudas frecuentes tienen respuesta local. Gemini se usa solo como apoyo adicional; para trámites o casos delicados, Castor FIT te indicará cuándo conviene apoyo humano.</p>
+        <p class="fit-chat-foot">Te ayudo con Guía FIT. No compartas contraseñas ni códigos de acceso.</p>
       </section>`;
     document.body.appendChild(host);
     panel = host.querySelector(".fit-chat-panel");
@@ -179,7 +180,9 @@
     const path = guest
       ? "/api/chatbot/public/history?guest_id=" + encodeURIComponent(guestSessionId())
       : "/api/chatbot/history";
-    const result = await ctx.client.request(path);
+    const version = generation;
+    const result = await ctx.client.request(path).catch(() => ({ error: true }));
+    if (version !== generation || busy || messages.length) return;
     if (!result.error && Array.isArray(result.data?.messages) && result.data.messages.length) {
       messages = result.data.messages.map((m) => ({
         role: m.role === "user" ? "user" : "assistant",
@@ -230,6 +233,8 @@
     const sendButton = host.querySelector("[data-chat-send]");
     if (sendButton) sendButton.disabled = true;
     const guest = isGuest();
+    const version = generation;
+    try {
     const result = await ctx.client.request(
       guest ? "/api/chatbot/public/message" : "/api/chatbot/message",
       "POST",
@@ -237,12 +242,13 @@
         ? { message: text, guest_id: guestSessionId() }
         : { message: text, device_context: await deviceContext() },
     );
+    if (version !== generation) return;
     if (result.error) {
       const unavailable = result.error.code === "chatbot_unavailable";
       messages.push({
         role: "assistant",
         content: unavailable
-          ? "El asistente inteligente todavía no está configurado en el servidor. Un administrador debe agregar la clave de Gemini en Render."
+          ? "El asistente no está disponible en este momento. Inténtalo nuevamente en unos momentos."
           : (result.error.message || "No pude responder en este momento. Inténtalo de nuevo."),
       });
     } else {
@@ -254,14 +260,20 @@
         });
       }
     }
-    messages = messages.slice(-24);
-    busy = false;
-    if (sendButton) sendButton.disabled = false;
-    renderMessages(false);
+    } catch {
+      if (version === generation) messages.push({ role: "assistant", content: "No pude conectar con el servidor. Revisa tu conexión e intenta enviar la pregunta otra vez." });
+    } finally {
+      if (version === generation) {
+        messages = messages.slice(-24);
+        busy = false;
+        if (sendButton) sendButton.disabled = false;
+        renderMessages(false);
+      }
+    }
   }
 
   function mount(nextCtx) {
-    const nextAudience = nextCtx?.state?.user ? "user" : "guest";
+    const nextAudience = nextCtx?.state?.user ? "user:" + nextCtx.state.user.id : "guest";
     if (host && audience !== nextAudience) unmount();
     ctx = nextCtx;
     audience = nextAudience;
@@ -274,6 +286,7 @@
   }
 
   function unmount() {
+    generation += 1;
     opened = false;
     busy = false;
     loadedFor = null;

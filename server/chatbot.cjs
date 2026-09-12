@@ -1,4 +1,5 @@
 const express = require("express");
+const { understand } = require("./chatbot-understanding.cjs");
 const { accountType } = require("./account.cjs");
 
 const HISTORY_TTL_MS = 2 * 60 * 60 * 1000;
@@ -26,9 +27,9 @@ function createGeminiClient(env = process.env) {
   const fallbackModels = [configuredModel, "gemini-2.5-flash-lite", "gemini-2.5-flash"]
     .filter((value, index, all) => value && all.indexOf(value) === index);
 
-  async function requestModel(model, system, messages) {
+  async function requestModel(model, system, messages, timeoutMs) {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 22000);
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
     try {
       const contents = (Array.isArray(messages) ? messages : []).map((message) => ({
         role: message?.role === "assistant" ? "model" : "user",
@@ -88,9 +89,10 @@ function createGeminiClient(env = process.env) {
     model: configuredModel,
     async complete({ system, messages }) {
       let lastError;
+      const deadline = Date.now() + 12000;
       for (const model of fallbackModels) {
         try {
-          return await requestModel(model, system, messages);
+          return await requestModel(model, system, messages, Math.max(1, deadline - Date.now()));
         } catch (error) {
           lastError = error;
           const status = Number(error?.status || 0);
@@ -101,7 +103,7 @@ function createGeminiClient(env = process.env) {
             code: error?.providerCode || null,
             message: cleanText(error?.message, 300),
           });
-          if (!retryable) break;
+          if (!retryable || Date.now() >= deadline || status === 429) break;
         }
       }
       throw lastError || new Error("Gemini no pudo responder.");
@@ -147,7 +149,7 @@ async function visibleEvents(db, user) {
       return [];
     }
   }
-  sql += " order by e.starts_at desc limit 16";
+  sql += (sql.includes(" where e.audience") ? " and" : " where") + " e.ends_at >= now() order by e.starts_at asc limit 16";
   return (await db.query(sql, params)).rows;
 }
 
@@ -218,7 +220,7 @@ ${JSON.stringify(context)}`;
 async function buildPublicContext(db) {
   const [eventsResult, foodResult, placesResult] = await Promise.all([
     db.query(`select id,title,description,location,audience,starts_at,ends_at
-      from events where visibility='public' and ends_at >= now()-interval '1 day'
+      from events where visibility='public' and ends_at >= now()
       order by starts_at asc limit 16`),
     db.query(`select p.name,p.description,p.price_cents,p.sale_unit,p.units_per_lot,
       v.business_name,v.pickup_location,v.hours_text
@@ -327,8 +329,14 @@ function dateTimeMx(value) {
   }).format(date);
 }
 
-function localAnswer(message, context, { authenticated = false, fallback = false } = {}) {
+function localAnswer(message, context, options = {}) {
+  const { authenticated = false, fallback = false } = options;
+  const interpreted = understand(message, context, options);
+  if (interpreted.answer) return interpreted.answer;
+  message = interpreted.message || message;
+  context = interpreted.context || context;
   const q = normalizeIntent(message);
+  if (context?.unavailable && /evento|comida|comer|producto|pedido|horario|clase|salon|ubicacion|donde/.test(q)) return { reply: "No pude consultar los datos del sistema en este momento. Inténtalo de nuevo en unos momentos; mientras tanto puedo orientarte con el registro y el acceso.", category: "system", escalate: false, handled: true };
   const answer = (reply, category = "system", escalate = false, handled = true) => ({ reply, category, escalate, handled });
   const has = (...terms) => terms.some((term) => q.includes(term));
 
@@ -458,8 +466,8 @@ function localAnswer(message, context, { authenticated = false, fallback = false
 
   if (fallback) {
     return answer(authenticated
-      ? "No pude usar la respuesta inteligente en este momento, pero sí puedo ayudarte de forma local con: Mi horario, Eventos, Comidas, Pedidos, Directorio/Mapa, asistencia QR, Mi cuenta y recuperación de acceso. Escríbeme qué necesitas."
-      : "No pude usar la respuesta inteligente en este momento, pero sí puedo ayudarte de forma local con: registro, acceso, docentes, recuperación de contraseña, eventos públicos, comidas y ubicación de espacios. Escríbeme qué necesitas.", "system", false, true);
+      ? "Para orientarte mejor, dime qué quieres hacer o qué aviso aparece. Puedo ayudarte con: Mi horario, Eventos, Comidas, Pedidos, Directorio/Mapa, asistencia QR, Mi cuenta y recuperación de acceso. Escríbeme qué necesitas."
+      : "Para orientarte mejor, dime qué quieres hacer o qué aviso aparece. Puedo ayudarte con: registro, acceso, docentes, recuperación de contraseña, eventos públicos, comidas y ubicación de espacios. Escríbeme qué necesitas.", "system", false, true);
   }
 
   return answer("", "system", false, false);
@@ -501,7 +509,7 @@ function createPublicChatbotRouter({ db, limit, chatbot }) {
   };
 
   router.get("/status", (req, res) => {
-    res.json({ data: { enabled: true, local_enabled: true, ai_enabled: !!chatbot, provider: chatbot?.provider || "local", model: chatbot?.model || "local-faq-v1", authenticated: false } });
+    res.json({ data: { enabled: true, local_enabled: true, ai_enabled: !!chatbot, provider: chatbot?.provider || "local", model: chatbot?.model || "local-faq-v2", authenticated: false } });
   });
 
   router.get("/history", (req, res) => {
@@ -525,13 +533,13 @@ function createPublicChatbotRouter({ db, limit, chatbot }) {
     if (!message) throw fail(400, "validation_error", "Escribe un mensaje para Castor FIT.");
     const key = keyFor(req, id);
     const prior = getHistory(key);
-    const context = await buildPublicContext(db);
+    const context = await buildPublicContext(db).catch(() => ({ unavailable: true }));
     const messages = [...prior, { role: "user", content: message }].slice(-HISTORY_MAX_MESSAGES);
     const started = Date.now();
 
-    let answer = localAnswer(message, context, { authenticated: false });
+    let answer = localAnswer(message, context, { authenticated: false, history: prior });
     let provider = "local-rules";
-    let model = "local-faq-v1";
+    let model = "local-faq-v2";
     if (!answer.handled && chatbot) {
       try {
         const output = await chatbot.complete({ system: publicSystemPrompt(context), messages });
@@ -541,10 +549,10 @@ function createPublicChatbotRouter({ db, limit, chatbot }) {
         model = output.model || chatbot.model || null;
       } catch (error) {
         console.warn("public chatbot provider failed; using local fallback:", error?.message || error);
-        answer = localAnswer(message, context, { authenticated: false, fallback: true });
+        answer = localAnswer(message, context, { authenticated: false, fallback: true, history: prior });
       }
     } else if (!answer.handled) {
-      answer = localAnswer(message, context, { authenticated: false, fallback: true });
+      answer = localAnswer(message, context, { authenticated: false, fallback: true, history: prior });
     }
 
     saveHistory(key, [...messages, { role: "assistant", content: answer.reply }]);
@@ -572,7 +580,7 @@ function createChatbotRouter({ db, limit, chatbot }) {
   };
 
   router.get("/status", (req, res) => {
-    res.json({ data: { enabled: true, local_enabled: true, ai_enabled: !!chatbot, provider: chatbot?.provider || "local", model: chatbot?.model || "local-faq-v1" } });
+    res.json({ data: { enabled: true, local_enabled: true, ai_enabled: !!chatbot, provider: chatbot?.provider || "local", model: chatbot?.model || "local-faq-v2" } });
   });
 
   router.get("/history", (req, res) => {
@@ -598,13 +606,13 @@ function createChatbotRouter({ db, limit, chatbot }) {
     if (message.length < 1) throw fail(400, "validation_error", "Escribe un mensaje para Castor FIT.");
     const key = getKey(req);
     const prior = getHistory(key);
-    const context = await buildContext(db, req.user, req.body?.device_context || {});
+    const context = await buildContext(db, req.user, req.body?.device_context || {}).catch(() => ({ unavailable: true }));
     const messages = [...prior, { role: "user", content: message }].slice(-HISTORY_MAX_MESSAGES);
     const started = Date.now();
 
-    let answer = localAnswer(message, context, { authenticated: true });
+    let answer = localAnswer(message, context, { authenticated: true, history: prior });
     let provider = "local-rules";
-    let model = "local-faq-v1";
+    let model = "local-faq-v2";
     if (!answer.handled && chatbot) {
       try {
         const output = await chatbot.complete({ system: systemPrompt(context), messages });
@@ -614,10 +622,10 @@ function createChatbotRouter({ db, limit, chatbot }) {
         model = output.model || chatbot.model || null;
       } catch (error) {
         console.warn("chatbot provider failed; using local fallback:", error?.message || error);
-        answer = localAnswer(message, context, { authenticated: true, fallback: true });
+        answer = localAnswer(message, context, { authenticated: true, fallback: true, history: prior });
       }
     } else if (!answer.handled) {
-      answer = localAnswer(message, context, { authenticated: true, fallback: true });
+      answer = localAnswer(message, context, { authenticated: true, fallback: true, history: prior });
     }
 
     saveHistory(key, [...messages, { role: "assistant", content: answer.reply }]);

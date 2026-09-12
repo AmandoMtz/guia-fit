@@ -254,3 +254,35 @@ test("si Gemini falla una pregunta habitual todavía responde localmente", async
   assert.match(reply.body.data.reply, /Conferencia Local/);
   await engine.close();
 });
+
+test('interpreta saludos con preguntas, errores y seguimiento sin IA', () => {
+  assert.match(localAnswer('Hola komo puedo registarme', {}).reply, /Crear cuenta/);
+  assert.match(localAnswer('Soy docente', {}).reply, /@docentes/);
+  assert.match(localAnswer('No recuerdo la contraseña', {}).reply, /Olvidé mi contraseña/);
+  assert.match(localAnswer('y no me llega', {}, { history:[{role:'user',content:'recuperar contraseña'}] }).reply, /spam/);
+  assert.match(localAnswer('Hola como inicar secion', {}).reply, /Iniciar sesión/);
+});
+
+test('prioriza privacidad y asistencia sobre listados generales', () => {
+  assert.match(localAnswer('mi pedido de comida', {recent_orders:[{product_name:'PRIVADO'}]}).reply, /Inicia sesión/);
+  assert.doesNotMatch(localAnswer('mi pedido de comida', {recent_orders:[{product_name:'PRIVADO'}]}).reply, /PRIVADO/);
+  assert.match(localAnswer('como registro asistencia en eventos', {}, {authenticated:true}).reply, /QR/);
+  assert.equal(localAnswer('necesito hablar con alguien', {}).escalate, true);
+});
+
+test('consulta entidades y precios del contexto actualizado', () => {
+  const context = {available_food:[{name:'Pizza',price_cents:8000},{name:'Torta',price_cents:3500}],verified_places:[{name:'Biblioteca',building:'Edificio B'}]};
+  assert.match(localAnswer('Biblioteca', context).reply, /Edificio B/);
+  assert.doesNotMatch(localAnswer('cuanto cuesta la torta', context).reply, /Pizza/);
+  const answer = localAnswer('comida mas barata', context).reply;
+  assert.ok(answer.indexOf('Torta') < answer.indexOf('Pizza'));
+  assert.match(localAnswer('eventos', {unavailable:true}).reply, /No pude consultar/);
+});
+
+test('calcula día y próxima clase con hora de Tampico y semana recurrente', () => {
+  const context = {now:'2026-09-14T15:00:00Z', schedule:{classes:[{subject:'Redes',day:'1',start:'11:00',end:'12:00',room:'A'},{subject:'Álgebra',day:'2',start:'08:00',end:'09:00'}]}};
+  assert.match(localAnswer('proxima clase', context, {authenticated:true}).reply, /Redes/);
+  assert.doesNotMatch(localAnswer('clases mañana', context, {authenticated:true}).reply, /Redes/);
+  assert.match(localAnswer('clases mañana', context, {authenticated:true}).reply, /Álgebra/);
+  assert.match(localAnswer('clases viernes', context, {authenticated:true}).reply, /No encuentro clases/);
+});

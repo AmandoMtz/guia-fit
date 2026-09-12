@@ -113,3 +113,9 @@ Para actualizar las copias estáticas tras cambiar sus dependencias fijadas: `np
 - La migración aditiva `004_events.sql` incorpora carrera del perfil, eventos, públicos cerrados, invitaciones docentes, QR, asistencias y códigos de validación. Las migraciones 001–003 permanecen intactas.
 
 Consulta [ACTUALIZAR_V5.md](docs/ACTUALIZAR_V5.md) y [ALMACENAMIENTO.md](docs/ALMACENAMIENTO.md). Esta versión sí añade tablas/columnas mediante `004_events.sql`, pero no necesita claves externas nuevas. El chat temporal usa memoria del proceso de Render: un reinicio o nuevo despliegue puede cerrar conversaciones activas antes de las 12 horas, precisamente porque no se persisten.
+
+## Asistente Castor FIT
+
+El proyecto incluye un chatbot contextual accesible desde la mascota de Guía FIT. Usa Claude desde el backend, mantiene historial temporal por sesión y combina el mensaje con datos reales de eventos, comidas, pedidos, espacios y el horario local del alumno.
+
+Configura `ANTHROPIC_API_KEY` en Render. El modelo puede ajustarse con `CHATBOT_MODEL` (por defecto `claude-sonnet-5`). Consulta `docs/CHATBOT_CASTOR_FIT.md`.

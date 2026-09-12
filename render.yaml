@@ -23,3 +23,7 @@ services:
         sync: false
       - key: MAIL_FROM
         sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: CHATBOT_MODEL
+        value: "claude-sonnet-5"

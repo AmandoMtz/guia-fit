@@ -47,8 +47,12 @@
     `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${paths[name] || paths.pin}"/></svg>`;
   const brand = () =>
     '<div class="brand"><span class="logo-crop"><img src="assets/logos.png" alt="Universidad Autónoma de Tamaulipas"></span><span class="divider"></span><span class="logo-crop logo-fit"><img src="assets/logos.png" alt="70 aniversario Facultad de Ingeniería Tampico, 1956–2026"></span></div>';
-  const guideMark = (compact = false) =>
-    `<div class="guide-mark ${compact ? "compact" : ""}" aria-label="Guía FIT"><span class="guide-mark-icon"><img src="assets/guia-fit-mascota.png" alt="Mascota de Guía FIT"></span><span class="guide-mark-text">${compact ? "Guía FIT" : "GUÍA DEL CAMPUS"}</span></div>`;
+  const guideMark = (compact = false, interactive = false) => {
+    const inner = `<span class="guide-mark-icon"><img src="assets/guia-fit-mascota.png" alt="Mascota de Guía FIT"></span><span class="guide-mark-text">${compact ? "Guía FIT" : "GUÍA DEL CAMPUS"}</span>`;
+    return interactive
+      ? `<button type="button" class="guide-mark compact guide-mark-button" data-chat-launch aria-label="Abrir ayuda de Castor FIT" aria-expanded="false">${inner}</button>`
+      : `<div class="guide-mark ${compact ? "compact" : ""}" aria-label="Guía FIT">${inner}</div>`;
+  };
   let client = null;
   const state = {
     mode: "login",
@@ -134,7 +138,10 @@
       .join("");
   function render() {
     if (state.user || state.demo) shell();
-    else authView();
+    else {
+      window.FIT_CHATBOT?.unmount?.();
+      authView();
+    }
   }
   function authView() {
     const mode = state.mode;
@@ -474,7 +481,7 @@
         .charAt(0)
         .toUpperCase();
     $("#app").innerHTML =
-      `<div class="shell"><header class="topbar app-top">${brand()}<div class="top-actions">${guideMark(true)}${state.user && !state.offline ? `<button class="notification-bell" data-view="notifications" aria-label="Mis avisos">${icon("bell")}<span id="notification-count" hidden></span></button>` : ""}${profileAvatar(initial)}<button class="btn ghost small" id="logout">${icon("exit")}${state.demo ? "Salir de demo" : state.offline ? "Salir del modo offline" : "Cerrar sesión"}</button></div></header><div class="workspace"><nav class="sidebar" aria-label="Navegación principal"><div class="eyebrow">EXPLORA LA FIT</div>${menu.map(([id, i, label]) => `<button class="nav-item ${state.view === id ? "active" : ""}" data-view="${id}" ${state.view === id ? 'aria-current="page"' : ""}>${icon(i)}${label}</button>`).join("")}<p class="sidebar-note">Facultad de Ingeniería Tampico<br>Universidad Autónoma de Tamaulipas</p></nav><main class="content" id="main"><div class="page-head"><div><span class="eyebrow muted">GUÍA DEL CAMPUS</span><h1>${current[0]}</h1><p>${current[1]}</p></div>${state.demo ? '<span class="badge pending">Modo demostración</span>' : badge(state.verification?.status === "verified")}</div>${state.demo ? '<div class="notice">Demostración: no has iniciado sesión. Los lugares proceden del croquis; sus recorridos todavía deben verificarse.</div>' : ""}${state.offline ? `<div class="offline-banner" role="status"><b>Modo sin conexión</b><span>Solo puedes consultar el horario guardado en este dispositivo y los eventos sincronizados antes de perder la red.${state.offlineSyncedAt ? ` Última sincronización: ${esc(new Date(state.offlineSyncedAt).toLocaleString("es-MX"))}.` : ""}</span></div>` : ""}${state.dataError ? `<div class="notice error" role="alert">${esc(state.dataError)} <button id="retry-data" class="text-button">Reintentar</button></div>` : ""}<div id="view"></div></main></div></div>`;
+      `<div class="shell"><header class="topbar app-top">${brand()}<div class="top-actions">${guideMark(true, !!state.user && !state.demo && !state.offline)}${state.user && !state.offline ? `<button class="notification-bell" data-view="notifications" aria-label="Mis avisos">${icon("bell")}<span id="notification-count" hidden></span></button>` : ""}${profileAvatar(initial)}<button class="btn ghost small" id="logout">${icon("exit")}${state.demo ? "Salir de demo" : state.offline ? "Salir del modo offline" : "Cerrar sesión"}</button></div></header><div class="workspace"><nav class="sidebar" aria-label="Navegación principal"><div class="eyebrow">EXPLORA LA FIT</div>${menu.map(([id, i, label]) => `<button class="nav-item ${state.view === id ? "active" : ""}" data-view="${id}" ${state.view === id ? 'aria-current="page"' : ""}>${icon(i)}${label}</button>`).join("")}<p class="sidebar-note">Facultad de Ingeniería Tampico<br>Universidad Autónoma de Tamaulipas</p></nav><main class="content" id="main"><div class="page-head"><div><span class="eyebrow muted">GUÍA DEL CAMPUS</span><h1>${current[0]}</h1><p>${current[1]}</p></div>${state.demo ? '<span class="badge pending">Modo demostración</span>' : badge(state.verification?.status === "verified")}</div>${state.demo ? '<div class="notice">Demostración: no has iniciado sesión. Los lugares proceden del croquis; sus recorridos todavía deben verificarse.</div>' : ""}${state.offline ? `<div class="offline-banner" role="status"><b>Modo sin conexión</b><span>Solo puedes consultar el horario guardado en este dispositivo y los eventos sincronizados antes de perder la red.${state.offlineSyncedAt ? ` Última sincronización: ${esc(new Date(state.offlineSyncedAt).toLocaleString("es-MX"))}.` : ""}</span></div>` : ""}${state.dataError ? `<div class="notice error" role="alert">${esc(state.dataError)} <button id="retry-data" class="text-button">Reintentar</button></div>` : ""}<div id="view"></div></main></div></div>`;
     document.querySelectorAll("[data-view]").forEach(
       (b) =>
         (b.onclick = () => {
@@ -491,6 +498,8 @@
         await loadData();
         render();
       };
+    if (state.user && !state.demo && !state.offline) window.FIT_CHATBOT?.mount?.(moduleContext());
+    else window.FIT_CHATBOT?.unmount?.();
     ({
       directory: directoryView,
       map: mapView,

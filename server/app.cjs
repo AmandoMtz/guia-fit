@@ -9,6 +9,7 @@ const S = require("./security.cjs");
 const { createFoodRouter } = require("./food.cjs");
 const { createProfileRouter } = require("./profile.cjs");
 const { createEventsRouter, createPublicEventsRouter } = require("./events.cjs");
+const { createChatbotRouter } = require("./chatbot.cjs");
 const { accountType } = require("./account.cjs");
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const generic =
@@ -22,6 +23,7 @@ function createApp({
   siteUrl = "http://localhost:3000",
   production = false,
   corsOrigins = [],
+  chatbot = null,
 }) {
   const app = express(),
     origin = new URL(siteUrl).origin,
@@ -625,6 +627,7 @@ function createApp({
   app.use("/api/events", createPublicEventsRouter({ db, limit }));
   app.use("/api/profile", authenticate, createProfileRouter({ db, limit }));
   app.use("/api/events", authenticate, createEventsRouter({ db, limit, siteUrl }));
+  app.use("/api/chatbot", authenticate, createChatbotRouter({ db, limit, chatbot }));
   app.use(
     "/api/food",
     authenticate,

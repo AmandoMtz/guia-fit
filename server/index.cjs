@@ -1,6 +1,7 @@
 const { createPool } = require("./db.cjs");
 const { createMailer } = require("./mail.cjs");
 const { createApp } = require("./app.cjs");
+const { createAnthropicClient } = require("./chatbot.cjs");
 const { migrate } = require("./migrate.cjs");
 (async () => {
   const db = createPool(),
@@ -18,6 +19,7 @@ const { migrate } = require("./migrate.cjs");
     siteUrl,
     production,
     corsOrigins: (process.env.CORS_ORIGINS || "").split(",").filter(Boolean),
+    chatbot: createAnthropicClient(),
   });
   const server = app.listen(Number(process.env.PORT || 3000), "0.0.0.0", () =>
     console.log(
@@ -30,7 +32,7 @@ const { migrate } = require("./migrate.cjs");
         () =>
           db
             .query(
-              "delete from sessions where expires_at<now(); delete from auth_tokens where expires_at<now(); delete from rate_limits where expires_at<now()",
+              "delete from sessions where expires_at<now(); delete from auth_tokens where expires_at<now(); delete from rate_limits where expires_at<now(); delete from chatbot_logs where created_at < now()-interval '90 days'",
             )
             .catch(() => {}),
         900000,

@@ -1,12 +1,13 @@
+/* Paleta Guía FIT: rojo del acceso (#7b0d29), con superficies claras. */
 :root {
-  --ink: #202932;
-  --muted: #62717c;
-  --orange: #bd430b;
-  --orange-dark: #923008;
+  --ink: #322024;
+  --muted: #7c6268;
+  --orange: #8a102b;
+  --orange-dark: #650a22;
   --red: #e02630;
-  --line: #e3e8eb;
-  --soft: #f3f6f8;
-  --navy: #183543;
+  --line: #ebe3e5;
+  --soft: #f8f3f4;
+  --navy: #7b0d29;
   --radius: 16px;
   font-family: Inter, "Segoe UI", Arial, sans-serif;
   color: var(--ink);
@@ -52,7 +53,7 @@ a:focus-visible,
 input:focus-visible,
 select:focus-visible,
 textarea:focus-visible {
-  outline: 3px solid #1567a5;
+  outline: 3px solid #a41a39;
   outline-offset: 3px;
 }
 button {
@@ -198,7 +199,7 @@ img {
   margin: 0;
 }
 .auth-aside .intro {
-  color: #d5e2e9;
+  color: #e9d5da;
   max-width: 460px;
   margin: 0;
   font-size: 1.05rem;
@@ -223,17 +224,17 @@ img {
   left: 22px;
   bottom: 20px;
   background: var(--navy);
-  border: 1px solid #667985;
+  border: 1px solid #85666e;
   padding: 8px 13px;
   border-radius: 25px;
   font-size: 0.8rem;
   color: white;
 }
 .aside-bottom {
-  border-top: 1px solid #45606b;
+  border-top: 1px solid #6b454e;
   padding-top: 20px;
   font-size: 0.84rem;
-  color: #c1d0d8;
+  color: #d8c1c7;
 }
 .auth-main {
   padding: 45px clamp(24px, 5vw, 78px);
@@ -287,7 +288,7 @@ img {
 .control {
   width: 100%;
   padding: 13px 14px;
-  border: 1px solid #bdc8cf;
+  border: 1px solid #cfbdc2;
   border-radius: 9px;
   background: #fff;
   color: var(--ink);
@@ -348,7 +349,7 @@ img {
   background: var(--orange-dark);
 }
 .btn.secondary {
-  border: 1px solid #bdc8cf;
+  border: 1px solid #cfbdc2;
   background: #fff;
   color: var(--ink);
 }
@@ -518,7 +519,7 @@ img {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  border: 1px solid #d9e1e6;
+  border: 1px solid #e6d9dc;
   background: #fff;
   color: var(--muted);
   padding: 5px 9px;
@@ -574,13 +575,13 @@ img {
 }
 .place-image {
   height: 126px;
-  background: #eaf0f4;
+  background: #f4eaec;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-direction: column;
   gap: 8px;
-  color: #718594;
+  color: #94717a;
   border-bottom: 1px solid var(--line);
 }
 .place-image svg {
@@ -632,7 +633,7 @@ img {
   margin-top: auto;
 }
 .empty {
-  border: 1px dashed #becbd3;
+  border: 1px dashed #d3bec3;
   border-radius: 12px;
   text-align: center;
   padding: 48px;
@@ -685,7 +686,7 @@ img {
   background: var(--navy);
   color: white;
   border: 3px solid white;
-  box-shadow: 0 2px 8px #18354355;
+  box-shadow: 0 2px 8px #7b0d2955;
   font-size: 0.75rem;
   font-weight: 700;
 }
@@ -832,10 +833,10 @@ dialog {
   padding: 28px;
   max-height: 90svh;
   color: var(--ink);
-  box-shadow: 0 20px 100px #10253244;
+  box-shadow: 0 20px 100px #32101844;
 }
 dialog::backdrop {
-  background: #122b3bc2;
+  background: #3b121cc2;
 }
 .dialog-head {
   display: flex;
@@ -1133,7 +1134,7 @@ dialog::backdrop {
     transition: box-shadow 0.15s;
   }
   .place-card:hover {
-    box-shadow: 0 5px 15px #1633400b;
+    box-shadow: 0 5px 15px #4016200b;
   }
 }
 @media print {
@@ -1160,8 +1161,8 @@ dialog::backdrop {
 /* Dirección visual final: azul profundo, naranja UAT y superficies claras. */
 .auth-layout {
   background:
-    radial-gradient(ellipse at 4% 15%, #285b7066, transparent 52%),
-    radial-gradient(ellipse at 70% 115%, #e65a1544, transparent 45%), #102735;
+    radial-gradient(ellipse at 4% 15%, #70283a66, transparent 52%),
+    radial-gradient(ellipse at 70% 115%, #e65a1544, transparent 45%), #7b0d29;
   grid-template-columns: 1.05fr 1fr;
   gap: 10px;
   padding: 0 3%;
@@ -1181,13 +1182,13 @@ dialog::backdrop {
   color: #ff944e;
 }
 .auth-aside .eyebrow {
-  color: #e9f1f5;
+  color: #f5e9ec;
   font-size: 0.75rem;
   letter-spacing: 0.14em;
 }
 .auth-aside .intro {
   font-size: 1.04rem;
-  color: #c3d7e2;
+  color: #e2c3cb;
   max-width: 370px;
 }
 .campus-teaser {
@@ -1195,12 +1196,12 @@ dialog::backdrop {
   max-width: 430px;
   padding: 11px;
   border-radius: 18px;
-  box-shadow: 0 20px 55px #06131c80;
+  box-shadow: 0 20px 55px #1c060b80;
   transform: rotate(-2deg);
   border: 1px solid #ffffff80;
 }
 .aside-bottom {
-  border-color: #45606b88;
+  border-color: #6b454e88;
   font-size: 0.8rem;
   margin-top: 5px;
 }
@@ -1214,12 +1215,12 @@ dialog::backdrop {
   border: 1px solid #ffffff66;
   border-radius: 24px;
   padding: 32px;
-  box-shadow: 0 25px 70px #03121d4d;
+  box-shadow: 0 25px 70px #1a060b4d;
 }
 .auth-card h2 {
   font-size: 2rem;
   letter-spacing: -0.05em;
-  color: #183543;
+  color: #7b0d29;
   font-weight: 780;
 }
 .auth-card > .icon-circle {
@@ -1229,16 +1230,16 @@ dialog::backdrop {
   border: 1px solid #f4c2a3;
 }
 .auth-card .btn:not(.secondary) {
-  background: linear-gradient(110deg, #bd430b, #df5a16);
-  box-shadow: 0 8px 20px #bd430b29;
+  background: linear-gradient(110deg, #8a102b, #df5a16);
+  box-shadow: 0 8px 20px #8a102b29;
   min-height: 50px;
 }
 .auth-card .btn:not(.secondary):hover {
-  background: linear-gradient(110deg, #a83806, #bf470b);
+  background: linear-gradient(110deg, #a83806, #8a102b);
 }
 .auth-tabs {
   margin: 24px 0;
-  background: #f0f4f7;
+  background: #f7f0f2;
   padding: 5px;
   border-radius: 10px;
   border-bottom: 0;
@@ -1251,7 +1252,7 @@ dialog::backdrop {
 }
 .auth-tabs .active {
   background: white;
-  box-shadow: 0 2px 6px #17374514;
+  box-shadow: 0 2px 6px #7b0d2914;
   color: #a23a09;
 }
 .auth-card .notice {
@@ -1263,16 +1264,16 @@ dialog::backdrop {
   margin: 16px 0;
 }
 .auth-card .field input {
-  background: #fafcfd;
-  border-color: #c5d1d9;
+  background: #fdfafb;
+  border-color: #d9c5ca;
   min-height: 49px;
   transition:
     border-color 0.18s,
     box-shadow 0.18s;
 }
 .auth-card .field input:focus {
-  border-color: #bd430b;
-  box-shadow: 0 0 0 3px #bd430b12;
+  border-color: #8a102b;
+  box-shadow: 0 0 0 3px #8a102b12;
   outline-offset: 2px;
 }
 .auth-card .auth-foot {
@@ -1308,7 +1309,7 @@ dialog::backdrop {
     display: block;
     min-height: calc(100svh - 85px);
     background:
-      radial-gradient(ellipse at 100% 0, #29596b, transparent 70%), #102735;
+      radial-gradient(ellipse at 100% 0, #6b2939, transparent 70%), #7b0d29;
   }
   .auth-main {
     padding: 22px 16px 30px;
@@ -1360,22 +1361,22 @@ dialog::backdrop {
   width: 18px;
   height: 18px;
   flex-shrink: 0;
-  accent-color: #c54a0b;
+  accent-color: #8a102b;
 }
 .seller-option span {
   display: grid;
   gap: 4px;
 }
 .seller-option small {
-  color: #65747d;
+  color: #7d656b;
   font-size: 12px;
   line-height: 1.6;
 }
 .notification-bell {
   position: relative;
-  border: 1px solid #d9e1e5;
+  border: 1px solid #e5d9dc;
   background: white;
-  color: #173743;
+  color: #7b0d29;
   border-radius: 50%;
   width: 42px;
   height: 42px;
@@ -1390,7 +1391,7 @@ dialog::backdrop {
   position: absolute;
   right: -4px;
   top: -5px;
-  background: #c54a0b;
+  background: #8a102b;
   color: white;
   border: 2px solid white;
   border-radius: 20px;
@@ -1402,14 +1403,14 @@ dialog::backdrop {
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
-  border-bottom: 1px solid #dce3e6;
+  border-bottom: 1px solid #e6dcde;
   margin: 26px 0 24px;
   padding-bottom: 10px;
 }
 .module-tabs button {
   border: 0;
   background: transparent;
-  color: #576c79;
+  color: #795760;
   font: inherit;
   font-weight: 600;
   padding: 11px 18px;
@@ -1417,11 +1418,11 @@ dialog::backdrop {
   cursor: pointer;
 }
 .module-tabs button.active {
-  background: #183743;
+  background: #7b0d29;
   color: white;
 }
 .module-tabs button:focus-visible {
-  outline: 3px solid #cb4b0b;
+  outline: 3px solid #8a102b;
   outline-offset: 2px;
 }
 .food-banner {
@@ -1429,7 +1430,7 @@ dialog::backdrop {
   align-items: center;
   justify-content: space-between;
   gap: 26px;
-  background: #173b45;
+  background: #7b0d29;
   color: #fff;
   border-radius: 22px;
   padding: 34px 40px;
@@ -1457,7 +1458,7 @@ dialog::backdrop {
   margin: 12px 0;
 }
 .food-banner p {
-  color: #d0dfe0;
+  color: #e0d0d4;
   margin: 0;
 }
 .food-stats {
@@ -1471,7 +1472,7 @@ dialog::backdrop {
   font-weight: 650;
 }
 .food-stats span {
-  color: #cbdcde;
+  color: #decbd0;
   font-size: 13px;
 }
 .food-grid {
@@ -1484,8 +1485,8 @@ dialog::backdrop {
   border-radius: 18px;
   overflow: hidden;
   background: white;
-  border: 1px solid #e0e6e9;
-  box-shadow: 0 5px 18px #173b4505;
+  border: 1px solid #e9e0e2;
+  box-shadow: 0 5px 18px #7b0d2905;
   display: flex;
   flex-direction: column;
   transition:
@@ -1494,7 +1495,7 @@ dialog::backdrop {
 }
 .food-card:hover {
   transform: translateY(-3px);
-  box-shadow: 0 12px 24px #173b450d;
+  box-shadow: 0 12px 24px #7b0d290d;
 }
 .food-photo {
   height: 205px;
@@ -1525,7 +1526,7 @@ dialog::backdrop {
   flex-direction: column;
 }
 .food-card-body .eyebrow {
-  color: #bf4a10;
+  color: #8a102b;
   font-size: 10px;
   letter-spacing: 1.7px;
 }
@@ -1535,7 +1536,7 @@ dialog::backdrop {
   margin: 10px 0;
 }
 .food-card-body p {
-  color: #61747d;
+  color: #7d6168;
   font-size: 13px;
   line-height: 1.65;
   margin: 0 0 16px;
@@ -1547,7 +1548,7 @@ dialog::backdrop {
   align-items: flex-start;
   font-size: 13px;
   line-height: 1.65;
-  color: #63767f;
+  color: #7f636a;
 }
 .pickup svg {
   width: 16px;
@@ -1560,17 +1561,17 @@ dialog::backdrop {
   align-items: center;
   gap: 10px;
   padding-top: 18px;
-  border-top: 1px solid #edf0f1;
+  border-top: 1px solid #f1edee;
   margin-top: auto;
 }
 .price-row strong {
   display: block;
   font-size: 24px;
-  color: #173743;
+  color: #7b0d29;
   letter-spacing: -0.5px;
 }
 .price-row small {
-  color: #61747d;
+  color: #7d6168;
   font-size: 11px;
 }
 .section-heading {
@@ -1616,15 +1617,15 @@ dialog::backdrop {
   margin-top: 18px;
 }
 .order-note {
-  background: #f5f7f8;
-  border-left: 3px solid #d4e0e4;
+  background: #f8f5f6;
+  border-left: 3px solid #e4d4d8;
   border-radius: 0 8px 8px 0;
   padding: 12px;
 }
 .order-total {
   font-size: 22px;
   font-weight: 700;
-  color: #173743;
+  color: #7b0d29;
 }
 .danger {
   color: #ad3134 !important;
@@ -1647,7 +1648,7 @@ dialog::backdrop {
   border-radius: 16px;
   display: grid;
   place-items: center;
-  color: #bf4a10;
+  color: #8a102b;
   font-size: 26px;
   font-weight: 650;
   margin-bottom: 16px;
@@ -1662,7 +1663,7 @@ dialog::backdrop {
 .seller-intro p,
 .seller-intro li {
   line-height: 1.85;
-  color: #5e727e;
+  color: #7e5e66;
 }
 .steps {
   padding-left: 23px;
@@ -1673,7 +1674,7 @@ dialog::backdrop {
 }
 .module-empty {
   grid-column: 1/-1;
-  border: 1px dashed #ccd6dc;
+  border: 1px dashed #dcccd0;
   border-radius: 18px;
   display: flex;
   align-items: center;
@@ -1694,7 +1695,7 @@ dialog::backdrop {
 }
 .module-empty p {
   max-width: 530px;
-  color: #667b88;
+  color: #88666e;
   line-height: 1.8;
   margin: 0;
 }
@@ -1715,7 +1716,7 @@ dialog::backdrop {
   margin: 20px 0;
 }
 .food-hero p {
-  color: #66747b;
+  color: #7b666b;
   line-height: 1.8;
 }
 .food-hero figure {
@@ -1756,7 +1757,7 @@ dialog::backdrop {
   width: 100%;
   height: 190px;
   object-fit: contain;
-  background: #f2f5f5;
+  background: #f5f2f3;
   border-radius: 12px;
 }
 .module-dialog-close {
@@ -1770,7 +1771,7 @@ dialog::backdrop {
   letter-spacing: -0.6px;
 }
 .dialog-content > p {
-  color: #687983;
+  color: #83686f;
   line-height: 1.75;
 }
 .dialog-content form {
@@ -1818,7 +1819,7 @@ dialog::backdrop {
 .schedule-welcome p {
   max-width: 570px;
   line-height: 1.8;
-  color: #61757e;
+  color: #7e6168;
 }
 .schedule-welcome .eyebrow {
   color: #b34c18;
@@ -1833,7 +1834,7 @@ dialog::backdrop {
   border-radius: 26px;
   background: #fff;
   transform: rotate(8deg);
-  box-shadow: 0 18px 40px #1c464514;
+  box-shadow: 0 18px 40px #461c2614;
   display: grid;
   place-items: center;
 }
@@ -1857,7 +1858,7 @@ dialog::backdrop {
   border-top: 1px solid #dfe8e4;
   padding-top: 25px;
   margin-top: 36px;
-  color: #5d7275;
+  color: #755d63;
   font-size: 12px;
 }
 .schedule-steps b {
@@ -1868,7 +1869,7 @@ dialog::backdrop {
 }
 .schedule-header {
   border-radius: 20px;
-  background: #173b45;
+  background: #7b0d29;
   color: #fff;
   padding: 30px 34px;
   display: flex;
@@ -1889,7 +1890,7 @@ dialog::backdrop {
 }
 .schedule-header p {
   font-size: 12px;
-  color: #c1d2d6;
+  color: #d6c1c6;
   line-height: 1.7;
   margin: 0;
 }
@@ -1906,7 +1907,7 @@ dialog::backdrop {
 .schedule-numbers span {
   display: block;
   font-size: 10px;
-  color: #c1d2d6;
+  color: #d6c1c6;
   white-space: nowrap;
 }
 .schedule-toolbar {
@@ -1926,14 +1927,14 @@ dialog::backdrop {
   gap: 8px;
   background: white;
   padding: 10px;
-  border: 1px solid #dfe7e9;
+  border: 1px solid #e9dfe2;
   border-radius: 18px;
   align-items: start;
 }
 .calendar-day > header {
   text-align: center;
   padding: 15px 5px;
-  border-bottom: 1px solid #eaf0f2;
+  border-bottom: 1px solid #f2eaec;
   margin-bottom: 12px;
   display: grid;
   gap: 5px;
@@ -1942,14 +1943,14 @@ dialog::backdrop {
   text-transform: uppercase;
   letter-spacing: 1px;
   font-size: 10px;
-  color: #627984;
+  color: #84626b;
 }
 .calendar-day > header b {
   font-size: 23px;
   font-weight: 600;
 }
 .calendar-day.today > header {
-  background: #173b45;
+  background: #7b0d29;
   color: #fff;
   border-radius: 12px;
 }
@@ -1975,9 +1976,9 @@ dialog::backdrop {
   color: #2b5d4d;
 }
 .class-card.color-2 {
-  background: #eff2fa;
-  border-color: #dee2f0;
-  color: #425a88;
+  background: #f8f1f3;
+  border-color: #f0dee2;
+  color: #884254;
 }
 .class-card.color-3 {
   background: #fbefec;
@@ -2024,7 +2025,7 @@ dialog::backdrop {
 .day-free {
   text-align: center;
   font-size: 10px;
-  color: #a4b0b7;
+  color: #b7a4a9;
   padding: 24px 0;
 }
 .conflict-label {
@@ -2038,7 +2039,7 @@ dialog::backdrop {
   justify-content: space-between;
   align-items: center;
   gap: 15px;
-  border: 1px solid #e0e6e8;
+  border: 1px solid #e8e0e2;
   padding: 15px;
   border-radius: 12px;
   margin-bottom: 10px;
@@ -2051,15 +2052,15 @@ dialog::backdrop {
 }
 .review-row span {
   font-size: 12px;
-  color: #5a727f;
+  color: #7f5a63;
 }
 .review-row small {
   font-size: 11px;
-  color: #6b7f88;
+  color: #886b72;
 }
 .review-check {
   padding-top: 16px;
-  border-top: 1px solid #e1e7e9;
+  border-top: 1px solid #e9e1e3;
 }
 .pdf-text {
   font-size: 12px;
@@ -2073,7 +2074,7 @@ dialog::backdrop {
   white-space: pre-wrap;
   max-height: 220px;
   overflow: auto;
-  background: #f3f5f6;
+  background: #f6f3f4;
   padding: 15px;
   border-radius: 10px;
 }
@@ -2081,7 +2082,7 @@ dialog::backdrop {
   max-height: 65vh;
   overflow: auto;
   margin-top: 20px;
-  background: #e6ebed;
+  background: #ede6e8;
 }
 .pdf-canvas-wrap canvas {
   width: 100%;
@@ -2295,10 +2296,10 @@ dialog:has(.dialog-content) {
 /* Tabla del alumno: el documento original es una referencia opcional. */
 .timetable-scroll {
   overflow: auto;
-  border: 1px solid #dce5e6;
+  border: 1px solid #e6dcde;
   border-radius: 18px;
   background: #fff;
-  box-shadow: 0 8px 24px #173b4505;
+  box-shadow: 0 8px 24px #7b0d2905;
 }
 .schedule-table {
   width: 100%;
@@ -2309,14 +2310,14 @@ dialog:has(.dialog-content) {
 }
 .schedule-table th,
 .schedule-table td {
-  border-bottom: 1px solid #e7edef;
-  border-right: 1px solid #eef2f3;
+  border-bottom: 1px solid #efe7e9;
+  border-right: 1px solid #f3eeef;
   padding: 10px;
   vertical-align: top;
 }
 .schedule-table thead th {
   background: #f0f5f3;
-  color: #405e64;
+  color: #644049;
   text-align: center;
   padding: 18px 8px;
   border-bottom: 1px solid #d7e2e1;
@@ -2334,7 +2335,7 @@ dialog:has(.dialog-content) {
   font-weight: 600;
 }
 .schedule-table thead th.is-today {
-  background: #173b45;
+  background: #7b0d29;
   color: white;
 }
 .schedule-table .time-column {
@@ -2342,26 +2343,26 @@ dialog:has(.dialog-content) {
   left: 0;
   width: 86px;
   z-index: 1;
-  background: #f8fafb;
+  background: #fbf8f9;
   text-align: center;
   vertical-align: middle;
-  border-right: 1px solid #dce5e8;
+  border-right: 1px solid #e8dcdf;
 }
 .schedule-table thead .time-column {
   font-size: 10px;
   letter-spacing: 1px;
-  color: #657e88;
-  background: #eef3f4;
+  color: #88656e;
+  background: #f4eeef;
 }
 .schedule-table tbody .time-column time {
   display: block;
-  color: #304f5e;
+  color: #5e303b;
   font-size: 13px;
   font-weight: 650;
 }
 .schedule-table tbody .time-column > span {
   display: block;
-  color: #91a2aa;
+  color: #aa9197;
   font-size: 10px;
   margin: 5px 0;
 }
@@ -2422,13 +2423,13 @@ dialog:has(.dialog-content) {
   min-height: 98px;
   align-items: center;
   justify-content: center;
-  color: #d5dfe3;
+  color: #e3d5d8;
   font-size: 18px;
 }
 .table-mobile-hint {
   display: none;
   font-size: 11px;
-  color: #6b808a;
+  color: #8a6b73;
 }
 .schedule-header .student-line {
   color: #fff;
@@ -2441,7 +2442,7 @@ dialog:has(.dialog-content) {
   display: block;
   max-height: 70dvh;
   object-fit: contain;
-  background: #edf0f2;
+  background: #f2edee;
 }
 .timetable-scroll:focus-visible {
   outline: 3px solid #bf501d;
@@ -2492,7 +2493,7 @@ dialog:has(.dialog-content) {
   height: 92px;
   font-size: 34px;
   border: 4px solid #fff;
-  box-shadow: 0 6px 22px #19354518;
+  box-shadow: 0 6px 22px #45192418;
 }
 .profile-hero {
   display: flex;
@@ -2559,7 +2560,7 @@ dialog:has(.dialog-content) {
   font-size: 13px;
 }
 .subjects-table thead th {
-  background: #173442;
+  background: #7b0d29;
   color: white;
   padding: 17px 12px;
   font-size: 11px;
@@ -2569,16 +2570,16 @@ dialog:has(.dialog-content) {
 .subjects-table td,
 .subjects-table tbody th {
   padding: 18px 12px;
-  border-bottom: 1px solid #e4ebee;
+  border-bottom: 1px solid #eee4e6;
   vertical-align: middle;
   text-align: left;
 }
 .subjects-table tbody th {
   min-width: 175px;
-  color: #173442;
+  color: #7b0d29;
 }
 .subjects-table tbody tr:nth-child(even) {
-  background: #f7f9fa;
+  background: #faf7f8;
 }
 .subjects-table td:last-child {
   min-width: 155px;
@@ -2591,7 +2592,7 @@ dialog:has(.dialog-content) {
   line-height: 1.8;
 }
 .subjects-table .no-class {
-  color: #b8c2c7;
+  color: #c7b8bc;
   text-align: center;
 }
 .group-pill {
@@ -2644,8 +2645,8 @@ dialog:has(.dialog-content) {
   padding: 16px;
   text-align: left;
   background: #fff;
-  color: var(--navy, #173542);
-  border: 1px solid #d8e3e8;
+  color: var(--navy, #7b0d29);
+  border: 1px solid #e8d8dc;
   border-radius: 14px;
   cursor: pointer;
   font: inherit;
@@ -2665,7 +2666,7 @@ dialog:has(.dialog-content) {
 }
 .food-nav-item small {
   display: block;
-  color: #536875;
+  color: #75535b;
   font-size: 0.875rem;
   line-height: 1.45;
   margin-top: 3px;
@@ -2674,13 +2675,13 @@ dialog:has(.dialog-content) {
   border-color: #d0602b;
 }
 .food-nav-item.active {
-  background: #173542;
+  background: #7b0d29;
   color: #fff;
-  border-color: #173542;
-  box-shadow: 0 5px 16px #17354216;
+  border-color: #7b0d29;
+  box-shadow: 0 5px 16px #7b0d2916;
 }
 .food-nav-item.active small {
-  color: #e0ebef;
+  color: #efe0e4;
 }
 .food-nav-item:focus-visible,
 .order-filters button:focus-visible,
@@ -2697,7 +2698,7 @@ dialog:has(.dialog-content) {
   height: 24px;
   padding: 0 6px;
   border-radius: 8px;
-  background: #c44b10;
+  background: #8a102b;
   color: #fff;
   font-size: 0.875rem;
   font-weight: 750;
@@ -2763,8 +2764,8 @@ dialog:has(.dialog-content) {
   gap: 12px 28px;
   padding: 14px 0 20px;
   margin-bottom: 8px;
-  color: #465f6c;
-  border-bottom: 1px solid #dfe7eb;
+  color: #6c464f;
+  border-bottom: 1px solid #ebdfe2;
 }
 .buy-guide span {
   display: flex;
@@ -2780,22 +2781,22 @@ dialog:has(.dialog-content) {
   height: 24px;
   border-radius: 50%;
   color: #fff;
-  background: #173542;
+  background: #7b0d29;
 }
 .food-tools {
   grid-template-columns: minmax(0, 1fr) minmax(160px, 240px);
 }
 .food-card .food-photo {
   position: relative;
-  background: #ecf1f4;
-  color: #536875;
+  background: #f4ecee;
+  color: #75535b;
 }
 .food-card .food-photo .food-sale-tag {
   position: absolute;
   bottom: 12px;
   left: 12px;
   background: #fff;
-  color: #173542;
+  color: #7b0d29;
   padding: 5px 10px;
   border-radius: 7px;
   font-size: 0.875rem;
@@ -2810,7 +2811,7 @@ dialog:has(.dialog-content) {
   line-height: 1.5;
 }
 .food-card .food-card-body p {
-  color: #536875;
+  color: #75535b;
   font-size: 1rem;
 }
 .order-filters {
@@ -2824,10 +2825,10 @@ dialog:has(.dialog-content) {
   align-items: center;
   gap: 9px;
   padding: 10px 13px;
-  border: 1px solid #d4e0e7;
+  border: 1px solid #e7d4d9;
   border-radius: 10px;
   background: #fff;
-  color: #425c6a;
+  color: #6a424c;
   cursor: pointer;
   font: inherit;
   font-size: 0.875rem;
@@ -2835,17 +2836,17 @@ dialog:has(.dialog-content) {
 .order-filters button span {
   padding: 1px 6px;
   border-radius: 5px;
-  background: #edf2f5;
-  color: #173542;
+  background: #f5edef;
+  color: #7b0d29;
   font-weight: 700;
 }
 .order-filters button.active {
   color: #fff;
-  border-color: #173542;
-  background: #173542;
+  border-color: #7b0d29;
+  background: #7b0d29;
 }
 .flow-order {
-  border-top: 3px solid #bdcdd5;
+  border-top: 3px solid #d5bdc3;
   padding: 24px;
 }
 .flow-order.status-requested {
@@ -2855,7 +2856,7 @@ dialog:has(.dialog-content) {
   border-top-color: #26714a;
 }
 .flow-order.focused-order {
-  outline: 3px solid #c44b10;
+  outline: 3px solid #8a102b;
   outline-offset: 3px;
 }
 .order-person {
@@ -2871,8 +2872,8 @@ dialog:has(.dialog-content) {
   border-radius: 8px;
   font-size: 0.875rem;
   font-weight: 650;
-  color: #465e6b;
-  background: #edf2f5;
+  color: #6b464f;
+  background: #f5edef;
   line-height: 1.4;
 }
 .order-status.requested {
@@ -2880,8 +2881,8 @@ dialog:has(.dialog-content) {
   color: #81400b;
 }
 .order-status.accepted {
-  background: #e8effb;
-  color: #2a4c8b;
+  background: #f7ecef;
+  color: #8b2a42;
 }
 .order-status.ready,
 .order-status.completed {
@@ -2890,8 +2891,8 @@ dialog:has(.dialog-content) {
 }
 .order-status.cancelled,
 .order-status.rejected {
-  background: #f0f2f4;
-  color: #566470;
+  background: #f4f0f1;
+  color: #70565c;
 }
 .order-line {
   display: flex;
@@ -2916,7 +2917,7 @@ dialog:has(.dialog-content) {
 .order-amount small {
   display: block;
   font-size: 0.875rem;
-  color: #536875;
+  color: #75535b;
   font-weight: 400;
   margin-top: 5px;
 }
@@ -2933,7 +2934,7 @@ dialog:has(.dialog-content) {
   flex-direction: column;
   align-items: center;
   gap: 8px;
-  color: #647984;
+  color: #84646c;
   text-align: center;
   min-width: 0;
 }
@@ -2944,10 +2945,10 @@ dialog:has(.dialog-content) {
   height: 2px;
   left: calc(50% + 18px);
   width: calc(100% - 36px);
-  background: #dce6eb;
+  background: #ebdce0;
 }
 .order-progress li.done:not(.current)::after {
-  background: #315c6d;
+  background: #6d3140;
 }
 .order-progress li > span {
   display: flex;
@@ -2955,19 +2956,19 @@ dialog:has(.dialog-content) {
   align-items: center;
   height: 32px;
   width: 32px;
-  border: 1px solid #ccdbe2;
+  border: 1px solid #e2ccd2;
   border-radius: 50%;
-  background: #f6f9fb;
+  background: #fbf6f7;
   font-size: 0.875rem;
 }
 .order-progress li.done > span {
   color: #fff;
-  background: #244d5e;
-  border-color: #244d5e;
+  background: #5e2432;
+  border-color: #5e2432;
 }
 .order-progress li.current > span {
-  background: #c44b10;
-  border-color: #c44b10;
+  background: #8a102b;
+  border-color: #8a102b;
 }
 .order-progress svg {
   width: 17px;
@@ -2978,15 +2979,15 @@ dialog:has(.dialog-content) {
   overflow-wrap: anywhere;
 }
 .order-progress li.current small {
-  color: #173542;
+  color: #7b0d29;
   font-weight: 700;
 }
 .flow-order .order-next {
   padding: 13px 15px;
   margin: 14px 0 20px;
   border-radius: 10px;
-  background: #f1f5f7;
-  color: #344f5d;
+  background: #f7f1f2;
+  color: #5d343e;
   line-height: 1.6;
 }
 .status-ready .order-next {
@@ -3005,11 +3006,11 @@ dialog:has(.dialog-content) {
   gap: 16px;
   margin-top: 20px;
   padding-top: 16px;
-  border-top: 1px solid #e2eaee;
+  border-top: 1px solid #eee2e5;
 }
 .order-footer > small {
   font-size: 0.8125rem;
-  color: #536875;
+  color: #75535b;
 }
 .order-footer .button-row {
   margin: 0;
@@ -3037,7 +3038,7 @@ dialog:has(.dialog-content) {
   grid-template-columns: 1fr auto;
   align-items: center;
   gap: 8px;
-  background: #173542;
+  background: #7b0d29;
   color: #fff;
   padding: 18px;
   border-radius: 12px;
@@ -3056,7 +3057,7 @@ dialog:has(.dialog-content) {
   gap: 12px;
   padding: 15px;
   margin: 20px 0;
-  background: #eff4f6;
+  background: #f6eff1;
   border-radius: 10px;
 }
 .order-pickup > svg {
@@ -3087,7 +3088,7 @@ dialog:has(.dialog-content) {
   padding: 26px;
   border-radius: 18px 18px 0 0;
   color: #fff;
-  background: #173542;
+  background: #7b0d29;
 }
 .seller-overview h2 {
   color: #fff;
@@ -3095,14 +3096,14 @@ dialog:has(.dialog-content) {
 }
 .seller-overview .eyebrow,
 .seller-overview p {
-  color: #dce9ef;
+  color: #efdce1;
 }
 .seller-overview p {
   margin: 5px 0;
 }
 .seller-overview .secondary {
   background: #fff;
-  color: #173542;
+  color: #7b0d29;
 }
 .seller-status {
   padding: 16px 24px;
@@ -3133,10 +3134,10 @@ dialog:has(.dialog-content) {
   padding: 18px;
   font: inherit;
   background: #fff;
-  border: 1px solid #d6e2e8;
+  border: 1px solid #e8d6da;
   border-radius: 12px;
   cursor: pointer;
-  color: #173542;
+  color: #7b0d29;
 }
 .seller-metrics strong {
   display: block;
@@ -3157,13 +3158,13 @@ dialog:has(.dialog-content) {
 .seller-checklist li {
   padding: 15px;
   border-radius: 10px;
-  background: #f2f6f8;
+  background: #f8f2f3;
 }
 .seller-checklist span {
   display: block;
   margin-top: 6px;
   font-size: 0.875rem;
-  color: #536875;
+  color: #75535b;
 }
 .menu-product {
   display: flex;
@@ -3175,8 +3176,8 @@ dialog:has(.dialog-content) {
   height: 92px;
   border-radius: 12px;
   overflow: hidden;
-  background: #edf3f6;
-  color: #567383;
+  background: #f6edef;
+  color: #835661;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -3203,7 +3204,7 @@ dialog:has(.dialog-content) {
 .menu-product-info p {
   margin: 0 0 10px;
   font-size: 0.875rem;
-  color: #536875;
+  color: #75535b;
 }
 .menu-product-actions {
   display: flex;
@@ -3218,9 +3219,9 @@ dialog:has(.dialog-content) {
 }
 .product-price-guide {
   padding: 14px;
-  background: #edf4f7;
+  background: #f7edf0;
   border-radius: 10px;
-  color: #244f64;
+  color: #642434;
   font-size: 0.875rem;
   line-height: 1.6;
 }
@@ -3365,7 +3366,7 @@ dialog:has(.chat-dialog) .module-dialog-close {
   align-items: center;
   gap: 7px;
   margin: 0;
-  color: #5b6f7a;
+  color: #7a5b63;
   font-size: 0.9rem;
 }
 .chat-dialog-head p svg {
@@ -3388,10 +3389,10 @@ dialog:has(.chat-dialog) .module-dialog-close {
   align-items: center;
   gap: 12px;
   padding: 13px 15px;
-  border: 1px solid #d9e5e9;
+  border: 1px solid #e9d9dd;
   border-radius: 12px;
-  background: #f5f8f9;
-  color: #304e5b;
+  background: #f9f5f6;
+  color: #5b303b;
 }
 .chat-expiry-banner {
   margin-bottom: 12px;
@@ -3414,13 +3415,13 @@ dialog:has(.chat-dialog) .module-dialog-close {
 .chat-expiry-banner span,
 .chat-privacy-note span,
 .chat-notification-banner span {
-  color: #607480;
+  color: #806068;
   font-size: 0.82rem;
   line-height: 1.45;
 }
 .chat-expiry-banner time {
   flex-shrink: 0;
-  color: #173542;
+  color: #7b0d29;
   font-size: 0.82rem;
   font-weight: 750;
   white-space: nowrap;
@@ -3454,11 +3455,11 @@ dialog:has(.chat-dialog) .module-dialog-close {
   font: inherit;
 }
 .chat-list-item:hover {
-  border-color: #aebfc7;
+  border-color: #c7aeb4;
   transform: translateY(-1px);
 }
 .chat-list-item.unread {
-  border-left: 4px solid #c44b10;
+  border-left: 4px solid #8a102b;
   background: #fffaf6;
 }
 .chat-avatar {
@@ -3467,7 +3468,7 @@ dialog:has(.chat-dialog) .module-dialog-close {
   border-radius: 50%;
   display: grid;
   place-items: center;
-  background: #173542;
+  background: #7b0d29;
   color: #fff;
   font-weight: 800;
 }
@@ -3490,16 +3491,16 @@ dialog:has(.chat-dialog) .module-dialog-close {
 }
 .chat-list-main span {
   margin-top: 3px;
-  color: #3d5966;
+  color: #663d47;
   font-size: 0.84rem;
 }
 .chat-list-main p {
   margin: 5px 0 0;
-  color: #6a7c85;
+  color: #856a71;
   font-size: 0.84rem;
 }
 .chat-list-main time {
-  color: #6a7c85;
+  color: #856a71;
   font-size: 0.75rem;
   white-space: nowrap;
 }
@@ -3510,7 +3511,7 @@ dialog:has(.chat-dialog) .module-dialog-close {
   display: grid;
   place-items: center;
   border-radius: 999px;
-  background: #c44b10;
+  background: #8a102b;
   color: #fff;
   font-size: 0.75rem;
 }
@@ -3520,11 +3521,11 @@ dialog:has(.chat-dialog) .module-dialog-close {
   overflow-y: auto;
   overscroll-behavior: contain;
   padding: 18px 14px;
-  border: 1px solid #dce6ea;
+  border: 1px solid #eadcdf;
   border-radius: 14px;
   background:
-    radial-gradient(circle at 18px 18px, #dce6e955 1.2px, transparent 1.2px) 0 0 / 24px 24px,
-    #eef3f5;
+    radial-gradient(circle at 18px 18px, #e9dcdf55 1.2px, transparent 1.2px) 0 0 / 24px 24px,
+    #f5eef0;
   scroll-behavior: smooth;
 }
 .chat-message-row {
@@ -3539,7 +3540,7 @@ dialog:has(.chat-dialog) .module-dialog-close {
   padding: 9px 11px 6px;
   border-radius: 13px 13px 13px 4px;
   background: #fff;
-  box-shadow: 0 1px 2px #0d263016;
+  box-shadow: 0 1px 2px #300d1616;
   overflow-wrap: anywhere;
 }
 .chat-message-row.mine .chat-bubble {
@@ -3548,14 +3549,14 @@ dialog:has(.chat-dialog) .module-dialog-close {
 }
 .chat-bubble p {
   margin: 0;
-  color: #203d49;
+  color: #49202a;
   line-height: 1.5;
   white-space: normal;
 }
 .chat-bubble time {
   display: block;
   margin-top: 4px;
-  color: #6a7d86;
+  color: #866a71;
   font-size: 0.68rem;
   text-align: right;
 }
@@ -3583,7 +3584,7 @@ dialog:has(.chat-dialog) .module-dialog-close {
   align-items: center;
   justify-content: center;
   text-align: center;
-  color: #526a76;
+  color: #76525b;
   padding: 24px;
 }
 .chat-empty .icon-circle {
@@ -3601,10 +3602,10 @@ dialog:has(.chat-dialog) .module-dialog-close {
   gap: 7px;
 }
 .chat-suggestions button {
-  border: 1px solid #c7d7dd;
+  border: 1px solid #ddc7cc;
   border-radius: 999px;
   background: #fff;
-  color: #31515e;
+  color: #5e313c;
   padding: 7px 10px;
   cursor: pointer;
   font: inherit;
@@ -3622,18 +3623,18 @@ dialog:has(.chat-dialog) .module-dialog-close {
   min-height: 44px;
   max-height: 112px;
   resize: vertical;
-  border: 1px solid #cbd8de;
+  border: 1px solid #decbd0;
   border-radius: 13px;
   padding: 11px 13px;
   font: inherit;
   line-height: 1.4;
-  color: #173542;
+  color: #7b0d29;
   background: #fff;
 }
 .chat-composer textarea:focus {
-  outline: 2px solid #b8d1db;
+  outline: 2px solid #dbb8c1;
   outline-offset: 1px;
-  border-color: #668a99;
+  border-color: #996673;
 }
 .chat-image-button,
 .chat-send-button {
@@ -3645,13 +3646,13 @@ dialog:has(.chat-dialog) .module-dialog-close {
   cursor: pointer;
 }
 .chat-image-button {
-  border: 1px solid #cbd8de;
+  border: 1px solid #decbd0;
   background: #fff;
-  color: #315564;
+  color: #64313e;
 }
 .chat-send-button {
   border: 0;
-  background: #173542;
+  background: #7b0d29;
   color: #fff;
 }
 .chat-image-button svg,
@@ -3673,7 +3674,7 @@ dialog:has(.chat-dialog) .module-dialog-close {
   margin-top: 8px;
 }
 .chat-bottom > small {
-  color: #71838c;
+  color: #8c7178;
   font-size: 0.72rem;
   line-height: 1.4;
 }
@@ -3708,7 +3709,7 @@ dialog:has(.chat-dialog) .module-dialog-close {
 .chat-order-compose {
   margin-top: 12px;
   padding: 16px;
-  border: 1px solid #d4e1e6;
+  border: 1px solid #e6d4d8;
   border-radius: 14px;
   background: #fff;
   max-height: 54dvh;
@@ -3724,8 +3725,8 @@ dialog:has(.chat-dialog) .module-dialog-close {
   margin-top: 12px;
   padding: 14px;
   border-radius: 10px;
-  background: #f2f6f7;
-  color: #536a75;
+  background: #f7f2f3;
+  color: #75535b;
 }
 
 @media (min-width: 1161px) {
@@ -3796,7 +3797,7 @@ dialog:has(.chat-dialog) .module-dialog-close {
 }
 .account-detected.teacher,
 .account-detected.admin {
-  background: #eaf2f5;
+  background: #f5eaed;
   color: var(--navy);
 }
 .account-detected.student {
@@ -3827,8 +3828,8 @@ dialog:has(.chat-dialog) .module-dialog-close {
   margin: 18px auto;
   overflow: hidden;
   border-radius: 50%;
-  background: #dfe5e8;
-  box-shadow: inset 0 0 0 1px #ccd4d9;
+  background: #e8dfe1;
+  box-shadow: inset 0 0 0 1px #d9cccf;
 }
 .photo-crop-stage canvas {
   display: block;
@@ -3847,7 +3848,7 @@ dialog:has(.chat-dialog) .module-dialog-close {
   border: 2px solid #ffffffdd;
   border-radius: 50%;
   pointer-events: none;
-  box-shadow: 0 0 0 999px #10253222;
+  box-shadow: 0 0 0 999px #32101822;
 }
 .photo-zoom {
   max-width: 440px;
@@ -3902,7 +3903,7 @@ dialog:has(.chat-dialog) .module-dialog-close {
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: #fff;
-  box-shadow: 0 8px 28px #1835430d;
+  box-shadow: 0 8px 28px #7b0d290d;
 }
 .event-card-top {
   display: flex;
@@ -3993,7 +3994,7 @@ dialog:has(.chat-dialog) .module-dialog-close {
   aspect-ratio: 1;
   margin: 16px auto;
   border-radius: 16px;
-  background: #17242b;
+  background: #2b171c;
 }
 .qr-camera video {
   width: 100%;

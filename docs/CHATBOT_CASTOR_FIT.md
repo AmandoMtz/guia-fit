@@ -1,6 +1,6 @@
 # Castor FIT · asistente contextual
 
-El chatbot se abre desde la mascota de Guía FIT en la barra superior o desde el botón flotante **¿Necesitas apoyo?**. Solo está disponible para sesiones autenticadas y con conexión.
+El chatbot se abre desde la mascota de Guía FIT en la barra superior o desde el botón flotante **¿Necesitas apoyo?**. Funciona tanto en la pantalla pública como después de iniciar sesión. Las dudas frecuentes se responden con lógica local del servidor; Gemini es un complemento opcional para preguntas abiertas.
 
 ## Configuración en Render
 
@@ -36,3 +36,8 @@ Google indica que el nivel gratuito de determinados modelos puede utilizar las e
 ## Acceso desde la pantalla de inicio
 
 Castor FIT también está disponible antes de iniciar sesión. En modo visitante solo recibe contexto público: orientación de registro/acceso, eventos públicos, comida disponible y espacios verificados. No tiene acceso a horario, perfil, pedidos, asistencias ni datos privados hasta que el usuario inicia sesión. El historial visitante es temporal y se identifica únicamente con una sesión aleatoria del navegador.
+
+
+## Respuestas locales
+
+Castor FIT responde sin depender de Gemini para registro, cuentas docentes, recuperación de contraseña, verificación de correo, modo sin conexión, horario guardado, eventos, comida, pedidos, directorio/mapa, asistencia QR y Mi cuenta. Si Gemini no está configurado o falla, el endpoint devuelve una respuesta local en vez de un error 502 para estas dudas y una orientación general para preguntas no reconocidas.

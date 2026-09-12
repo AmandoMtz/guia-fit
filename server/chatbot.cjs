@@ -297,6 +297,189 @@ function parseModelReply(text) {
 }
 
 
+function normalizeIntent(value) {
+  return cleanText(value, USER_MESSAGE_MAX)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9@._-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function money(cents) {
+  const value = Number(cents);
+  if (!Number.isFinite(value)) return "";
+  return new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" }).format(value / 100);
+}
+
+function dateTimeMx(value) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return cleanText(value, 80);
+  return new Intl.DateTimeFormat("es-MX", {
+    timeZone: "America/Monterrey",
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+}
+
+function localAnswer(message, context, { authenticated = false, fallback = false } = {}) {
+  const q = normalizeIntent(message);
+  const answer = (reply, category = "system", escalate = false, handled = true) => ({ reply, category, escalate, handled });
+  const has = (...terms) => terms.some((term) => q.includes(term));
+
+  if (!q) return answer("Escribe tu duda y con gusto te ayudo con Guía FIT.", "system", false, true);
+
+  if (has("emergencia", "acoso", "amenaza", "riesgo", "queja formal", "cobro indebido", "problema de seguridad")) {
+    return answer(
+      "Ese caso sí conviene revisarlo con una persona de la facultad. Puedo orientarte dentro de Guía FIT, pero para una queja formal, seguridad, acoso, cobros o una emergencia es mejor solicitar atención humana directamente.",
+      "human_support",
+      true,
+    );
+  }
+
+  if (/^(hola|buenas|buen dia|buenas tardes|buenas noches|hey|que tal)\b/.test(q)) {
+    return answer(authenticated
+      ? "¡Hola! Soy Castor FIT. Puedo ayudarte con tu horario guardado, eventos, comida disponible, pedidos, espacios del campus y dudas de uso de Guía FIT."
+      : "¡Hola! Soy Castor FIT. Desde aquí puedo ayudarte a registrarte, iniciar sesión, recuperar tu acceso, consultar eventos públicos, comida disponible y ubicar espacios de la FIT.", "casual");
+  }
+
+  if (has("que es guia fit", "para que sirve", "que puedo hacer", "que hace la pagina", "que hace guia fit")) {
+    return answer("Guía FIT reúne en un solo lugar el directorio y mapa del campus, rutas, comidas, eventos, horario y cuenta del usuario. Algunas funciones personales, como horario, pedidos o asistencias, requieren iniciar sesión.");
+  }
+
+  if (has("docente", "maestro", "profesor") && has("registr", "crear cuenta", "correo", "cuenta institucional")) {
+    return answer("Si eres docente puedes registrarte desde “Crear cuenta” usando tu correo institucional @uat.edu.mx o @docentes.uat.edu.mx. Después completa el registro y verifica tu correo cuando el sistema te lo solicite.");
+  }
+
+  if (has("registr", "crear cuenta", "darme de alta", "nueva cuenta", "abrir cuenta")) {
+    return answer("En la pantalla de inicio selecciona “Crear cuenta”, escribe tu nombre, correo y una contraseña de al menos 8 caracteres con letra, número y carácter especial. Si eres docente, también puedes usar tu correo institucional @uat.edu.mx o @docentes.uat.edu.mx.");
+  }
+
+  if (has("olvide mi contrasena", "olvide contraseña", "recuperar contrasena", "recuperar contraseña", "cambiar contrasena", "cambiar contraseña", "no recuerdo mi contrasena", "no recuerdo mi contraseña")) {
+    return answer("En la pantalla de inicio pulsa “Olvidé mi contraseña”. Escribe el correo de tu cuenta y sigue el enlace de recuperación que recibas. La nueva contraseña debe tener al menos 8 caracteres con letra, número y carácter especial.");
+  }
+
+  if (has("verificacion", "verificar correo", "reenviar correo", "correo de verificacion", "correo de confirmacion")) {
+    return answer("Si no recibiste la verificación, usa “Reenviar correo de verificación” en la pantalla de inicio. Revisa también spam o correo no deseado. No compartas códigos ni contraseñas con otras personas.");
+  }
+
+  if (has("sin internet", "sin conexion", "offline", "no tengo internet", "me quede sin internet")) {
+    return answer("Si eres alumno y ya habías iniciado sesión y sincronizado datos en este dispositivo, el modo sin conexión puede mostrar tu horario guardado y los eventos que quedaron almacenados antes de perder internet. Las funciones que requieren servidor se reactivan cuando vuelve la conexión.");
+  }
+
+  if (has("horario", "clases", "materias", "proxima clase", "próxima clase")) {
+    if (!authenticated) {
+      return answer("Para consultar tu horario personal primero inicia sesión. Guía FIT usa el horario que hayas cargado y guardado en ese dispositivo; sin iniciar sesión no tengo acceso a datos personales.");
+    }
+    const schedule = context?.schedule;
+    const classes = Array.isArray(schedule?.classes) ? schedule.classes : [];
+    if (!classes.length) {
+      return answer("No encuentro un horario guardado para tu cuenta en este dispositivo. Entra a “Mi horario” y carga o revisa tu horario para que quede disponible ahí.");
+    }
+    const rows = classes.slice(0, 6).map((c) => {
+      const when = [c.day, c.start && c.end ? `${c.start}-${c.end}` : (c.start || c.end)].filter(Boolean).join(" · ");
+      const where = c.room ? ` · ${c.room}` : "";
+      return `• ${c.subject || "Materia"}${where}${when ? ` · ${when}` : ""}`;
+    });
+    const extra = classes.length > 6 ? `\nY ${classes.length - 6} bloque(s) más en “Mi horario”.` : "";
+    return answer(`Tu horario guardado tiene ${classes.length} bloque(s):\n${rows.join("\n")}${extra}`);
+  }
+
+  if (has("evento", "eventos", "actividad", "actividades")) {
+    const events = Array.isArray(context?.events) ? context.events : (Array.isArray(context?.public_events) ? context.public_events : []);
+    if (!events.length) {
+      return answer(authenticated
+        ? "En este momento no encuentro eventos disponibles para tu cuenta. Puedes revisar la sección “Eventos” para confirmar si se publica alguno nuevo."
+        : "En este momento no encuentro eventos públicos disponibles. Puedes volver a consultar más tarde desde la sección de eventos.");
+    }
+    const rows = events.slice(0, 5).map((e) => {
+      const when = dateTimeMx(e.starts_at);
+      const where = cleanText(e.location, 100);
+      const attended = authenticated && e.attended ? " · asistencia registrada" : "";
+      return `• ${cleanText(e.title, 140)}${when ? ` · ${when}` : ""}${where ? ` · ${where}` : ""}${attended}`;
+    });
+    return answer(`${authenticated ? "Estos son los eventos disponibles para ti" : "Estos son los eventos públicos disponibles"}:\n${rows.join("\n")}`);
+  }
+
+  if (has("comida", "comidas", "comer", "menu", "menú", "producto", "productos", "cafeteria", "cafetería")) {
+    const food = Array.isArray(context?.available_food) ? context.available_food : [];
+    if (!food.length) return answer("Ahora mismo no encuentro productos de comida disponibles en Guía FIT. Puedes revisar la sección “Comidas” más tarde.");
+    const rows = food.slice(0, 6).map((item) => {
+      const price = money(item.price_cents);
+      const vendor = cleanText(item.business_name, 100);
+      const pickup = cleanText(item.pickup_location, 100);
+      return `• ${cleanText(item.name, 120)}${price ? ` · ${price}` : ""}${vendor ? ` · ${vendor}` : ""}${pickup ? ` · recoge en ${pickup}` : ""}`;
+    });
+    return answer(`Hay estas opciones disponibles:\n${rows.join("\n")}\nPuedes abrir “Comidas” para ver el detalle y hacer un pedido cuando corresponda.`);
+  }
+
+  if (authenticated && has("pedido", "pedidos", "orden", "ordenes", "órdenes", "compra", "ventas")) {
+    const orders = Array.isArray(context?.recent_orders) ? context.recent_orders : [];
+    if (!orders.length) return answer("No encuentro pedidos recientes asociados a tu cuenta. Puedes revisar la sección “Comidas” para confirmar tus compras o ventas.");
+    const rows = orders.slice(0, 5).map((o) => `• ${cleanText(o.product_name, 120)} · ${cleanText(o.status, 60)}${o.relation ? ` · ${o.relation}` : ""}`);
+    return answer(`Tus pedidos recientes son:\n${rows.join("\n")}`);
+  }
+
+  if (has("mapa", "directorio", "donde esta", "dónde está", "ubicacion", "ubicación", "como llegar", "cómo llegar", "salon", "salón", "aula")) {
+    const places = Array.isArray(context?.verified_places) ? context.verified_places : [];
+    const match = places.find((place) => {
+      const name = normalizeIntent(place?.name);
+      const code = normalizeIntent(place?.code);
+      return (name.length >= 4 && q.includes(name)) || (code.length >= 3 && q.includes(code));
+    });
+    if (match) {
+      const details = [match.name, match.code, match.building, match.floor, match.description].map((x) => cleanText(x, 160)).filter(Boolean);
+      return answer(`Encontré este espacio verificado: ${details.join(" · ")}. También puedes abrir “Mapa del campus” o “Cómo llegar” para orientarte.`);
+    }
+    if (places.length) {
+      return answer("Puedo ayudarte a ubicar espacios verificados de la FIT. Escríbeme el nombre o clave del salón/espacio que buscas, o abre “Directorio”, “Mapa del campus” o “Cómo llegar”.");
+    }
+    return answer("Puedes usar “Directorio”, “Mapa del campus” o “Cómo llegar” para buscar salones y espacios. En este momento no tengo una lista verificada disponible para darte una ubicación específica.");
+  }
+
+  if (has("qr", "asistencia", "pdf de asistencia", "constancia de asistencia")) {
+    if (!authenticated) return answer("Para asistencia, QR o comprobantes primero debes iniciar sesión. Después entra a “Eventos” y abre el evento correspondiente.");
+    return answer("Las funciones de asistencia se manejan desde “Eventos”. Si el evento tiene verificación habilitada podrás usar su QR; cuando corresponda, el historial del evento permite generar el PDF de asistencia con su código de validación.");
+  }
+
+  if (has("perfil", "mi cuenta", "foto de perfil", "cambiar foto", "datos de mi cuenta")) {
+    if (!authenticated) return answer("Para revisar o modificar tu cuenta primero inicia sesión. Después encontrarás esas opciones en “Mi cuenta”.");
+    return answer("Puedes revisar tus datos y foto desde “Mi cuenta”. Los cambios de perfil se aplican solo a tu propia cuenta.");
+  }
+
+  if (has("ayuda", "apoyo", "soporte", "persona real", "hablar con alguien")) {
+    return answer("Claro. Puedo orientarte con registro, acceso, horario, eventos, comidas, pedidos y espacios. Si tu caso requiere una decisión administrativa o atención personal, te indicaré que conviene acudir con el personal responsable de la facultad.");
+  }
+
+  if (fallback) {
+    return answer(authenticated
+      ? "No pude usar la respuesta inteligente en este momento, pero sí puedo ayudarte de forma local con: Mi horario, Eventos, Comidas, Pedidos, Directorio/Mapa, asistencia QR, Mi cuenta y recuperación de acceso. Escríbeme qué necesitas."
+      : "No pude usar la respuesta inteligente en este momento, pero sí puedo ayudarte de forma local con: registro, acceso, docentes, recuperación de contraseña, eventos públicos, comidas y ubicación de espacios. Escríbeme qué necesitas.", "system", false, true);
+  }
+
+  return answer("", "system", false, false);
+}
+
+async function writeChatLog(db, { userId = null, accountTypeValue = "other", message, answer, provider, model, started }) {
+  await db.query(`insert into chatbot_logs(user_id,account_type,user_message,assistant_message,category,escalated,provider,model,latency_ms)
+    values($1,$2,$3,$4,$5,$6,$7,$8,$9)`, [
+    userId,
+    accountTypeValue,
+    message,
+    answer.reply,
+    answer.category,
+    answer.escalate,
+    provider,
+    model,
+    Date.now() - started,
+  ]).catch(() => {});
+}
+
 function createPublicChatbotRouter({ db, limit, chatbot }) {
   const router = express.Router();
   const history = new Map();
@@ -318,7 +501,7 @@ function createPublicChatbotRouter({ db, limit, chatbot }) {
   };
 
   router.get("/status", (req, res) => {
-    res.json({ data: { enabled: !!chatbot, provider: chatbot?.provider || null, model: chatbot?.model || null, authenticated: false } });
+    res.json({ data: { enabled: true, local_enabled: true, ai_enabled: !!chatbot, provider: chatbot?.provider || "local", model: chatbot?.model || "local-faq-v1", authenticated: false } });
   });
 
   router.get("/history", (req, res) => {
@@ -332,7 +515,6 @@ function createPublicChatbotRouter({ db, limit, chatbot }) {
   });
 
   router.post("/message", async (req, res) => {
-    if (!chatbot) throw fail(503, "chatbot_unavailable", "El asistente inteligente todavía no está configurado.");
     const id = guestId(req.body?.guest_id);
     if (!id) throw fail(400, "validation_error", "No pudimos iniciar la conversación pública.");
     if (limit) {
@@ -346,26 +528,28 @@ function createPublicChatbotRouter({ db, limit, chatbot }) {
     const context = await buildPublicContext(db);
     const messages = [...prior, { role: "user", content: message }].slice(-HISTORY_MAX_MESSAGES);
     const started = Date.now();
-    try {
-      const output = await chatbot.complete({ system: publicSystemPrompt(context), messages });
-      const answer = parseModelReply(output.text);
-      if (!answer.reply) throw new Error("Respuesta vacía del asistente");
-      saveHistory(key, [...messages, { role: "assistant", content: answer.reply }]);
-      await db.query(`insert into chatbot_logs(user_id,account_type,user_message,assistant_message,category,escalated,provider,model,latency_ms)
-        values(null,'other',$1,$2,$3,$4,$5,$6,$7)`, [
-        message,
-        answer.reply,
-        answer.category,
-        answer.escalate,
-        chatbot.provider || "unknown",
-        output.model || chatbot.model || null,
-        Date.now() - started,
-      ]).catch(() => {});
-      res.json({ data: { ...answer } });
-    } catch (error) {
-      console.error("public chatbot provider failed:", error?.message || error);
-      throw fail(502, "chatbot_provider_error", "Castor FIT no pudo responder en este momento. Inténtalo de nuevo en unos segundos.");
+
+    let answer = localAnswer(message, context, { authenticated: false });
+    let provider = "local-rules";
+    let model = "local-faq-v1";
+    if (!answer.handled && chatbot) {
+      try {
+        const output = await chatbot.complete({ system: publicSystemPrompt(context), messages });
+        answer = parseModelReply(output.text);
+        if (!answer.reply) throw new Error("Respuesta vacía del asistente");
+        provider = chatbot.provider || "unknown";
+        model = output.model || chatbot.model || null;
+      } catch (error) {
+        console.warn("public chatbot provider failed; using local fallback:", error?.message || error);
+        answer = localAnswer(message, context, { authenticated: false, fallback: true });
+      }
+    } else if (!answer.handled) {
+      answer = localAnswer(message, context, { authenticated: false, fallback: true });
     }
+
+    saveHistory(key, [...messages, { role: "assistant", content: answer.reply }]);
+    await writeChatLog(db, { message, answer, provider, model, started });
+    res.json({ data: { reply: answer.reply, category: answer.category, escalate: answer.escalate, source: provider === "local-rules" ? "local" : "ai" } });
   });
 
   return router;
@@ -388,7 +572,7 @@ function createChatbotRouter({ db, limit, chatbot }) {
   };
 
   router.get("/status", (req, res) => {
-    res.json({ data: { enabled: !!chatbot, provider: chatbot?.provider || null, model: chatbot?.model || null } });
+    res.json({ data: { enabled: true, local_enabled: true, ai_enabled: !!chatbot, provider: chatbot?.provider || "local", model: chatbot?.model || "local-faq-v1" } });
   });
 
   router.get("/history", (req, res) => {
@@ -409,7 +593,6 @@ function createChatbotRouter({ db, limit, chatbot }) {
   });
 
   router.post("/message", async (req, res) => {
-    if (!chatbot) throw fail(503, "chatbot_unavailable", "El asistente inteligente todavía no está configurado.");
     if (limit) await limit(req, `chatbot:${req.user.id}`, 30, 15 * 60 * 1000);
     const message = cleanText(req.body?.message);
     if (message.length < 1) throw fail(400, "validation_error", "Escribe un mensaje para Castor FIT.");
@@ -418,29 +601,36 @@ function createChatbotRouter({ db, limit, chatbot }) {
     const context = await buildContext(db, req.user, req.body?.device_context || {});
     const messages = [...prior, { role: "user", content: message }].slice(-HISTORY_MAX_MESSAGES);
     const started = Date.now();
-    try {
-      const output = await chatbot.complete({ system: systemPrompt(context), messages });
-      const answer = parseModelReply(output.text);
-      if (!answer.reply) throw new Error("Respuesta vacía del asistente");
-      const next = [...messages, { role: "assistant", content: answer.reply }];
-      saveHistory(key, next);
-      await db.query(`insert into chatbot_logs(user_id,account_type,user_message,assistant_message,category,escalated,provider,model,latency_ms)
-        values($1,$2,$3,$4,$5,$6,$7,$8,$9)`, [
-        req.user.id,
-        accountType(req.user.email, req.user.role),
-        message,
-        answer.reply,
-        answer.category,
-        answer.escalate,
-        chatbot.provider || "unknown",
-        output.model || chatbot.model || null,
-        Date.now() - started,
-      ]).catch(() => {});
-      res.json({ data: { ...answer } });
-    } catch (error) {
-      console.error("chatbot provider failed:", error?.message || error);
-      throw fail(502, "chatbot_provider_error", "Castor FIT no pudo responder en este momento. Inténtalo de nuevo en unos segundos.");
+
+    let answer = localAnswer(message, context, { authenticated: true });
+    let provider = "local-rules";
+    let model = "local-faq-v1";
+    if (!answer.handled && chatbot) {
+      try {
+        const output = await chatbot.complete({ system: systemPrompt(context), messages });
+        answer = parseModelReply(output.text);
+        if (!answer.reply) throw new Error("Respuesta vacía del asistente");
+        provider = chatbot.provider || "unknown";
+        model = output.model || chatbot.model || null;
+      } catch (error) {
+        console.warn("chatbot provider failed; using local fallback:", error?.message || error);
+        answer = localAnswer(message, context, { authenticated: true, fallback: true });
+      }
+    } else if (!answer.handled) {
+      answer = localAnswer(message, context, { authenticated: true, fallback: true });
     }
+
+    saveHistory(key, [...messages, { role: "assistant", content: answer.reply }]);
+    await writeChatLog(db, {
+      userId: req.user.id,
+      accountTypeValue: accountType(req.user.email, req.user.role),
+      message,
+      answer,
+      provider,
+      model,
+      started,
+    });
+    res.json({ data: { reply: answer.reply, category: answer.category, escalate: answer.escalate, source: provider === "local-rules" ? "local" : "ai" } });
   });
 
   return router;
@@ -451,5 +641,7 @@ module.exports = {
   createChatbotRouter,
   createPublicChatbotRouter,
   buildContext,
+  buildPublicContext,
+  localAnswer,
   parseModelReply,
 };

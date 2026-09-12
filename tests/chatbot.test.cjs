@@ -6,7 +6,7 @@ const { randomUUID } = require("node:crypto");
 const { PGlite } = require("@electric-sql/pglite");
 const request = require("supertest");
 const { createApp } = require("../server/app.cjs");
-const { createGeminiClient } = require("../server/chatbot.cjs");
+const { createGeminiClient, localAnswer } = require("../server/chatbot.cjs");
 const { hashToken } = require("../server/security.cjs");
 
 const root = path.resolve(__dirname, "..");
@@ -50,7 +50,7 @@ test("Castor FIT usa contexto real, historial temporal y registra la conversaci�
   const api = request(createApp({ db, siteUrl: "https://castoresfit.com", chatbot }));
   const auth = { Authorization: "Bearer " + token };
   const first = await api.post("/api/chatbot/message").set(auth).send({
-    message: "que eventos tengo?",
+    message: "¿Qué me recomiendas priorizar esta tarde con la información disponible?",
     device_context: {
       schedule: {
         career: "ING. SISTEMAS",
@@ -73,7 +73,7 @@ test("Castor FIT usa contexto real, historial temporal y registra la conversaci�
   await engine.close();
 });
 
-test("Castor FIT no finge IA si falta la clave/proveedor", async () => {
+test("Castor FIT mantiene respuestas locales aunque no haya proveedor de IA", async () => {
   const engine = new PGlite();
   for (const file of fs.readdirSync(path.join(root, "backend/migrations")).sort()) {
     if (file.endsWith(".sql"))
@@ -88,9 +88,12 @@ test("Castor FIT no finge IA si falta la clave/proveedor", async () => {
   await query("insert into sessions(token_hash,user_id,expires_at) values($1,$2,now()+interval '1 day')", [hashToken(token), userId]);
   const api = request(createApp({ db, siteUrl: "https://castoresfit.com" }));
   const status = await api.get("/api/chatbot/status").set("Authorization", "Bearer " + token).expect(200);
-  assert.equal(status.body.data.enabled, false);
-  const response = await api.post("/api/chatbot/message").set("Authorization", "Bearer " + token).send({ message: "hola" }).expect(503);
-  assert.equal(response.body.error.code, "chatbot_unavailable");
+  assert.equal(status.body.data.enabled, true);
+  assert.equal(status.body.data.local_enabled, true);
+  assert.equal(status.body.data.ai_enabled, false);
+  const response = await api.post("/api/chatbot/message").set("Authorization", "Bearer " + token).send({ message: "hola" }).expect(200);
+  assert.equal(response.body.data.source, "local");
+  assert.match(response.body.data.reply, /Castor FIT/i);
   await engine.close();
 });
 
@@ -201,7 +204,7 @@ test("Castor FIT también atiende visitantes desde la pantalla de inicio sin exp
   const guestId = "visitante_prueba_123456";
   const reply = await api.post("/api/chatbot/public/message").send({
     guest_id: guestId,
-    message: "hola, todavía no tengo cuenta, qué puedo hacer?",
+    message: "dame una bienvenida creativa usando el contexto público disponible",
   }).expect(200);
   assert.match(reply.body.data.reply, /registrarte/i);
   assert.match(calls[0].system, /TODAVÍA NO ha iniciado sesión/);
@@ -213,5 +216,41 @@ test("Castor FIT también atiende visitantes desde la pantalla de inicio sin exp
   const logs = (await query("select * from chatbot_logs where user_id is null order by id")).rows;
   assert.equal(logs.length, 1);
   assert.equal(logs[0].account_type, "other");
+  await engine.close();
+});
+
+
+test("respuestas locales cubren preguntas frecuentes sin llamar a Gemini", () => {
+  const publicContext = {
+    public_events: [{ title: "Feria FIT", starts_at: "2026-09-15T16:00:00Z", location: "Auditorio" }],
+    available_food: [{ name: "Torta", price_cents: 5500, business_name: "Café Castor", pickup_location: "Cafetería" }],
+    verified_places: [{ name: "Sala A", code: "SALA-A", building: "Posgrado", floor: "PB", description: "Sala de clases" }],
+  };
+  assert.match(localAnswer("¿Qué eventos públicos hay disponibles?", publicContext, { authenticated: false }).reply, /Feria FIT/);
+  assert.match(localAnswer("¿Qué comida está disponible?", publicContext, { authenticated: false }).reply, /Torta/);
+  assert.match(localAnswer("Soy docente, ¿cómo me registro?", publicContext, { authenticated: false }).reply, /@uat\.edu\.mx/);
+  assert.match(localAnswer("¿Dónde está Sala A?", publicContext, { authenticated: false }).reply, /Posgrado/);
+});
+
+test("si Gemini falla una pregunta habitual todavía responde localmente", async () => {
+  const engine = new PGlite();
+  for (const file of fs.readdirSync(path.join(root, "backend/migrations")).sort()) {
+    if (file.endsWith(".sql")) await engine.exec(fs.readFileSync(path.join(root, "backend/migrations", file), "utf8"));
+  }
+  const query = (sql, params) => engine.query(sql, params);
+  const db = { query, connect: async () => ({ query, release() {} }) };
+  const creator = randomUUID();
+  await query("insert into users(id,email,password_hash,email_confirmed_at) values($1,$2,'fixture',now())", [creator, "admin2@uat.edu.mx"]);
+  await query("insert into profiles(id,full_name) values($1,'Admin Local')", [creator]);
+  await query(`insert into events(title,description,location,audience,visibility,starts_at,ends_at,created_by)
+    values('Conferencia Local','Evento visible','Auditorio','students','public',now()+interval '2 hours',now()+interval '4 hours',$1)`, [creator]);
+  const brokenChatbot = { provider: "google-gemini", model: "broken", async complete() { throw new Error("provider down"); } };
+  const api = request(createApp({ db, siteUrl: "https://castoresfit.com", chatbot: brokenChatbot }));
+  const reply = await api.post("/api/chatbot/public/message").send({
+    guest_id: "visitante_local_123456",
+    message: "¿Qué eventos públicos hay disponibles?",
+  }).expect(200);
+  assert.equal(reply.body.data.source, "local");
+  assert.match(reply.body.data.reply, /Conferencia Local/);
   await engine.close();
 });

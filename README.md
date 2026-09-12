@@ -116,6 +116,6 @@ Consulta [ACTUALIZAR_V5.md](docs/ACTUALIZAR_V5.md) y [ALMACENAMIENTO.md](docs/AL
 
 ## Asistente Castor FIT
 
-El proyecto incluye un chatbot contextual accesible desde la mascota de Guía FIT. Usa Gemini desde el backend, mantiene historial temporal por sesión y combina el mensaje con datos reales de eventos, comidas, pedidos, espacios y el horario local del alumno.
+El proyecto incluye un chatbot contextual accesible desde la mascota de Guía FIT. Las preguntas frecuentes se resuelven primero con respuestas locales del propio sistema usando datos reales de eventos, comidas, pedidos, espacios y el horario local del alumno. Gemini queda como apoyo opcional para preguntas abiertas.
 
-Configura `GEMINI_API_KEY` en Render. El modelo puede ajustarse con `CHATBOT_MODEL` (por defecto `gemini-2.5-flash-lite`). El nivel gratuito de Gemini puede usarse sin habilitar facturación mientras el proyecto se mantenga dentro de sus límites. Consulta `docs/CHATBOT_CASTOR_FIT.md`.
+`GEMINI_API_KEY` es opcional: si está configurada en Render, Castor FIT usa Gemini para preguntas que no cubre la base local; si falta o Gemini falla, Castor FIT continúa respondiendo las dudas habituales sin devolver error. El modelo puede ajustarse con `CHATBOT_MODEL` (por defecto `gemini-2.5-flash-lite`). Consulta `docs/CHATBOT_CASTOR_FIT.md`.

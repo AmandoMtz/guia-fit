@@ -1,4 +1,4 @@
-/* Castor FIT: asistente contextual. La API del modelo vive únicamente en el backend. */
+/* Castor FIT: respuestas locales para dudas frecuentes + IA opcional desde el backend. */
 (function (root) {
   "use strict";
   let ctx = null;
@@ -89,7 +89,7 @@
           <textarea id="fit-chat-input" data-chat-input rows="1" maxlength="1200" placeholder="Escribe tu mensaje…" autocomplete="off"></textarea>
           <button type="submit" data-chat-send aria-label="Enviar mensaje">${ctx?.icon?.("send") || "→"}</button>
         </form>
-        <p class="fit-chat-foot">Las respuestas pueden variar. Para trámites o casos delicados, Castor FIT te indicará cuándo conviene apoyo humano.</p>
+        <p class="fit-chat-foot">Las dudas frecuentes tienen respuesta local. Gemini se usa solo como apoyo adicional; para trámites o casos delicados, Castor FIT te indicará cuándo conviene apoyo humano.</p>
       </section>`;
     document.body.appendChild(host);
     panel = host.querySelector(".fit-chat-panel");

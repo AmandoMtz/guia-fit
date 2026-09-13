@@ -84,13 +84,22 @@
     offlineSyncedAt: null,
     networkUnavailable: false,
   };
-  let toastTimer;
+  let toastTimer, toastCleanupTimer;
   function toast(message) {
     const el = $("#toast");
-    el.textContent = message;
-    el.classList.add("show");
+    if (!el) return;
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => el.classList.remove("show"), 3000);
+    clearTimeout(toastCleanupTimer);
+    el.hidden = false;
+    el.textContent = String(message || "");
+    el.classList.add("show");
+    toastTimer = setTimeout(() => {
+      el.classList.remove("show");
+      toastCleanupTimer = setTimeout(() => {
+        el.textContent = "";
+        el.hidden = true;
+      }, 200);
+    }, 3000);
   }
   const transientMessageTimers = new WeakMap();
   function armTransientMessage(el) {

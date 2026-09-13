@@ -30,6 +30,10 @@ test("el correo HTTPS usa el remitente configurado y enlaces de un solo propósi
       "token-simulado-de-prueba",
     );
     assert.equal(link.searchParams.has("token"), false);
+    assert.match(body.html, /https:\/\/guia.example.test\/assets\/guia-fit-mascota.png/);
+    assert.ok(body.html.includes(purpose === "confirm" ? "Confirmar mi correo" : "Restablecer mi contraseña"));
+    assert.ok(body.html.includes(link.href.replace(/&/g, "&amp;")));
+    assert.match(body.html, /bgcolor="#8a102b"/);
   }
 });
 test("sin configuración no se simula el envío de verificación", () => {

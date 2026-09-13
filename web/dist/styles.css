@@ -878,6 +878,10 @@ dialog::backdrop {
   font-size: 0.95rem;
 }
 #toast {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity .2s ease, visibility .2s ease;
   position: fixed;
   bottom: 24px;
   left: 50%;
@@ -892,6 +896,8 @@ dialog::backdrop {
   font-size: 0.9rem;
 }
 #toast.show {
+  opacity: 1;
+  visibility: visible;
   padding: 14px 22px;
 }
 .screen-reader {

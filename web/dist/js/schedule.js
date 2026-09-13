@@ -22,6 +22,7 @@
     if (method === "put") {
       const result = await root.FIT_SCHEDULE_STORE.operation("put", key, value);
       root.FIT_OFFLINE?.saveSchedule?.(key, value);
+      root.FIT_REWARDS?.scheduleSaved?.(key, value);
       return result;
     }
     if (method === "delete") {

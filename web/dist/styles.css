@@ -4657,3 +4657,24 @@ dialog:has(.chat-dialog) .module-dialog-close {
     transition: none !important;
   }
 }
+
+/* Progreso y personalización FIT */
+.reward-hero{display:flex;flex-wrap:wrap;gap:24px;align-items:center;justify-content:space-between;padding:32px;border-radius:24px;color:#fff;background:linear-gradient(120deg,#650a22,#a41a39);box-shadow:0 12px 30px #7b0d2918}
+.reward-hero h2{font-size:2.8rem;margin:8px 0}.reward-hero p{margin:0}.reward-balance{display:grid;text-align:right}.reward-balance strong{font-size:2.5rem}.reward-progress{width:100%;display:grid;gap:8px}.reward-progress progress{width:100%;height:12px;accent-color:#f6c95b}.reward-tabs{display:flex;flex-wrap:wrap;gap:10px;margin:24px 0}.reward-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:20px}.reward-card{padding:24px;border:1px solid #ead7dc;border-radius:20px;background:#fff}.reward-card h3{margin:12px 0}.reward-card small{color:#65505a}.reward-card label{display:block;margin:12px 0}.reward-card select{width:100%}.reward-week{display:flex;gap:10px}.reward-week span{flex:1;border:1px solid #ead7dc;border-radius:12px;padding:12px 4px;text-align:center}.reward-week small{display:block}.reward-week .earned{background:#7b0d29;color:white}.reward-week .earned small{color:white}.reward-history{border:1px solid #ead7dc;border-radius:18px;overflow:hidden}.reward-history>div,.reward-history>article{padding:16px 22px;border-bottom:1px solid #f0e5e8;display:flex;align-items:center;justify-content:space-between;gap:18px}.reward-history>article{justify-content:flex-start}.reward-history small{display:block;color:#67505a}.reward-history h3,.reward-history p{margin:0}.reward-rank{font-size:1.6rem;color:#7b0d29;font-weight:800;min-width:35px}.reward-settings{margin-bottom:20px}.reward-preview{height:110px;border-radius:16px;display:grid;place-items:center;background:#fff8fa;border:1px solid #ead7dc;overflow:hidden}.reward-preview span{padding:14px;border-radius:14px;background:white;color:#650a22}.frame-ruby span{border:4px solid #9b1735}.frame-gold span{border:4px solid #ac7718}.frame-orbit span{border:4px dashed #9b1735}.chat-ruby span{border:2px solid #9b1735}.chat-gold span{border:2px solid #ac7718}.bot-petals{background:radial-gradient(#e8bac6 1px,transparent 2px) 0 0/16px 16px}.bot-night{background:#390817}.motion-rise span{animation:fit-rise 1s ease both}.motion-glow span{animation:fit-glow 1.2s ease both}
+body[data-fitframe="frame-ruby"] :is(.profile-avatar,.avatar){outline:3px solid #a41a39;outline-offset:3px}
+body[data-fitframe="frame-gold"] :is(.profile-avatar,.avatar){outline:4px solid #ac7718;outline-offset:3px;box-shadow:0 0 18px #d1aa5355}
+body[data-fitframe="frame-orbit"] :is(.profile-avatar,.avatar){outline:3px dashed #a41a39;outline-offset:4px;animation:fit-halo 3s ease-in-out infinite}
+body[data-fitchat="chat-ruby"] :is(.fit-chat-panel,.food-chat-dialog,.chat-dialog){border:2px solid #a41a39}
+body[data-fitchat="chat-gold"] :is(.fit-chat-panel,.food-chat-dialog,.chat-dialog){border:2px solid #ac7718}
+body[data-fitbackground="bot-petals"] .fit-chat-body{background:radial-gradient(#e8bac6 1px,transparent 2px) 0 0/16px 16px #fff}
+body[data-fitbackground="bot-night"] .fit-chat-body{background:#390817}
+body[data-fitmotion="motion-rise"] :is(.fit-chat-message,.chat-message-row){animation:fit-rise .35s ease both}
+body[data-fitmotion="motion-glow"] :is(.fit-chat-message,.chat-message-row){animation:fit-glow .6s ease both}
+@keyframes fit-rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fit-glow{from{filter:brightness(1.2)}to{filter:brightness(1)}}
+@keyframes fit-halo{50%{box-shadow:0 0 16px #a41a3944}}
+body.fit-no-motion :is(.fit-chat-message,.chat-message-row,.profile-avatar,.avatar,.reward-preview span){animation:none!important;transition:none!important}
+@media(prefers-reduced-motion:reduce){.reward-preview span,body[data-fitframe] :is(.profile-avatar,.avatar),body[data-fitmotion] :is(.fit-chat-message,.chat-message-row){animation:none!important;transition:none!important}}
+@media(max-width:600px){.reward-hero{padding:22px}.reward-hero h2{font-size:2.2rem}.reward-tabs .btn{flex:1 1 42%}.reward-card{padding:18px}.reward-history>article{align-items:flex-start}}
+
+.reward-settings input,.reward-card input{accent-color:#7b0d29}

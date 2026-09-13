@@ -249,6 +249,7 @@
       const checkin = async (raw) => {
         const token = tokenFrom(raw); if (!token) throw Error("El código no es válido.");
         const data = await api(c, "/api/events/checkin", "POST", { token });
+        root.FIT_REWARDS?.refresh?.();
         c.toast(data.already_registered ? `Tu asistencia a “${data.title}” ya estaba registrada.` : `Asistencia registrada: ${data.title}.`);
         c.state.pendingEventToken = null;
         const url = new URL(location.href); url.searchParams.delete("e"); history.replaceState(null, "", url.pathname + url.search + url.hash);

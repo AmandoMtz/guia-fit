@@ -1,0 +1,121 @@
+const {Router} = require('express');
+const {transaction} = require('./db.cjs');
+const {accountType} = require('./account.cjs');
+const categories = ['comida','postres','botanas','bebidas','otros'];
+const catalog = [
+ {id:'frame-ruby',slot:'frame',name:'Marco Rubí FIT',price:50,description:'Un aro rojo luminoso para tu perfil.'},
+ {id:'frame-gold',slot:'frame',name:'Marco Honor',price:150,description:'Dorado con brillo suave.'},
+ {id:'frame-orbit',slot:'frame',name:'Órbita Castor',price:250,description:'Un halo animado alrededor de tu foto.'},
+ {id:'chat-ruby',slot:'chat',name:'Chat Rubí',price:50,description:'Bordes rojos para tus conversaciones.'},
+ {id:'chat-gold',slot:'chat',name:'Chat Honor',price:100,description:'Marcos dorados en tus chats.'},
+ {id:'bot-petals',slot:'background',name:'Pétalos FIT',price:75,description:'Fondo suave de puntos para Castor FIT.'},
+ {id:'bot-night',slot:'background',name:'Noche Castor',price:125,description:'Un fondo vino para conversar.'},
+ {id:'motion-rise',slot:'motion',name:'Entrada flotante',price:75,description:'Los mensajes aparecen con un movimiento suave.'},
+ {id:'motion-glow',slot:'motion',name:'Destello',price:125,description:'Un brillo breve al recibir mensajes.'},
+];
+const fail=(status,message)=>Object.assign(new Error(message),{status,code:'gamification_error'});
+async function lock(c,uid) {
+ await c.query('insert into fit_progress(user_id) values($1) on conflict do nothing',[uid]);
+ return (await c.query('select * from fit_progress where user_id=$1 for update',[uid])).rows[0];
+}
+async function award(c,uid,key,xp) {
+ const p=await lock(c,uid);
+ const inserted=await c.query('insert into fit_rewards(user_id,activity,xp) values($1,$2,$3) on conflict do nothing returning activity',[uid,key,xp]);
+ if(!inserted.rows.length)return 0;
+ const coins=(Math.floor((p.xp+xp)/100)-Math.floor(p.xp/100))*50;
+ await c.query('update fit_progress set xp=xp+$2,coins=coins+$3 where user_id=$1',[uid,xp,coins]);
+ return xp;
+}
+async function sync(c,uid) {
+ await lock(c,uid);
+ const {day,week}= (await c.query("select to_char(now() at time zone 'America/Monterrey','YYYY-MM-DD') as day,to_char(date_trunc('week',now() at time zone 'America/Monterrey'),'YYYY-MM-DD') as week")).rows[0];
+ let earned=await award(c,uid,'day:'+day,10);
+ const n=(await c.query("select count(*)::int as n from fit_rewards where user_id=$1 and activity like 'day:%' and substring(activity from 5)::date between $2::date and $2::date+4",[uid,week])).rows[0].n;
+ if(n===5)earned+=await award(c,uid,'week:'+week,50);
+ const attendances=(await c.query('select event_id from event_attendance where user_id=$1',[uid])).rows;
+ for(const a of attendances)earned+=await award(c,uid,'event:'+a.event_id,40);
+ return earned;
+}
+function createGamificationRouter({db,limit}) {
+ const r=Router();
+ r.use(async(req,res,next)=>{
+  if(!['student','teacher','admin'].includes(accountType(req.user.email,req.user.role)))throw fail(403,'Los beneficios están disponibles para alumnos y docentes con correo institucional.');
+  if(req.method!=='GET'&&limit)await limit(req,`rewards:${req.user.id}`,90,15*60*1000);
+  next();
+ });
+ r.get('/me',async(req,res)=>{
+  const p=(await db.query('select * from fit_progress where user_id=$1',[req.user.id])).rows[0]||{xp:0,coins:0,equipped:{},animations:true};
+  const inventory=(await db.query('select item from fit_inventory where user_id=$1',[req.user.id])).rows.map(x=>x.item);
+  const history=(await db.query('select activity,xp,created_at from fit_rewards where user_id=$1 order by created_at desc limit 20',[req.user.id])).rows;
+  const days=(await db.query("select activity from fit_rewards where user_id=$1 and activity like 'day:%' and substring(activity from 5)::date between date_trunc('week',now() at time zone 'America/Monterrey')::date and date_trunc('week',now() at time zone 'America/Monterrey')::date+4",[req.user.id])).rows.map(x=>x.activity.slice(4));
+  res.json({data:{...p,level:1+Math.floor(p.xp/100),next:100-p.xp%100,inventory,catalog,history,days,categories}});
+ });
+ r.post('/sync',async(req,res)=>res.json({data:{earned:await transaction(db,c=>sync(c,req.user.id))}}));
+ r.post('/schedule',async(req,res)=>{
+  const rows=req.body?.classes;
+  if(!Array.isArray(rows)||!rows.length||rows.length>100||rows.some(x=>!x||typeof x.subject!=='string'||!x.subject.trim()||x.subject.length>180||!Number.isInteger(Number(x.day))||Number(x.day)<1||Number(x.day)>7||!/^([01]\d|2[0-3]):[0-5]\d$/.test(x.start)||!/^([01]\d|2[0-3]):[0-5]\d$/.test(x.end)||x.end<=x.start))throw fail(400,'Guarda un horario con materias, días y horas válidas.');
+  res.json({data:{earned:await transaction(db,c=>award(c,req.user.id,'first-schedule',30))}});
+ });
+ r.post('/buy',async(req,res)=>{
+  const item=catalog.find(x=>x.id===req.body?.item);if(!item)throw fail(400,'Personalización desconocida.');
+  await transaction(db,async c=>{
+   const p=await lock(c,req.user.id);
+   if((await c.query('select 1 from fit_inventory where user_id=$1 and item=$2',[req.user.id,item.id])).rows.length)return;
+   if(p.coins<item.price)throw fail(409,'Todavía no tienes monedas suficientes.');
+   await c.query('update fit_progress set coins=coins-$2 where user_id=$1',[req.user.id,item.price]);
+   await c.query('insert into fit_inventory(user_id,item) values($1,$2)',[req.user.id,item.id]);
+  });res.json({data:{}});
+ });
+ r.post('/equip',async(req,res)=>{
+  const {slot,item}=req.body||{};
+  if(!['frame','chat','background','motion'].includes(slot))throw fail(400,'Estilo desconocido.');
+  if(item!==null&&!catalog.some(x=>x.id===item&&x.slot===slot))throw fail(400,'Estilo incompatible.');
+  await transaction(db,async c=>{
+   const p=await lock(c,req.user.id);
+   if(item!==null&&!(await c.query('select 1 from fit_inventory where user_id=$1 and item=$2',[req.user.id,item])).rows.length)throw fail(403,'Primero debes canjear este estilo.');
+   await c.query('update fit_progress set equipped=$2 where user_id=$1',[req.user.id,JSON.stringify({...p.equipped,[slot]:item})]);
+  });res.json({data:{}});
+ });
+ r.post('/animations',async(req,res)=>{
+  if(typeof req.body?.enabled!=='boolean')throw fail(400,'Valor inválido.');
+  await transaction(db,async c=>{await lock(c,req.user.id);await c.query('update fit_progress set animations=$2 where user_id=$1',[req.user.id,req.body.enabled]);});res.json({data:{}});
+ });
+ r.get('/orders',async(req,res)=>res.json({data:(await db.query("select o.id,o.product_name,v.business_name,o.vendor_id,r.stars,coalesce((select json_agg(category) from fit_vendor_categories where vendor_id=v.id),'[\"comida\"]'::json) as categories from food_orders o join food_vendors v on v.id=o.vendor_id left join fit_ratings r on r.order_id=o.id where o.buyer_id=$1 and o.status='completed' order by o.updated_at desc limit 100",[req.user.id])).rows}));
+ r.post('/ratings',async(req,res)=>{
+  const {order_id,stars,category}=req.body||{};
+  if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(order_id||'')||!Number.isInteger(stars)||stars<1||stars>5||!categories.includes(category))throw fail(400,'Elige de 1 a 5 estrellas y una categoría.');
+  await transaction(db,async c=>{
+   const o=(await c.query('select o.*,v.user_id as seller from food_orders o join food_vendors v on v.id=o.vendor_id where o.id=$1 for update of o',[order_id])).rows[0];
+   if(!o||o.buyer_id!==req.user.id||o.seller===req.user.id||o.status!=='completed')throw fail(403,'Solo puedes calificar tus pedidos entregados.');
+   const cats=(await c.query('select category from fit_vendor_categories where vendor_id=$1',[o.vendor_id])).rows.map(x=>x.category);
+   if(!(cats.length?cats:['comida']).includes(category))throw fail(400,'Esa categoría no pertenece al puesto.');
+   await lock(c,o.seller);
+   const inserted=await c.query('insert into fit_ratings(order_id,buyer_id,vendor_id,stars,category) values($1,$2,$3,$4,$5) on conflict do nothing returning order_id',[order_id,req.user.id,o.vendor_id,stars,category]);
+   if(!inserted.rows.length)throw fail(409,'Este pedido ya fue calificado.');
+   const {day,week}=(await c.query("select to_char(now() at time zone 'America/Monterrey','YYYY-MM-DD') as day,to_char(date_trunc('week',now() at time zone 'America/Monterrey'),'YYYY-MM-DD') as week")).rows[0];
+   const n=(await c.query("select count(*)::int n from fit_rewards where user_id=$1 and activity like 'rating:%' and (created_at at time zone 'America/Monterrey')::date=$2::date",[o.seller,day])).rows[0].n;
+   if(n<5)await award(c,o.seller,'rating:'+req.user.id+':'+week,10);
+  });res.json({data:{}});
+ });
+ r.get('/categories',async(req,res)=>res.json({data:(await db.query("select v.id,coalesce((select json_agg(category) from fit_vendor_categories where vendor_id=v.id),'[\"comida\"]'::json) categories from food_vendors v where user_id=$1",[req.user.id])).rows[0]||null}));
+ r.post('/categories',async(req,res)=>{
+  const list=req.body?.categories;if(!Array.isArray(list)||!list.length||list.length>5||list.some(x=>!categories.includes(x)))throw fail(400,'Elige al menos una categoría.');
+  await transaction(db,async c=>{
+   const v=(await c.query('select id from food_vendors where user_id=$1 for update',[req.user.id])).rows[0];if(!v)throw fail(403,'Primero registra tu puesto en Comidas.');
+   await c.query('delete from fit_vendor_categories where vendor_id=$1',[v.id]);
+   for(const category of new Set(list))await c.query('insert into fit_vendor_categories values($1,$2)',[v.id,category]);
+  });res.json({data:{}});
+ });
+ r.get('/ranking',async(req,res)=>{
+  const cat=req.query.category||'';if(cat&&!categories.includes(cat))throw fail(400,'Categoría inválida.');
+  const rows=(await db.query(`select v.id,v.business_name,v.pickup_location,count(r.order_id)::int as votes,coalesce(avg(r.stars),0)::float as average,
+   ((coalesce(sum(r.stars),0)+15.0)/(count(r.order_id)+5))::float as score,
+   coalesce((select json_agg(category) from fit_vendor_categories where vendor_id=v.id),'["comida"]'::json) categories
+   from food_vendors v left join fit_ratings r on r.vendor_id=v.id and ($1='' or r.category=$1)
+   where v.status='approved' and v.is_active=true and ($1='' or exists(select 1 from fit_vendor_categories c where c.vendor_id=v.id and c.category=$1) or ($1='comida' and not exists(select 1 from fit_vendor_categories c where c.vendor_id=v.id)))
+   group by v.id order by (count(r.order_id)>0) desc,score desc,votes desc,v.business_name,v.id limit 100`,[cat])).rows;
+  res.json({data:rows});
+ });
+ return r;
+}
+module.exports={createGamificationRouter,award,sync,catalog};

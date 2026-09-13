@@ -18,6 +18,7 @@
     seed = window.FIT_CATALOG,
     config = window.FIT_CONFIG;
   const paths = {
+    star: "M12 3l2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9L12 3z",
     bag: "M5 7h14l1 14H4L5 7zm4 0V5a3 3 0 016 0v2",
     store: "M3 10h18L19 3H5l-2 7zm1 0v11h16V10M8 21v-7h8v7",
     refresh: "M20 7v5h-5M4 17v-5h5M6 6a8 8 0 0114 6M18 18A8 8 0 014 12",
@@ -224,6 +225,7 @@
       window.FIT_CHATBOT?.mount?.(moduleContext());
     else
       window.FIT_CHATBOT?.unmount?.();
+    window.FIT_REWARDS?.clearIfGuest?.(state);
   }
   function showMessage(message, error = false) {
     state.notice = message;
@@ -436,6 +438,7 @@
         "Comidas",
         "Elige qué comer, sigue tus compras o atiende a tus clientes.",
       ],
+      rewards: ["Mi progreso", "Participa, sube de nivel y haz tuya Guía FIT."],
       schedule: ["Mi horario", "Tu semana, tus materias y tu próximo salón."],
       events: ["Eventos", "Actividades, reuniones y asistencias verificadas de la facultad."],
       notifications: ["Mis avisos", "Novedades de tus pedidos y de tu puesto."],
@@ -471,6 +474,7 @@
           ...(state.user ? [["events", "calendar", state.user.account_type === "teacher" ? "Eventos docentes" : "Eventos"]] : []),
           ["schedule", "calendar", "Mi horario"],
           ["profile", "user", "Mi cuenta"],
+          ...(state.user ? [["rewards", "star", "Mi progreso y premios"]] : []),
         ];
     if (state.admin && !state.offline)
       menu.push(
@@ -501,7 +505,10 @@
       };
     if (state.user && !state.demo && !state.offline) window.FIT_CHATBOT?.mount?.(moduleContext());
     else window.FIT_CHATBOT?.unmount?.();
+    window.FIT_REWARDS?.clearIfGuest?.(state);
+    window.FIT_REWARDS?.mount(moduleContext());
     ({
+      rewards: () => window.FIT_REWARDS.render(moduleContext()),
       directory: directoryView,
       map: mapView,
       route: routeView,

@@ -1,3 +1,4 @@
+const { createGamificationRouter } = require("./gamification.cjs");
 const express = require("express");
 const helmet = require("helmet");
 const cookieParser = require("cookie-parser");
@@ -626,6 +627,7 @@ function createApp({
   );
   app.use("/api/events", createPublicEventsRouter({ db, limit }));
   app.use("/api/chatbot/public", createPublicChatbotRouter({ db, limit, chatbot }));
+  app.use("/api/gamification", authenticate, createGamificationRouter({ db, limit }));
   app.use("/api/profile", authenticate, createProfileRouter({ db, limit }));
   app.use("/api/events", authenticate, createEventsRouter({ db, limit, siteUrl }));
   app.use("/api/chatbot", authenticate, createChatbotRouter({ db, limit, chatbot }));

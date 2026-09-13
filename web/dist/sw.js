@@ -1,5 +1,5 @@
 /* App shell sin conexión. Las respuestas /api nunca se guardan aquí. */
-const CACHE = "guia-fit-shell-v10";
+const CACHE = "guia-fit-shell-v11";
 const SHELL = [
   "/",
   "/index.html",
@@ -21,6 +21,7 @@ const SHELL = [
   "/js/schedule.js",
   "/js/events.js",
   "/js/chatbot.js",
+  "/js/gamification.js",
   "/js/app.js",
 ];
 

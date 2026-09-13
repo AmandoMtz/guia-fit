@@ -1089,6 +1089,7 @@ class _FoodScreenState extends State<FoodScreen> {
                     borderRadius: BorderRadius.circular(12),
                     child: Image.network(
                       raw['photo_url'],
+                      headers: c.client?.imageHeaders(raw['photo_url'] as String),
                       height: 150,
                       width: double.infinity,
                       fit: BoxFit.cover,
@@ -1986,6 +1987,7 @@ class _ProductDialogState extends State<ProductDialog> {
               else if (widget.product?['photo_url'] != null && !_removePhoto)
                 Image.network(
                   widget.product!['photo_url'],
+                  headers: widget.controller.client?.imageHeaders(widget.product!['photo_url'] as String),
                   height: 150,
                   fit: BoxFit.contain,
                   errorBuilder: (_, e, s) =>

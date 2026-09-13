@@ -256,10 +256,7 @@ test("API Render/Aiven: autenticación real, permisos y verificación", async (t
   await t.test(
     "fotografías: solo administradores; bytes persistentes y tipo de archivo comprobado",
     async () => {
-      const png = Buffer.from(
-        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jQWQAAAAASUVORK5CYII=",
-        "base64",
-      );
+      const png = await require("sharp")({ create: { width: 8, height: 8, channels: 3, background: "#8a102b" } }).png().toBuffer();
       await api
         .post("/api/photos")
         .set("Authorization", "Bearer " + tokenA)
@@ -286,9 +283,11 @@ test("API Render/Aiven: autenticación real, permisos y verificación", async (t
         .expect(201);
       const photo = await api
         .get(new URL(result.body.data.url).pathname)
+        .set("Authorization", "Bearer " + tokenAdmin)
         .expect(200)
-        .expect("Content-Type", /image\/png/);
-      assert.deepEqual(photo.body, png);
+        .expect("Content-Type", /image\/webp/);
+      assert.equal((await require("sharp")(photo.body).metadata()).width, 8);
+      await api.get(new URL(result.body.data.url).pathname).expect(404);
       assert.equal(
         (await query("select count(*)::int as n from photos")).rows[0].n,
         1,

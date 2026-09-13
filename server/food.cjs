@@ -1,5 +1,6 @@
 const { Router } = require("express");
 const multer = require("multer");
+const { normalizeImage, imageUploadSlot } = require("./images.cjs");
 const { transaction } = require("./db.cjs");
 const { createTemporaryFoodChat } = require("./food-chat.cjs");
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -279,32 +280,14 @@ function createFoodRouter({ db, siteUrl, administrator, limit }) {
         );
       next();
     },
+    imageUploadSlot,
     upload.single("file"),
     async (req, res) => {
-      const b = req.file?.buffer,
-        mime = req.file?.mimetype;
-      const valid =
-        b &&
-        ((mime === "image/png" &&
-          b
-            .subarray(0, 8)
-            .equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))) ||
-          (mime === "image/jpeg" &&
-            b[0] === 255 &&
-            b[1] === 216 &&
-            b[2] === 255) ||
-          (mime === "image/webp" &&
-            b.subarray(0, 4).toString() === "RIFF" &&
-            b.subarray(8, 12).toString() === "WEBP"));
-      if (!valid)
-        throw error(
-          400,
-          "Selecciona una fotografía JPG, PNG o WebP de hasta 5 MB.",
-        );
+      const b = await normalizeImage(req.file);
       const row = (
         await db.query(
           "insert into photos(mime,bytes,created_by) values($1,$2,$3) returning id",
-          [mime, b, req.user.id],
+          ["image/webp", b, req.user.id],
         )
       ).rows[0];
       res
@@ -345,6 +328,7 @@ function createFoodRouter({ db, siteUrl, administrator, limit }) {
   });
   router.post(
     "/chats/:id/images",
+    imageUploadSlot,
     chatUpload.single("file"),
     async (req, res) => {
       const data = await chat.addImage(

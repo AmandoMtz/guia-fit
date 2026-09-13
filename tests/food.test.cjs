@@ -146,10 +146,7 @@ test("Comidas: permisos, dinero, pedidos y notificaciones persistentes", async (
   await t.test(
     "fotos persistentes y productos solo pueden ser asignados o editados por su dueño",
     async () => {
-      const png = Buffer.from(
-        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jQWQAAAAASUVORK5CYII=",
-        "base64",
-      );
+      const png = await require("sharp")({ create: { width: 8, height: 8, channels: 3, background: "#8a102b" } }).png().toBuffer();
       await req(buyer, "post", "/photos")
         .attach("file", png, { filename: "a.png", contentType: "image/png" })
         .expect(403);
@@ -164,10 +161,10 @@ test("Comidas: permisos, dinero, pedidos y notificaciones persistentes", async (
           .attach("file", png, { filename: "a.png", contentType: "image/png" })
           .expect(201)
       ).body.data;
-      assert.deepEqual(
-        (await api.get(new URL(photo.url).pathname).expect(200)).body,
-        png,
-      );
+      await api.get(new URL(photo.url).pathname).expect(404);
+      const image = await api.get(new URL(photo.url).pathname).set("Authorization", "Bearer " + seller.token).expect(200);
+      assert.equal(image.headers["content-type"], "image/webp");
+      assert.equal((await require("sharp")(image.body).metadata()).width, 8);
       await req(seller2, "post", "/products", {
         ...productBody,
         photo_id: photo.id,
@@ -213,6 +210,7 @@ test("Comidas: permisos, dinero, pedidos y notificaciones persistentes", async (
       assert.equal(data.products.length, 1);
       assert.equal(data.vendors[0].email, undefined);
       assert.ok(data.products[0].photo_url);
+      await api.get(new URL(photo.url).pathname).expect(200).expect("Cache-Control", "private, no-store");
       assert.equal(
         (await req(seller, "get", "/notifications")).body.data.unread_count,
         1,
@@ -263,10 +261,7 @@ test("Comidas: permisos, dinero, pedidos y notificaciones persistentes", async (
       assert.equal(buyerDetail.messages.length, 2);
       assert.equal(buyerDetail.unread_count, 1);
 
-      const png = Buffer.from(
-        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jQWQAAAAASUVORK5CYII=",
-        "base64",
-      );
+      const png = await require("sharp")({ create: { width: 8, height: 8, channels: 3, background: "#8a102b" } }).png().toBuffer();
       const imageMessage = (
         await req(seller, "post", "/chats/" + chat.id + "/images")
           .attach("file", png, { filename: "producto.png", contentType: "image/png" })
@@ -523,6 +518,8 @@ test("Comidas: permisos, dinero, pedidos y notificaciones persistentes", async (
       }).expect(200);
       const mine = (await req(seller, "get", "/mine")).body.data;
       assert.equal(mine.vendor.status, "pending");
+      await api.get(new URL(photo.url).pathname).expect(404);
+      await api.get(new URL(photo.url).pathname).set("Authorization", "Bearer " + seller.token).expect(200);
       assert.equal(mine.vendor.review_source, null);
       assert.equal(
         (await req(buyer, "get", "/catalog")).body.data.vendors.length,

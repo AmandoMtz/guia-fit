@@ -1,32 +1,17 @@
 const { randomUUID } = require("node:crypto");
-const sharp = require("sharp");
+const { normalizeImage } = require("./images.cjs");
 
 const CHAT_TTL_MS = 12 * 60 * 60 * 1000;
 const MAX_TEXT = 1200;
+const MAX_CHATS = 250;
+const MAX_STREAMS = 128;
+const MAX_STREAMS_PER_USER = 3;
 const MAX_MESSAGES = 300;
 const MAX_IMAGES_PER_CHAT = 24;
 const MAX_TOTAL_IMAGE_BYTES = 64 * 1024 * 1024;
-const MAX_STORED_IMAGE_BYTES = 1536 * 1024;
 
 function chatError(status, message, code = "validation_error") {
   return Object.assign(new Error(message), { status, code });
-}
-
-function validImage(buffer, mime) {
-  return (
-    buffer &&
-    ((mime === "image/png" &&
-      buffer
-        .subarray(0, 8)
-        .equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))) ||
-      (mime === "image/jpeg" &&
-        buffer[0] === 255 &&
-        buffer[1] === 216 &&
-        buffer[2] === 255) ||
-      (mime === "image/webp" &&
-        buffer.subarray(0, 4).toString() === "RIFF" &&
-        buffer.subarray(8, 12).toString() === "WEBP"))
-  );
 }
 
 function createTemporaryFoodChat({ db }) {
@@ -35,6 +20,7 @@ function createTemporaryFoodChat({ db }) {
   let storedImageBytes = 0;
 
   function removeChat(chat) {
+    if (!chats.has(chat.id)) return;
     if (chat.expiry_timer) {
       clearTimeout(chat.expiry_timer);
       chat.expiry_timer = null;
@@ -141,8 +127,9 @@ function createTemporaryFoodChat({ db }) {
         continue;
       }
       try {
-        stream.res.write(data);
+        if (!stream.res.write(data)) stream.res.destroy();
       } catch {
+        stream.res.destroy();
         userStreams.delete(stream);
       }
     }
@@ -195,6 +182,8 @@ function createTemporaryFoodChat({ db }) {
         "rate_limited",
       );
 
+    purgeExpired();
+    if (chats.size >= MAX_CHATS) throw chatError(503, "Las conversaciones temporales están ocupadas. Inténtalo más tarde.", "chat_storage_full");
     const now = Date.now();
     const chat = {
       id: randomUUID(),
@@ -275,55 +264,18 @@ function createTemporaryFoodChat({ db }) {
   }
 
   async function addImage(userId, chatId, file) {
-    const chat = getChat(chatId, userId);
-    if (!validImage(file?.buffer, file?.mimetype))
-      throw chatError(
-        400,
-        "Selecciona una imagen JPG, PNG o WebP de hasta 5 MB.",
-      );
-    if (chat.messages.length >= MAX_MESSAGES)
-      throw chatError(409, "Esta conversación alcanzó su límite de mensajes.", "conflict");
-    if (chat.messages.filter((message) => message.kind === "image").length >= MAX_IMAGES_PER_CHAT)
-      throw chatError(409, "Puedes compartir hasta 24 imágenes en un chat temporal.", "conflict");
-
-    let optimized;
-    try {
-      // Normalizamos primero y solo redimensionamos cuando realmente hace falta.
-      // Esto evita fallos de libvips/Sharp con PNG muy pequeños o con canales
-      // gris+alfa, y mantiene el resultado en WebP para no guardar el original.
-      const metadata = await sharp(file.buffer, { animated: false, failOn: "none" }).metadata();
-      if (!metadata.width || !metadata.height) throw new Error("Imagen sin dimensiones válidas");
-      let pipeline = sharp(file.buffer, { animated: false, failOn: "none" }).rotate();
-      if (metadata.width > 1280 || metadata.height > 1280) {
-        pipeline = pipeline.resize({
-          width: 1280,
-          height: 1280,
-          fit: "inside",
-          withoutEnlargement: true,
-        });
-      }
-      optimized = await pipeline
-        .toColourspace("srgb")
-        .webp({ quality: 78 })
-        .toBuffer();
-    } catch {
-      // Segundo intento conservador: sin rotación ni resize. Algunos builds de
-      // Sharp son más estrictos al transformar imágenes PNG mínimas.
-      try {
-        optimized = await sharp(file.buffer, { animated: false, failOn: "none" })
-          .toColourspace("srgb")
-          .webp({ quality: 78 })
-          .toBuffer();
-      } catch {
-        throw chatError(400, "No pudimos procesar esa imagen. Usa JPG, PNG o WebP.");
-      }
+    function checkCapacity() {
+      const chat = getChat(chatId, userId);
+      if (chat.messages.length >= MAX_MESSAGES)
+        throw chatError(409, "Esta conversación alcanzó su límite de mensajes.", "conflict");
+      if (chat.messages.filter(m => m.kind === "image").length >= MAX_IMAGES_PER_CHAT)
+        throw chatError(409, "Puedes compartir hasta 24 imágenes en un chat temporal.", "conflict");
+      return chat;
     }
-    if (!optimized.length || optimized.length > MAX_STORED_IMAGE_BYTES)
-      throw chatError(
-        413,
-        "La imagen sigue siendo demasiado pesada después de optimizarla.",
-        "image_too_large",
-      );
+    checkCapacity();
+    const optimized = await normalizeImage(file);
+    // Other uploads or expiration may run during decoding. Re-check before storing.
+    const chat = checkCapacity();
     if (storedImageBytes + optimized.length > MAX_TOTAL_IMAGE_BYTES)
       throw chatError(
         503,
@@ -388,50 +340,59 @@ function createTemporaryFoodChat({ db }) {
 
   function connect(userId, sessionHash, res) {
     purgeExpired();
+    const count = [...streams.values()].reduce((sum, set) => sum + set.size, 0);
+    if ((streams.get(userId)?.size || 0) >= MAX_STREAMS_PER_USER || count >= MAX_STREAMS)
+      throw chatError(429, "Hay demasiadas conexiones de chat abiertas. Cierra otras pestañas e inténtalo de nuevo.", "rate_limited");
     const stream = { res, sessionHash };
     if (!streams.has(userId)) streams.set(userId, new Set());
     streams.get(userId).add(stream);
-    res.set({
-      "Content-Type": "text/event-stream; charset=utf-8",
-      "Cache-Control": "no-cache, no-transform",
-      Connection: "keep-alive",
-      "X-Accel-Buffering": "no",
-    });
-    res.flushHeaders?.();
-    res.write(
-      `retry: 3000\nevent: ready\ndata: ${JSON.stringify({ type: "ready" })}\n\n`,
-    );
-
-    const heartbeat = setInterval(async () => {
-      if (res.writableEnded || res.destroyed) return;
-      try {
-        if (sessionHash) {
-          const alive = (
-            await db.query(
-              "select 1 from sessions where token_hash=$1 and expires_at>now()",
-              [sessionHash],
-            )
-          ).rows.length;
-          if (!alive) return res.end();
-        }
-        purgeExpired();
-        res.write(
-          `event: ping\ndata: ${JSON.stringify({ type: "ping", now: new Date().toISOString() })}\n\n`,
-        );
-      } catch {
-        res.end();
-      }
-    }, 25000);
-    heartbeat.unref?.();
-
+    let heartbeat, checking = false;
+    const opened = Date.now();
     const close = () => {
       clearInterval(heartbeat);
       const set = streams.get(userId);
       set?.delete(stream);
       if (set && !set.size) streams.delete(userId);
     };
-    res.on("close", close);
-    res.on("finish", close);
+    res.once("close", close);
+    res.once("finish", close);
+    const write = (data) => {
+      if (res.writableEnded || res.destroyed) { close(); return false; }
+      try {
+        if (res.write(data)) return true;
+      } catch {}
+      // A slow/disconnected reader must not retain an unbounded response buffer.
+      close();
+      res.destroy();
+      return false;
+    };
+    res.set({
+      "Content-Type": "text/event-stream; charset=utf-8",
+      "Cache-Control": "private, no-store, no-transform",
+      Connection: "keep-alive",
+      "X-Accel-Buffering": "no",
+    });
+    res.flushHeaders?.();
+    if (!write('retry: 3000\nevent: ready\ndata: {"type":"ready"}\n\n')) return;
+    heartbeat = setInterval(async () => {
+      if (res.writableEnded || res.destroyed) return close();
+      if (Date.now() - opened > 3600000) return res.end();
+      if (checking) return;
+      checking = true;
+      try {
+        if (sessionHash) {
+          const alive = (await db.query(
+            "select 1 from sessions s join users u on u.id=s.user_id where s.token_hash=$1 and s.expires_at>now() and u.email_confirmed_at is not null",
+            [sessionHash],
+          )).rows.length;
+          if (!alive) return res.end();
+        }
+        purgeExpired();
+        write(`event: ping\ndata: ${JSON.stringify({ type: "ping", now: new Date().toISOString() })}\n\n`);
+      } catch { res.end(); }
+      finally { checking = false; }
+    }, 25000);
+    heartbeat.unref?.();
   }
 
   return {

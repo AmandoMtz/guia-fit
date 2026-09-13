@@ -103,9 +103,10 @@ async function replaceTargets(client, id, data) {
 async function decorate(db, rows, user) {
   if (!rows.length) return [];
   const ids = rows.map((x) => x.id);
+  const managedIds = rows.filter(row => user.role === "admin" || (row.audience === "teachers" && row.created_by === user.id && accountType(user.email, user.role) === "teacher")).map(row => row.id);
   const [careers, invites, attend] = await Promise.all([
     db.query("select event_id,career from event_careers where event_id=any($1::uuid[]) order by career", [ids]),
-    db.query("select i.event_id,i.user_id,p.full_name,u.email from event_teacher_invites i join users u on u.id=i.user_id join profiles p on p.id=i.user_id where i.event_id=any($1::uuid[]) order by p.full_name", [ids]),
+    db.query("select i.event_id,i.user_id,p.full_name,u.email from event_teacher_invites i join users u on u.id=i.user_id join profiles p on p.id=i.user_id where i.event_id=any($1::uuid[]) order by p.full_name", [managedIds]),
     db.query("select event_id from event_attendance where user_id=$1 and event_id=any($2::uuid[])", [user.id, ids]),
   ]);
   const attended = new Set(attend.rows.map((x) => x.event_id));
@@ -135,6 +136,7 @@ function createEventsRouter({ db, limit, siteUrl }) {
   const router = express.Router();
   router.use(async (req, res, next) => {
     if (!["GET", "HEAD", "OPTIONS"].includes(req.method)) await limit(req, "events-write:" + req.user.id, 80);
+    if (req.method === "GET" && /\.pdf$/.test(req.path)) await limit(req, "events-pdf:" + req.user.id, 15);
     next();
   });
 
@@ -145,7 +147,7 @@ function createEventsRouter({ db, limit, siteUrl }) {
       data.careers = (await db.query("select distinct career from profiles p join users u on u.id=p.id where career is not null and u.email ~* '^a[0-9]+@alumnos\\.uat\\.edu\\.mx$' order by career")).rows.map((x) => x.career);
     }
     if (req.user.role === "admin" || type === "teacher") {
-      data.teachers = (await db.query("select u.id,p.full_name,u.email from users u join profiles p on p.id=u.id where (u.email ~* '@docentes\\.uat\\.edu\\.mx$' or (u.email ~* '@uat\\.edu\\.mx$' and u.email !~* '@alumnos\\.uat\\.edu\\.mx$')) order by p.full_name,u.email")).rows;
+      data.teachers = (await db.query("select u.id,p.full_name,u.email from users u join profiles p on p.id=u.id where u.email_confirmed_at is not null and (u.email ~* '@docentes\\.uat\\.edu\\.mx$' or (u.email ~* '@uat\\.edu\\.mx$' and u.email !~* '@alumnos\\.uat\\.edu\\.mx$')) order by p.full_name,u.email")).rows;
     }
     res.json({ data });
   });
@@ -222,9 +224,8 @@ function createEventsRouter({ db, limit, siteUrl }) {
 
   router.get("/:id/qr", async (req, res) => {
     const event = await managedEvent(db, req.params.id, req.user);
-    let tokenRow = await currentQr(db, event.id);
-    if (!tokenRow || !tokenRow.active)
-      tokenRow = await issueQr(db, event, req.user.id, { action: "generate", durationHours: tokenRow?.duration_hours || QR_DEFAULT_HOURS });
+    const tokenRow = await currentQr(db, event.id);
+    if (!tokenRow || !tokenRow.active) throw fail(409, "qr_inactive", "Genera el QR desde el panel del evento.");
     res.json({ data: qrPayloadData(siteUrl, tokenRow, await eventDay(db, event.starts_at)) });
   });
 

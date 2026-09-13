@@ -63,7 +63,9 @@ test('eventos: públicos cerrados, docentes, QR, asistencia y PDF validable', as
   });
 
   await t.test('QR registra una asistencia una sola vez y bloquea alumnos fuera del público', async () => {
-    studentQr = (await call(admin, 'get', `/api/events/${studentEvent.id}/qr`).expect(200)).body.data;
+    await call(admin, 'get', `/api/events/${studentEvent.id}/qr`).expect(409);
+    assert.equal((await query('select count(*)::int n from event_checkin_tokens')).rows[0].n, 0);
+    studentQr = (await call(admin, 'post', `/api/events/${studentEvent.id}/qr`).expect(200)).body.data;
     assert.match(studentQr.svg, /^<svg/);
     assert.match(studentQr.payload, /^https:\/\/castoresfit\.com\/\?e=/);
     const first = await call(student, 'post', '/api/events/checkin').send({ token: studentQr.token }).expect(200);
@@ -98,7 +100,7 @@ test('eventos: públicos cerrados, docentes, QR, asistencia y PDF validable', as
       title: 'Evento de mañana', description: '', location: 'Sala 1', audience: 'students', visibility: 'public',
       starts_at: iso(clock.tomorrow_start), ends_at: iso(clock.tomorrow_end), careers: [], invitees: [],
     }).expect(201)).body.data;
-    const qr = (await call(admin, 'get', `/api/events/${future.id}/qr`).expect(200)).body.data;
+    const qr = (await call(admin, 'post', `/api/events/${future.id}/qr`).expect(200)).body.data;
     await call(student, 'post', '/api/events/checkin').send({ token: qr.token }).expect(400);
   });
 
@@ -129,6 +131,9 @@ test('eventos: públicos cerrados, docentes, QR, asistencia y PDF validable', as
     }).expect(201)).body.data;
     const invited = (await call(invitedTeacher, 'get', '/api/events').expect(200)).body.data;
     assert.ok(invited.some((x) => x.id === teacherEvent.id));
+    assert.deepEqual(invited.find(x => x.id === teacherEvent.id).invitees, []);
+    const managed = (await call(teacher, 'get', '/api/events').expect(200)).body.data;
+    assert.equal(managed.find(x => x.id === teacherEvent.id).invitees[0].id, invitedTeacher.id);
     const hidden = (await call(otherTeacher, 'get', '/api/events').expect(200)).body.data;
     assert.ok(!hidden.some((x) => x.id === teacherEvent.id));
     await call(invitedTeacher, 'patch', `/api/events/${teacherEvent.id}`).send({
@@ -138,14 +143,14 @@ test('eventos: públicos cerrados, docentes, QR, asistencia y PDF validable', as
   });
 
   await t.test('el creador docente puede reagendar y el QR anterior queda invalidado', async () => {
-    const oldQr = (await call(teacher, 'get', `/api/events/${teacherEvent.id}/qr`).expect(200)).body.data;
+    const oldQr = (await call(teacher, 'post', `/api/events/${teacherEvent.id}/qr`).expect(200)).body.data;
     await call(invitedTeacher, 'post', '/api/events/checkin').send({ token: oldQr.token }).expect(200);
     await call(teacher, 'patch', `/api/events/${teacherEvent.id}`).send({
       title: 'Junta docente reagendada', description: 'Reunión académica', location: 'Sala de maestros', audience: 'teachers', visibility: 'targeted',
       starts_at: iso(clock.tomorrow_start), ends_at: iso(clock.tomorrow_end), careers: [], invitees: [invitedTeacher.id],
     }).expect(200);
     await call(invitedTeacher, 'post', '/api/events/checkin').send({ token: oldQr.token }).expect(400);
-    const nextQr = (await call(teacher, 'get', `/api/events/${teacherEvent.id}/qr`).expect(200)).body.data;
+    const nextQr = (await call(teacher, 'post', `/api/events/${teacherEvent.id}/qr`).expect(200)).body.data;
     assert.notEqual(nextQr.token, oldQr.token);
   });
 

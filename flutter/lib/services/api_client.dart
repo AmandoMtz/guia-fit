@@ -36,6 +36,18 @@ class FitApiClient {
     if (!kIsWeb) _sessionToken = await _storage.read(key: 'fit_session');
   }
 
+  // Only attach the session to our protected photo endpoint, never third-party images.
+  Map<String, String> imageHeaders(String url) {
+    final target = Uri.tryParse(url), origin = Uri.tryParse(base);
+    if (kIsWeb || _sessionToken == null || target == null || origin == null ||
+        target.scheme != origin.scheme || target.host != origin.host ||
+        target.port != origin.port || target.userInfo.isNotEmpty ||
+        !RegExp(r'^/api/photos/[0-9a-fA-F-]{36}$').hasMatch(target.path)) {
+      return <String, String>{};
+    }
+    return {'Authorization': 'Bearer $_sessionToken'};
+  }
+
   Future<dynamic> request(
     String path, {
     String method = 'GET',

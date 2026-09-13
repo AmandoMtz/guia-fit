@@ -1,6 +1,6 @@
 const express = require("express");
 const multer = require("multer");
-const sharp = require("sharp");
+const { normalizeImage, imageUploadSlot } = require("./images.cjs");
 const { transaction } = require("./db.cjs");
 const fail = (status, code, message) =>
   Object.assign(new Error(message), { status, code });
@@ -57,6 +57,7 @@ function createProfileRouter({ db, limit }) {
   });
   router.post(
     "/photo",
+    imageUploadSlot,
     (req, res, next) =>
       upload.single("file")(req, res, (error) => {
         if (error)
@@ -70,45 +71,7 @@ function createProfileRouter({ db, limit }) {
         next();
       }),
     async (req, res) => {
-      const file = req.file;
-      if (
-        !file ||
-        !["image/jpeg", "image/png", "image/webp"].includes(file.mimetype)
-      )
-        throw fail(
-          400,
-          "invalid_image",
-          "Selecciona una imagen JPG, PNG o WebP.",
-        );
-      let bytes;
-      try {
-        const processor = sharp(file.buffer, {
-          failOn: "warning",
-          limitInputPixels: 25000000,
-        });
-        const meta = await processor.metadata();
-        if (
-          !["jpeg", "png", "webp"].includes(meta.format) ||
-          (meta.pages || 1) > 1
-        )
-          throw Error("Unsupported format");
-        bytes = await processor
-          .rotate()
-          .resize(512, 512, {
-            fit: "cover",
-            position: "centre",
-            withoutEnlargement: true,
-          })
-          .webp({ quality: 80 })
-          .toBuffer();
-        if (bytes.length > 524288) throw Error("Too large");
-      } catch {
-        throw fail(
-          400,
-          "invalid_image",
-          "No se pudo leer esa foto. Usa una imagen estática válida de hasta 25 megapíxeles.",
-        );
-      }
+      const bytes = await normalizeImage(req.file, { size: 512, fit: "cover", maxBytes: 524288 });
       const row = (
         await db.query(
           "insert into profile_photos(user_id,bytes) values($1,$2) on conflict(user_id) do update set bytes=excluded.bytes,updated_at=clock_timestamp() returning updated_at",

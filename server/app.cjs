@@ -4,6 +4,7 @@ const helmet = require("helmet");
 const cookieParser = require("cookie-parser");
 const cors = require("cors");
 const multer = require("multer");
+const { normalizeImage, imageUploadSlot } = require("./images.cjs");
 const path = require("node:path");
 const { transaction } = require("./db.cjs");
 const S = require("./security.cjs");
@@ -71,7 +72,7 @@ function createApp({
     if (
       !["GET", "HEAD", "OPTIONS"].includes(req.method) &&
       req.cookies.fit_session &&
-      !req.headers.authorization &&
+      !req.headers.authorization?.startsWith("Bearer ") &&
       !allowed.has(req.get("origin"))
     ) {
       return next(fail(403, "origin_denied", "Origen no permitido."));
@@ -127,7 +128,7 @@ function createApp({
     if (!token || token.length > 256)
       throw fail(401, "session_expired", "Inicia sesión para continuar.");
     const { rows } = await db.query(
-      "select u.id,u.email,u.role,u.email_confirmed_at,u.food_seller_intent from sessions s join users u on u.id=s.user_id where s.token_hash=$1 and s.expires_at>now()",
+      "select u.id,u.email,u.role,u.email_confirmed_at,u.food_seller_intent from sessions s join users u on u.id=s.user_id where s.token_hash=$1 and s.expires_at>now() and u.email_confirmed_at is not null",
       [S.hashToken(token)],
     );
     if (!rows[0])
@@ -163,7 +164,7 @@ function createApp({
       );
       await sendMail({ email: user.email, purpose, token, siteUrl });
     } catch (error) {
-      console.error("emailToken failed:", error);
+      console.error("emailToken failed", { code: "mail_delivery_failed" });
       await db
         .query("delete from auth_tokens where token_hash=$1", [hash])
         .catch(() => {});
@@ -391,18 +392,25 @@ function createApp({
   app.get("/api/photos/:id", async (req, res) => {
     if (!UUID.test(req.params.id))
       throw fail(404, "not_found", "Fotografía no disponible.");
-    const photo = (
-      await db.query("select mime,bytes from photos where id=$1", [
-        req.params.id,
-      ])
-    ).rows[0];
+    const token = req.headers.authorization?.startsWith("Bearer ")
+      ? req.headers.authorization.slice(7) : req.cookies.fit_session;
+    const tokenHash = typeof token === "string" && token.length <= 256 ? S.hashToken(token) : "";
+    // Check publication OR ownership in the same query that fetches the bytes.
+    const photo = (await db.query(`select f.mime,f.bytes from photos f where f.id=$1 and (
+      exists(select 1 from places p where p.photo_url=$2 or p.photo_url=$3)
+      or exists(select 1 from food_products p join food_vendors v on v.id=p.vendor_id
+        where p.photo_id=f.id and p.deleted_at is null and p.available=true and v.status='approved' and v.is_active=true)
+      or exists(select 1 from sessions s join users u on u.id=s.user_id
+        where s.token_hash=$4 and s.expires_at>now() and u.email_confirmed_at is not null
+        and (u.id=f.created_by or u.role='admin'))
+    )`, [req.params.id, origin + "/api/photos/" + req.params.id, "/api/photos/" + req.params.id, tokenHash])).rows[0];
     if (!photo) throw fail(404, "not_found", "Fotografía no disponible.");
     res
       .set({
         "Content-Type": photo.mime,
         "Content-Disposition": "inline",
-        "Cache-Control": "public,max-age=86400",
-        "Cross-Origin-Resource-Policy": "cross-origin",
+        "Cache-Control": "private, no-store",
+        "Cross-Origin-Resource-Policy": "same-origin",
       })
       .send(Buffer.from(photo.bytes));
   });
@@ -498,7 +506,7 @@ function createApp({
   for (const method of ["post", "patch", "delete"])
     app[method]("/api/data/:table", administrator, async (req, res) => {
       const table = req.params.table,
-        fields = columns[table];
+        fields = Object.hasOwn(columns, table) ? columns[table] : null;
       if (!fields) throw fail(404, "not_found", "Recurso no encontrado.");
       const id = req.query.id;
       if (method !== "post" && (!id || typeof id !== "string"))
@@ -582,7 +590,7 @@ function createApp({
   );
   const upload = multer({
     storage: multer.memoryStorage(),
-    limits: { fileSize: 5242880, files: 1 },
+    limits: { fileSize: 5242880, files: 1, fields: 0, parts: 2 },
     fileFilter: (req, file, cb) =>
       cb(
         null,
@@ -593,32 +601,14 @@ function createApp({
     "/api/photos",
     authenticate,
     administrator,
+    async (req, res, next) => { await limit(req, "admin-photo:" + req.user.id, 30); next(); },
+    imageUploadSlot,
     upload.single("file"),
     async (req, res) => {
-      const f = req.file,
-        b = f?.buffer;
-      const valid =
-        b &&
-        ((f.mimetype === "image/png" &&
-          b
-            .subarray(0, 8)
-            .equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))) ||
-          (f.mimetype === "image/jpeg" &&
-            b[0] === 255 &&
-            b[1] === 216 &&
-            b[2] === 255) ||
-          (f.mimetype === "image/webp" &&
-            b.subarray(0, 4).toString() === "RIFF" &&
-            b.subarray(8, 12).toString() === "WEBP"));
-      if (!valid)
-        throw fail(
-          400,
-          "invalid_image",
-          "Selecciona una imagen JPG, PNG o WebP de hasta 5 MB.",
-        );
+      const b = await normalizeImage(req.file);
       const { rows } = await db.query(
         "insert into photos(mime,bytes,created_by) values($1,$2,$3) returning id",
-        [f.mimetype, b, req.user.id],
+        ["image/webp", b, req.user.id],
       );
       res
         .status(201)
@@ -649,7 +639,12 @@ function createApp({
     }),
   );
   app.use((error, req, res, next) => {
-    if (!error.status) console.error("Unhandled error:", error);
+    if (res.headersSent) return next(error);
+    if (error.type === "entity.parse.failed") error = fail(400, "invalid_json", "La solicitud contiene JSON inválido.");
+    else if (error.type === "entity.too.large") error = fail(413, "payload_too_large", "La solicitud supera el tamaño permitido.");
+    else if (error instanceof multer.MulterError) error = fail(error.code === "LIMIT_FILE_SIZE" ? 413 : 400, "invalid_image", "Sube una sola imagen JPG, PNG o WebP de hasta 5 MB.");
+    // No SQL, request bodies, email addresses, cookies or provider responses in error logs.
+    if (!error.status) console.error("Request failed", { code: /^[A-Z0-9_]{2,40}$/.test(error.code || "") ? error.code : "internal_error" });
     const sqlError = [
       "23514",
       "23502",

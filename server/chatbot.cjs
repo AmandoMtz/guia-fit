@@ -1,3 +1,4 @@
+const { createHistoryStore } = require("./history-store.cjs");
 const express = require("express");
 const { conversation, gentleOutput, TONE_RULES } = require("./chatbot-conversation.cjs");
 const { understand } = require("./chatbot-understanding.cjs");
@@ -102,7 +103,6 @@ function createGeminiClient(env = process.env) {
             model,
             status: status || null,
             code: error?.providerCode || null,
-            message: cleanText(error?.message, 300),
           });
           if (!retryable || Date.now() >= deadline || status === 429) break;
         }
@@ -538,23 +538,14 @@ async function writeChatLog(db, { userId = null, accountTypeValue = "other", mes
 
 function createPublicChatbotRouter({ db, limit, chatbot }) {
   const router = express.Router();
-  const history = new Map();
+  const history = createHistoryStore({ ttlMs: HISTORY_TTL_MS, maxMessages: HISTORY_MAX_MESSAGES });
   const keyFor = (req, value) => {
     const id = guestId(value);
     if (!id) throw fail(400, "validation_error", "No pudimos iniciar la conversación pública.");
     return `guest:${req.ip}:${id}`;
   };
-  const getHistory = (key) => {
-    const item = history.get(key);
-    if (!item || Date.now() - item.updatedAt > HISTORY_TTL_MS) {
-      history.delete(key);
-      return [];
-    }
-    return item.messages;
-  };
-  const saveHistory = (key, messages) => {
-    history.set(key, { updatedAt: Date.now(), messages: messages.slice(-HISTORY_MAX_MESSAGES) });
-  };
+  const getHistory = history.get;
+  const saveHistory = history.set;
 
   router.get("/status", (req, res) => {
     res.json({ data: { enabled: true, local_enabled: true, ai_enabled: !!chatbot, provider: chatbot?.provider || "local", model: chatbot?.model || "local-faq-v2", authenticated: false } });
@@ -598,19 +589,10 @@ function createPublicChatbotRouter({ db, limit, chatbot }) {
 
 function createChatbotRouter({ db, limit, chatbot }) {
   const router = express.Router();
-  const history = new Map();
+  const history = createHistoryStore({ ttlMs: HISTORY_TTL_MS, maxMessages: HISTORY_MAX_MESSAGES });
   const getKey = (req) => `${req.user.id}:${req.sessionHash || "session"}`;
-  const getHistory = (key) => {
-    const item = history.get(key);
-    if (!item || Date.now() - item.updatedAt > HISTORY_TTL_MS) {
-      history.delete(key);
-      return [];
-    }
-    return item.messages;
-  };
-  const saveHistory = (key, messages) => {
-    history.set(key, { updatedAt: Date.now(), messages: messages.slice(-HISTORY_MAX_MESSAGES) });
-  };
+  const getHistory = history.get;
+  const saveHistory = history.set;
 
   router.get("/status", (req, res) => {
     res.json({ data: { enabled: true, local_enabled: true, ai_enabled: !!chatbot, provider: chatbot?.provider || "local", model: chatbot?.model || "local-faq-v2" } });

@@ -55,3 +55,24 @@ Un plano permite construir este modelo de orientación. No contiene las fotograf
 - scripts/test-campus-map-browser.cjs y .github/workflows/campus-map.yml: comprobaciones en navegador.
 
 Si se ajustan los contornos, mantener documentado su origen y comprobarlos contra el plano. La constante BUILDINGS es el único lugar para editar la geometría de los edificios identificados.
+
+## Incorporar la actualización a GitHub
+
+La rama de esta propuesta es codex/mapa-campus-oriente. Puedes incorporar el pull request desde GitHub cuando las comprobaciones terminen.
+
+Si prefieres PowerShell, abre la consola **dentro de tu copia local del repositorio** y ejecuta:
+
+~~~powershell
+git fetch origin
+if ($LASTEXITCODE -ne 0) { throw "No se pudo descargar la rama." }
+git show origin/codex/mapa-campus-oriente:scripts/actualizar-mapa.ps1 | Set-Content -Encoding UTF8 "$env:TEMP\actualizar-mapa-fit.ps1"
+if ($LASTEXITCODE -ne 0) { throw "No se pudo obtener el script." }
+& "$env:TEMP\actualizar-mapa-fit.ps1"
+~~~
+
+El script está en scripts/actualizar-mapa.ps1 para leerlo antes de ejecutarlo. Comprueba la carpeta y el remoto, se detiene ante cambios locales o conflictos y sube main sin forzar el historial. Si la política de PowerShell bloquea scripts, incorpora el pull request desde GitHub; no hace falta cambiar la política del equipo.
+
+El ZIP completo se descarga desde:
+https://github.com/AmandoMtz/guia-fit/archive/refs/heads/codex/mapa-campus-oriente.zip
+
+Para verlo sin subir nada, descomprime el ZIP y abre web/dist/mapa-campus-demo.html.

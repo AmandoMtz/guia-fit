@@ -186,7 +186,10 @@
       if(event.target.matches("[data-search]")) { query=event.target.value; drawList(); }
     });
     host.querySelector(".cm-campus").addEventListener("click",(event)=>{
-      if(suppressClick) { suppressClick=false; return; }
+      if(suppressClick) {
+        suppressClick=false;
+        if(viewport.contains(event.target)) return;
+      }
       const target=event.target.closest("[data-building],[data-select],[data-action],[data-mode],[data-place]");
       if(!target || !host.contains(target)) return;
       if(target.dataset.building || target.dataset.select) {

@@ -6,6 +6,8 @@ const SHELL = [
   "/styles.css",
   "/campus-map.css",
   "/js/campus-map.js",
+  "/mapa-campus-demo.html",
+  "/js/campus-map-demo.js",
   "/config.js",
   "/assets/logos.png",
   "/assets/guia-fit-mascota.png",
@@ -64,16 +66,19 @@ self.addEventListener("fetch", (event) => {
   if (url.origin !== self.location.origin || url.pathname.startsWith("/api/")) return;
 
   if (request.mode === "navigate") {
+    const navigationPath = url.pathname === "/" ? "/index.html" : url.pathname;
     event.respondWith(
       fetch(request)
         .then((response) => {
-          if (response.ok) {
+          if (response.ok && SHELL.includes(navigationPath)) {
             const copy = response.clone();
-            caches.open(CACHE).then((cache) => cache.put("/index.html", copy));
+            event.waitUntil(caches.open(CACHE)
+              .then((cache) => cache.put(navigationPath, copy))
+              .catch(() => {}));
           }
           return response;
         })
-        .catch(async () => (await caches.match("/index.html")) || caches.match("/")),
+        .catch(async () => (await caches.match(navigationPath)) || (await caches.match("/index.html")) || caches.match("/")),
     );
     return;
   }

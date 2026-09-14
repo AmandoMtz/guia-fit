@@ -60,10 +60,19 @@ const server = http.createServer((req,res) => {
       assert.notEqual(await page.locator(".cm-svg").getAttribute("viewBox"),before);
       const box=await page.locator("[data-scene]").boundingBox();
       const dragBefore=await page.locator(".cm-svg").getAttribute("viewBox");
-      await page.mouse.move(box.x+35,box.y+35);
-      await page.mouse.down();
-      await page.mouse.move(box.x+85,box.y+60,{steps:5});
-      await page.mouse.up();
+      if(viewport.width<500) {
+        const client=await context.newCDPSession(page);
+        await client.send("Input.dispatchTouchEvent",{type:"touchStart",touchPoints:[{x:box.x+35,y:box.y+35}]});
+        await client.send("Input.dispatchTouchEvent",{type:"touchMove",touchPoints:[{x:box.x+65,y:box.y+50}]});
+        await client.send("Input.dispatchTouchEvent",{type:"touchMove",touchPoints:[{x:box.x+85,y:box.y+60}]});
+        await client.send("Input.dispatchTouchEvent",{type:"touchEnd",touchPoints:[]});
+        await client.detach();
+      } else {
+        await page.mouse.move(box.x+35,box.y+35);
+        await page.mouse.down();
+        await page.mouse.move(box.x+85,box.y+60,{steps:5});
+        await page.mouse.up();
+      }
       assert.notEqual(await page.locator(".cm-svg").getAttribute("viewBox"),dragBefore);
       await page.locator('[data-action="reset"]').click();
       assert.equal(await page.locator("[data-zoom]").textContent(),"100%");

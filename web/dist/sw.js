@@ -1,9 +1,11 @@
 /* App shell sin conexión. Las respuestas /api nunca se guardan aquí. */
-const CACHE = "guia-fit-shell-v13";
+const CACHE = "guia-fit-shell-v14-campus";
 const SHELL = [
   "/",
   "/index.html",
   "/styles.css",
+  "/campus-map.css",
+  "/js/campus-map.js",
   "/config.js",
   "/assets/logos.png",
   "/assets/guia-fit-mascota.png",

@@ -734,6 +734,17 @@
       };
   }
   function mapView() {
+    if (window.FIT_CAMPUS_MAP) {
+      window.FIT_CAMPUS_MAP.mount($("#view"), {
+        places: state.places,
+        onDetails: detail,
+        onOriginal: originalMapView,
+      });
+      return;
+    }
+    originalMapView();
+  }
+  function originalMapView() {
     $("#view").innerHTML =
       `<div class="map-layout"><div class="map-wrap"><div class="map-sheet"><img src="assets/croquis.png" alt="Croquis original: entradas López Mateos y Faja de Oro, campo de futbol, auditorio, salas A y B, aula interactiva, cafetería y sala de negocios.">${state.places
         .filter((p) => Number.isFinite(p.x) && Number.isFinite(p.y))
@@ -745,6 +756,14 @@
           "",
         )}</div></div><aside><section class="panel"><h2>Espacios del croquis</h2><div class="map-list">${state.places.map((p, i) => `<button data-detail="${esc(p.id)}"><span>${i + 1}</span>${esc(p.name)}</button>`).join("")}</div></section><div class="notice">Este croquis es una referencia. No es un plano a escala ni indica tu posición actual.</div><a class="btn secondary full" href="assets/croquis.png" target="_blank" rel="noopener">Abrir croquis original</a></aside></div>`;
     bindPlaceButtons();
+    if (window.FIT_CAMPUS_MAP) {
+      const back = document.createElement("button");
+      back.type = "button";
+      back.className = "btn secondary";
+      back.textContent = "Volver al mapa 3D";
+      back.addEventListener("click", mapView);
+      $("#view").prepend(back);
+    }
   }
   function routeView() {
     $("#view").innerHTML =

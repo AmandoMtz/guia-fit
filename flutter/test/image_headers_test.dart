@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import '../lib/services/api_client.dart';
+import 'package:guia_fit/services/api_client.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

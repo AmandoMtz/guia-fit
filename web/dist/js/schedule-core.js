@@ -109,7 +109,7 @@
     const n = norm(s).replace(/[.:]/g, "").trim();
     if (/^(gpo|grupo)$/.test(n)) return 0;
     if (/^(materia|asignatura)$/.test(n)) return 1;
-    if (/^(aula|salon)$/.test(n)) return 2;
+    if (/^(aula|salon|lugar)$/.test(n)) return 2;
     if (/^(profesor|docente|maestro)$/.test(n)) return 10;
     return dayOf(n) ? dayOf(n) + 2 : -1;
   };
@@ -125,9 +125,10 @@
           y0: -i.transform[5],
           y1: -i.transform[5] + (Math.abs(i.height) || 8),
         })),
+      { pdfText: true },
     );
   }
-  function rowsFromBoxes(boxes) {
+  function rowsFromBoxes(boxes, options = {}) {
     const rows = [];
     // Algunos lectores agrupan varios encabezados en un solo fragmento.
     const words = boxes.flatMap((b) => {
@@ -144,8 +145,11 @@
     });
     for (const b of words.sort((a, b) => a.y0 - b.y0 || a.x0 - b.x0)) {
       const center = (b.y0 + b.y1) / 2;
+      const rowTolerance = options.pdfText
+        ? Math.max(4, (b.y1 - b.y0) * 0.65)
+        : Math.max(12, (b.y1 - b.y0) * 0.9);
       let r = rows.find(
-        (x) => Math.abs(x.y - center) < Math.max(12, (b.y1 - b.y0) * 0.9),
+        (x) => Math.abs(x.y - center) < rowTolerance,
       );
       if (!r) {
         r = { y: center, items: [] };
@@ -155,12 +159,15 @@
     }
     let bounds = null,
       teacherSpans = null,
+      teacherRoomIsLugar = false,
+      teacherPendingAnchored = false,
       pending = null,
       lastY = null;
     const output = [];
     const flush = () => {
       if (pending) output.push(pending.join(" | "));
       pending = null;
+      teacherPendingAnchored = false;
     };
     for (const r of rows.sort((a, b) => a.y - b.y)) {
       const xs = r.items.sort((a, b) => a.x0 - b.x0);
@@ -193,7 +200,7 @@
       // existan columnas administrativas adicionales (Clave, Sit, Hrs., etc.).
       // Solo conservamos lo que el docente necesita y descartamos lo demás.
       const subjectHead = xs.find((x) => /^(materia|asignatura)$/.test(norm(x.text).replace(/[.:]/g, "").trim()));
-      const roomHead = xs.find((x) => /^(aula|salon)$/.test(norm(x.text).replace(/[.:]/g, "").trim()));
+      const roomHead = xs.find((x) => /^(aula|salon|lugar)$/.test(norm(x.text).replace(/[.:]/g, "").trim()));
       const dayHeads = Array.from({ length: 7 }, (_, i) =>
         xs.find((x) => dayOf(x.text) === i + 1),
       );
@@ -206,6 +213,7 @@
       if (subjectHead && roomHead && detectedDays.length >= 4) {
         flush();
         bounds = null;
+        teacherRoomIsLugar = /^lugar$/.test(norm(roomHead.text).replace(/[.:]/g, "").trim());
         const centers = xs
           .map((x) => (x.x0 + x.x1) / 2)
           .sort((a, b) => a - b)
@@ -231,15 +239,42 @@
           const col = teacherSpans.findIndex((span) => center >= span.left && center < span.right);
           if (col >= 0) cells[col] += (cells[col] ? " " : "") + x.text.trim();
         }
-        const anyTime = cells.slice(1, -1).some((x) => /\d/.test(x));
-        if (cells[0]) flush();
-        const continuation = pending && r.y - lastY < Math.max(28, (xs[0]?.y1 - xs[0]?.y0 || 8) * 3);
-        if (!pending && (cells[0] || anyTime)) pending = cells;
-        else if (continuation && (cells.some(Boolean)))
-          pending = pending.map((v, i) => [v, cells[i]].filter(Boolean).join(" "));
-        else if (cells.some(Boolean) && (cells[0] || anyTime)) {
+        if (teacherRoomIsLugar && cells[cells.length - 1])
+          cells[cells.length - 1] = cells[cells.length - 1].replace(/\s+P\s*$/i, "").trim();
+        const dayCells = cells.slice(1, -1),
+          hasTime = dayCells.some((x) => rangesInCell(x).length || /\d{1,2}:\d{2}/.test(x)),
+          hasRoom = Boolean(cells[cells.length - 1]?.trim()),
+          hasSchedule = hasTime || hasRoom,
+          hasSubject = Boolean(cells[0]?.trim()),
+          // En los reportes docentes de Servicios Escolares la asignatura puede
+          // ocupar 2-5 renglones. El código entre paréntesis marca con bastante
+          // seguridad el inicio de una materia nueva.
+          startsCourse = /^\s*\((?=[^)]*\d)[^)]*\)/.test(cells[0] || ""),
+          continuation = pending && r.y - lastY < Math.max(34, (xs[0]?.y1 - xs[0]?.y0 || 8) * 4);
+
+        if (startsCourse && pending && teacherPendingAnchored) flush();
+
+        if (!pending && (hasSubject || hasSchedule)) {
+          pending = cells;
+          teacherPendingAnchored = hasSchedule;
+        } else if (pending && hasSchedule) {
+          if (teacherPendingAnchored && !hasSubject && continuation) {
+            // Continuación vertical de una misma celda de hora: «10:00 -» / «11:00».
+            pending = pending.map((v, i) => [v, cells[i]].filter(Boolean).join(" "));
+          } else if (teacherPendingAnchored) {
+            flush();
+            pending = cells;
+          } else {
+            pending = pending.map((v, i) => [v, cells[i]].filter(Boolean).join(" "));
+          }
+          teacherPendingAnchored = true;
+        } else if (pending && continuation && hasSubject) {
+          // Texto de asignatura antes o después del renglón donde aparecen las horas.
+          pending[0] = [pending[0], cells[0]].filter(Boolean).join(" ");
+        } else if (cells.some(Boolean) && (hasSubject || hasSchedule)) {
           flush();
           pending = cells;
+          teacherPendingAnchored = hasSchedule;
         }
         lastY = r.y;
         continue;
@@ -409,13 +444,18 @@
             /^(materia|asignatura|nombre de (?:la )?materia)$/,
           ),
           teacher = value(/docente|maestro|profesor/),
-          room = value(/salon|aula/),
+          room = value(/salon|aula|lugar/),
           group = value(/^(grupo|gpo)\.?$/);
         const daily = header
           .map((h, i) => ({ day: dayOf(h), cell: cells[i] || "" }))
           .filter((x) => x.day);
-        const teacherGrid = header.some((h) => /^(aula|salon)$/.test(h)) &&
-          !header.some((h) => /docente|maestro|profesor/.test(h));
+        const teacherGrid = header.some((h) => /^(aula|salon|lugar)$/.test(h)) &&
+            !header.some((h) => /docente|maestro|profesor/.test(h)),
+          roomIsLugar = header.some((h) => h === "lugar"),
+          teacherSubject = teacherGrid
+            ? subject.replace(/^\s*\((?=[^)]*\d)[^)]*\)\s*/, "").trim()
+            : subject,
+          teacherRoom = roomIsLugar ? room.replace(/\s+P\s*$/i, "").trim() : room;
         if (daily.length) {
           for (const x of daily) {
             x.ranges = rangesInCell(x.cell);
@@ -451,9 +491,9 @@
               );
             for (const r of ranges)
               add(
-                subject.replace(/[!|]+$/g, "").trim(),
+                teacherSubject.replace(/[!|]+$/g, "").trim(),
                 teacher,
-                room ||
+                teacherRoom ||
                   x.cell.match(/(?:sal[oó]n|aula)\s*:?\s*([^|,;]+)/i)?.[1] ||
                   "",
                 x.day,

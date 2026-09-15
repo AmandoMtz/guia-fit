@@ -111,3 +111,41 @@ test("horario docente realista: PSM 11 separa Aula y puede borrar guiones", () =
   assert.deepEqual(parsed.classes.slice(0, 4).map((x) => [x.day, x.start, x.end, x.classroom]), [1,2,3,4].map((d) => [d,"09:00","10:00","D-406"]));
   assert.deepEqual(parsed.classes.slice(4).map((x) => [x.day, x.start, x.end, x.classroom]), [1,2,3,4].map((d) => [d,"10:00","11:00","D-405"]));
 });
+
+test("horario docente Servicios Escolares: Lugar + asignatura multilínea + seis días", () => {
+  const box = (text, x, y, w = 46, h = 9) => ({ text, x0: x - w / 2, x1: x + w / 2, y0: y, y1: y + h });
+  const heads = [
+    ["Grupo", 30], ["Asignatura", 125], ["Nivel", 220], ["Período", 290], ["Lugar", 347],
+    ["Lunes", 416], ["Martes", 482], ["Miércoles", 551], ["Jueves", 618], ["Viernes", 681], ["Sábado", 744],
+  ].map(([text, x]) => box(text, x, 138));
+  const first = [
+    box("(RC.06062.2835.5-5)", 92, 153, 80), box("GESTION", 151, 153),
+    box("ORGANIZACIONAL DE LAS", 112, 163, 115),
+    box("TECNOLOGIAS DE LA", 111, 172, 95), box("K", 32, 172), box("LICENCIATURA", 222, 172, 80), box("2", 290, 172),
+    box("A-112 P", 347, 172, 55), box("10:00-11:00", 416, 172, 62), box("10:00-11:00", 482, 172, 62),
+    box("10:00-11:00", 551, 172, 62), box("10:00-11:00", 618, 172, 62), box("-", 681, 172), box("-", 744, 172),
+    box("INFORMACION Y", 110, 182, 85), box("COMUNICACION", 110, 191, 75),
+  ];
+  const second = [
+    box("(MCC20)", 90, 204, 45), box("MINERÍA DE DATOS", 130, 204, 95),
+    box("A", 32, 214), box("MAESTRIA", 222, 214, 55), box("3", 290, 214), box("POSGRADO-7 P", 347, 214, 78),
+    box("-", 416, 214), box("11:00-12:00", 482, 214, 62), box("11:00-12:00", 551, 214, 62), box("11:00-12:00", 618, 214, 62), box("-", 681, 214), box("-", 744, 214),
+    box("(OPTATIVA)", 120, 223, 60),
+  ];
+  const items = [...heads, ...first, ...second].map((b) => ({
+    str: b.text,
+    transform: [1, 0, 0, 1, b.x0, -b.y0],
+    height: b.y1 - b.y0,
+    width: b.x1 - b.x0,
+  }));
+  const parsed = S.parse(S.rowsFromItems(items));
+  assert.equal(parsed.classes.length, 7, JSON.stringify(parsed));
+  assert.deepEqual(
+    parsed.classes.slice(0, 4).map((x) => [x.subject, x.classroom, x.day, x.start, x.end]),
+    [1,2,3,4].map((d) => ["GESTION ORGANIZACIONAL DE LAS TECNOLOGIAS DE LA INFORMACION Y COMUNICACION", "A-112", d, "10:00", "11:00"]),
+  );
+  assert.deepEqual(
+    parsed.classes.slice(4).map((x) => [x.subject, x.classroom, x.day, x.start, x.end]),
+    [2,3,4].map((d) => ["MINERÍA DE DATOS (OPTATIVA)", "POSGRADO-7", d, "11:00", "12:00"]),
+  );
+});

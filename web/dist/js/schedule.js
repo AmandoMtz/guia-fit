@@ -167,10 +167,12 @@
       const img = new Image();
       img.src = url;
       await img.decode();
-      // Las capturas docentes suelen ser muy anchas y con texto pequeño.
-      // Permitimos ampliar hasta 2× antes del OCR local para conservar Clave/Materia/días/Aula.
+      // No ampliamos imágenes pequeñas: el reescalado interpolado del canvas
+      // borra los trazos finos de estas tablas y Tesseract deja de reconocer
+      // Materia/Lunes…Aula. Conservamos los píxeles originales y solo reducimos
+      // capturas enormes para limitar memoria.
       const scale = Math.min(
-        2,
+        1,
         3200 / Math.max(img.naturalWidth, img.naturalHeight),
       );
       const canvas = document.createElement("canvas");
@@ -207,16 +209,27 @@
         if (el) el.textContent = message;
       };
       const ocr = async (canvas) => {
-        const result = await root.FIT_OCR.read(
-          canvas.toDataURL("image/png"),
-          announce,
-          { teacherMode: c.state.user?.account_type === "teacher" },
-        );
-        return S.rowsFromOcr
-          ? S.rowsFromOcr(result)
-          : result.boxes.length
-            ? S.rowsFromBoxes(result.boxes)
-            : result.text.split(/\r?\n/).filter(Boolean);
+        const teacherMode = c.state.user?.account_type === "teacher",
+          result = await root.FIT_OCR.read(
+            canvas.toDataURL("image/png"),
+            announce,
+            { teacherMode },
+          ),
+          candidates = [result, ...(result.alternatives || [])],
+          rowsFor = (candidate) => S.rowsFromOcr
+            ? S.rowsFromOcr(candidate)
+            : candidate.boxes?.length
+              ? S.rowsFromBoxes(candidate.boxes)
+              : String(candidate.text || "").split(/\r?\n/).filter(Boolean);
+        if (!teacherMode || candidates.length === 1) return rowsFor(result);
+        // Si hubo una segunda segmentación OCR, conserva la que realmente genera
+        // más bloques válidos en vez de escoger por cantidad de texto.
+        return candidates
+          .map((candidate) => {
+            const rows = rowsFor(candidate);
+            return { rows, count: S.parse(rows).classes.length };
+          })
+          .sort((a, b) => b.count - a.count)[0].rows;
       };
       try {
         const bytes = await file.arrayBuffer(),

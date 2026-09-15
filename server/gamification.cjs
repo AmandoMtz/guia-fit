@@ -3,6 +3,15 @@ const {transaction} = require('./db.cjs');
 const {accountType} = require('./account.cjs');
 const categories = ['comida','postres','botanas','bebidas','otros'];
 const catalog = [
+ {id:'theme-pink',slot:'theme',name:'Rosa FIT',price:10,description:'Un tema rosa suave, claro y limpio para toda la página.'},
+ {id:'theme-blue',slot:'theme',name:'Azul Campus',price:20,description:'Azules frescos para navegar con un estilo distinto.'},
+ {id:'theme-purple',slot:'theme',name:'Morado Castor',price:30,description:'Un morado elegante con acentos modernos.'},
+ {id:'theme-lilac',slot:'theme',name:'Lila Suave',price:40,description:'Tonos lila claros y tranquilos en toda la interfaz.'},
+ {id:'theme-mint',slot:'theme',name:'Verde Menta',price:50,description:'Un verde claro y fresco para cambiar el ambiente de la página.'},
+ {id:'theme-dark',slot:'theme',name:'Modo Oscuro FIT',price:100,minLevel:50,description:'Modo oscuro premium. Se desbloquea al llegar al nivel 50.'},
+ {id:'font-rounded',slot:'font',name:'Tipografía Redondeada',price:15,description:'Una letra más suave y amigable para toda la página.'},
+ {id:'font-classic',slot:'font',name:'Tipografía Clásica',price:25,description:'Un estilo sobrio y elegante para títulos y textos.'},
+ {id:'font-compact',slot:'font',name:'Tipografía Compacta',price:35,description:'Una apariencia más moderna y compacta.'},
  {id:'frame-ruby',slot:'frame',name:'Marco Rubí FIT',price:50,description:'Un aro rojo luminoso para tu perfil.'},
  {id:'frame-gold',slot:'frame',name:'Marco Honor',price:150,description:'Dorado con brillo suave.'},
  {id:'frame-orbit',slot:'frame',name:'Órbita Castor',price:250,description:'Un halo animado alrededor de tu foto.'},
@@ -61,6 +70,8 @@ function createGamificationRouter({db,limit}) {
   await transaction(db,async c=>{
    const p=await lock(c,req.user.id);
    if((await c.query('select 1 from fit_inventory where user_id=$1 and item=$2',[req.user.id,item.id])).rows.length)return;
+   const level=1+Math.floor(p.xp/100);
+   if(item.minLevel&&level<item.minLevel)throw fail(409,`Este premio se desbloquea en el nivel ${item.minLevel}.`);
    if(p.coins<item.price)throw fail(409,'Todavía no tienes monedas suficientes.');
    await c.query('update fit_progress set coins=coins-$2 where user_id=$1',[req.user.id,item.price]);
    await c.query('insert into fit_inventory(user_id,item) values($1,$2)',[req.user.id,item.id]);
@@ -68,11 +79,14 @@ function createGamificationRouter({db,limit}) {
  });
  r.post('/equip',async(req,res)=>{
   const {slot,item}=req.body||{};
-  if(!['frame','chat','background','motion'].includes(slot))throw fail(400,'Estilo desconocido.');
+  if(!['frame','chat','background','motion','theme','font'].includes(slot))throw fail(400,'Estilo desconocido.');
   if(item!==null&&!catalog.some(x=>x.id===item&&x.slot===slot))throw fail(400,'Estilo incompatible.');
   await transaction(db,async c=>{
    const p=await lock(c,req.user.id);
    if(item!==null&&!(await c.query('select 1 from fit_inventory where user_id=$1 and item=$2',[req.user.id,item])).rows.length)throw fail(403,'Primero debes canjear este estilo.');
+   const chosen=item===null?null:catalog.find(x=>x.id===item);
+   const level=1+Math.floor(p.xp/100);
+   if(chosen?.minLevel&&level<chosen.minLevel)throw fail(409,`Este premio se desbloquea en el nivel ${chosen.minLevel}.`);
    await c.query('update fit_progress set equipped=$2 where user_id=$1',[req.user.id,JSON.stringify({...p.equipped,[slot]:item})]);
   });res.json({data:{}});
  });

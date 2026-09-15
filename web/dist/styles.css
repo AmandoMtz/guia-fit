@@ -4710,3 +4710,62 @@ body.fit-no-motion .photo-file-picker,body.fit-no-motion .photo-save{transition:
 .chat-dialog.ordering #chat-order-form>button[type=submit]{position:sticky;bottom:0;z-index:2;box-shadow:0 -8px 16px white;min-height:48px}
 .chat-dialog.ordering .chat-dialog-head{flex-shrink:0}.chat-dialog.ordering textarea{min-height:60px}
 @media(max-width:600px){.chat-dialog.ordering{max-height:calc(100dvh - 90px)}.chat-dialog.ordering .chat-dialog-head h2{font-size:1.2rem}}
+
+/* Temas y tipografías canjeables - Guía FIT */
+body[data-fittheme]{
+  --fit-accent: var(--orange);
+  --fit-accent-dark: var(--orange-dark);
+  --fit-bg: #fff;
+  --fit-surface: #fff;
+  --fit-soft: #fafafa;
+  --fit-line: #e8e8e8;
+  --fit-ink: #322024;
+  --fit-muted: #7c6268;
+  background:var(--fit-bg);
+  color:var(--fit-ink);
+}
+body[data-fittheme="theme-pink"]{--fit-accent:#e85d8f;--fit-accent-dark:#c83d72;--fit-bg:#fff9fc;--fit-surface:#fff;--fit-soft:#fff0f6;--fit-line:#f2cfde;--fit-ink:#452732;--fit-muted:#8d6674;--orange:#e85d8f;--orange-dark:#c83d72;--red:#e85d8f;--navy:#e85d8f;--line:#f2cfde;--soft:#fff0f6;--ink:#452732;--muted:#8d6674}
+body[data-fittheme="theme-blue"]{--fit-accent:#3f8edb;--fit-accent-dark:#2469ad;--fit-bg:#f7fbff;--fit-surface:#fff;--fit-soft:#edf6ff;--fit-line:#cfe3f5;--fit-ink:#20364a;--fit-muted:#60798e;--orange:#3f8edb;--orange-dark:#2469ad;--red:#3f8edb;--navy:#3f8edb;--line:#cfe3f5;--soft:#edf6ff;--ink:#20364a;--muted:#60798e}
+body[data-fittheme="theme-purple"]{--fit-accent:#8a5bd6;--fit-accent-dark:#673ab0;--fit-bg:#fbf9ff;--fit-surface:#fff;--fit-soft:#f3edff;--fit-line:#ddd0f2;--fit-ink:#382b4a;--fit-muted:#79688f;--orange:#8a5bd6;--orange-dark:#673ab0;--red:#8a5bd6;--navy:#8a5bd6;--line:#ddd0f2;--soft:#f3edff;--ink:#382b4a;--muted:#79688f}
+body[data-fittheme="theme-lilac"]{--fit-accent:#aa79d6;--fit-accent-dark:#8454b2;--fit-bg:#fcfaff;--fit-surface:#fff;--fit-soft:#f6effc;--fit-line:#e4d4ef;--fit-ink:#423248;--fit-muted:#806d88;--orange:#aa79d6;--orange-dark:#8454b2;--red:#aa79d6;--navy:#aa79d6;--line:#e4d4ef;--soft:#f6effc;--ink:#423248;--muted:#806d88}
+body[data-fittheme="theme-mint"]{--fit-accent:#54ae91;--fit-accent-dark:#33866d;--fit-bg:#f8fffc;--fit-surface:#fff;--fit-soft:#ebf8f3;--fit-line:#cbe9de;--fit-ink:#244139;--fit-muted:#617f75;--orange:#54ae91;--orange-dark:#33866d;--red:#54ae91;--navy:#54ae91;--line:#cbe9de;--soft:#ebf8f3;--ink:#244139;--muted:#617f75}
+body[data-fittheme="theme-dark"]{--fit-accent:#ff4d5f;--fit-accent-dark:#ff1f36;--fit-bg:#121316;--fit-surface:#1b1d22;--fit-soft:#24272e;--fit-line:#343841;--fit-ink:#f5f5f6;--fit-muted:#afb3bd;--orange:#ff4d5f;--orange-dark:#ff1f36;--red:#ff4d5f;--navy:#ff4d5f;--line:#343841;--soft:#24272e;--ink:#f5f5f6;--muted:#afb3bd;color-scheme:dark}
+
+body[data-fittheme] :is(.shell,.sidebar,.topbar,.panel,.reward-card,.account-reward-item,.empty,.map-wrap,.auth-card,.dialog-content,.food-chat-dialog,.chat-dialog){background:var(--fit-surface);color:var(--fit-ink);border-color:var(--fit-line)}
+body[data-fittheme] :is(.shell,.workspace,.content){background:var(--fit-bg)}
+body[data-fittheme] .nav-item.active{background:var(--fit-soft);color:var(--fit-accent)}
+body[data-fittheme] .nav-item:hover{background:var(--fit-soft)}
+body[data-fittheme] :is(.btn:not(.secondary),.reward-week .earned){background:var(--fit-accent);color:#fff}
+body[data-fittheme] .btn:not(.secondary):hover{background:var(--fit-accent-dark)}
+body[data-fittheme] :is(a,.text-button,.reward-rank,.eyebrow){color:var(--fit-accent)}
+body[data-fittheme] .reward-hero{background:linear-gradient(120deg,var(--fit-accent-dark),var(--fit-accent));box-shadow:0 12px 30px color-mix(in srgb,var(--fit-accent) 14%,transparent)}
+body[data-fittheme] :is(input,select,textarea){background:var(--fit-surface);color:var(--fit-ink);border-color:var(--fit-line)}
+body[data-fittheme] :is(.muted,.hint,.sidebar-note,.page-head p,.reward-card small,.reward-history small){color:var(--fit-muted)}
+body[data-fittheme="theme-dark"] :is(.reward-preview,.account-reward-item .reward-preview){background:#24272e;border-color:#343841}
+body[data-fittheme="theme-dark"] .reward-preview span{background:#17191d;color:#fff}
+body[data-fittheme="theme-dark"] :is(.btn.secondary,.text-button){color:#f5f5f6;border-color:#474b55;background:#24272e}
+body[data-fittheme="theme-dark"] .nav-item{color:#c0c4cc}
+body[data-fittheme="theme-dark"] .nav-item.active{color:#fff}
+body[data-fittheme="theme-dark"] .chat-expiry-banner,
+body[data-fittheme="theme-dark"] .chat-privacy-note{background:#24272e;border-color:#343841;color:#f5f5f6}
+
+.reward-preview.theme-pink{background:linear-gradient(135deg,#fff3f8,#f9d7e5)}
+.reward-preview.theme-pink span{background:#fff;color:#c83d72;border:2px solid #e85d8f}
+.reward-preview.theme-blue{background:linear-gradient(135deg,#eef7ff,#d7ebff)}
+.reward-preview.theme-blue span{background:#fff;color:#2469ad;border:2px solid #3f8edb}
+.reward-preview.theme-purple{background:linear-gradient(135deg,#f5efff,#e3d5fa)}
+.reward-preview.theme-purple span{background:#fff;color:#673ab0;border:2px solid #8a5bd6}
+.reward-preview.theme-lilac{background:linear-gradient(135deg,#fbf5ff,#eadcf5)}
+.reward-preview.theme-lilac span{background:#fff;color:#8454b2;border:2px solid #aa79d6}
+.reward-preview.theme-mint{background:linear-gradient(135deg,#effcf7,#d4f0e5)}
+.reward-preview.theme-mint span{background:#fff;color:#33866d;border:2px solid #54ae91}
+.reward-preview.theme-dark{background:linear-gradient(135deg,#17191d,#2b2f37)}
+.reward-preview.theme-dark span{background:#101114;color:#fff;border:2px solid #ff4d5f}
+.reward-preview.font-rounded span{font-family:"Trebuchet MS","Arial Rounded MT Bold",Arial,sans-serif;font-weight:700}
+.reward-preview.font-classic span{font-family:Georgia,"Times New Roman",serif}
+.reward-preview.font-compact span{font-family:"Arial Narrow","Roboto Condensed",Arial,sans-serif;font-weight:700;letter-spacing:.02em}
+body[data-fitfont="font-rounded"]{font-family:"Trebuchet MS","Arial Rounded MT Bold",Arial,sans-serif}
+body[data-fitfont="font-classic"]{font-family:Georgia,"Times New Roman",serif}
+body[data-fitfont="font-compact"]{font-family:"Arial Narrow","Roboto Condensed",Arial,sans-serif}
+.reward-card.reward-locked{opacity:.72;position:relative}
+.reward-card.reward-locked::after{content:"Bloqueado";position:absolute;top:14px;right:14px;padding:5px 9px;border-radius:999px;background:var(--soft);color:var(--muted);font-size:.72rem;font-weight:800}

@@ -4701,3 +4701,12 @@ body.fit-no-motion .photo-file-picker,body.fit-no-motion .photo-save{transition:
 
 .purchase-stars{border:0;padding:12px 0;margin:12px 0;display:flex;gap:12px}.purchase-stars legend{font-weight:700}.purchase-stars label{position:relative;cursor:pointer;display:grid;text-align:center}.purchase-stars input{position:absolute;opacity:0;width:100%;height:100%;cursor:pointer}.purchase-stars label>span[aria-hidden]{font-size:34px;color:#b6b6b6;transition:transform .15s,color .15s}.purchase-stars .star-on>span[aria-hidden]{color:#a56b00}.purchase-stars label:hover>span[aria-hidden]{transform:scale(1.15)}.purchase-stars label:focus-within{outline:2px solid currentColor;border-radius:6px}.purchase-stars .sr-only{position:absolute;clip-path:inset(50%);width:1px;height:1px;overflow:hidden}.reward-tabs select,#vendor-sort{display:block;padding:10px;border:1px solid #ccc;border-radius:8px;background:white;color:inherit} @media(prefers-reduced-motion:reduce){.purchase-stars label>span[aria-hidden]{transition:none;transform:none}}
 .purchase-stars label>span,.purchase-stars label>small{pointer-events:none}
+
+/* Pedido dentro del chat: evita el formulario recortado debajo del historial. */
+.chat-dialog.ordering{display:flex;flex-direction:column;max-height:calc(90dvh - 64px);overflow:hidden;min-height:0}
+.chat-dialog.ordering .chat-messages,.chat-dialog.ordering .chat-composer,.chat-dialog.ordering .chat-bottom,.chat-dialog.ordering .chat-expiry-banner{display:none}
+.chat-dialog.ordering #chat-order-panel{display:block;flex:1;min-height:0;overflow:auto;padding-bottom:4px}
+.chat-dialog.ordering .chat-order-compose{max-height:none;overflow:visible;margin:0}
+.chat-dialog.ordering #chat-order-form>button[type=submit]{position:sticky;bottom:0;z-index:2;box-shadow:0 -8px 16px white;min-height:48px}
+.chat-dialog.ordering .chat-dialog-head{flex-shrink:0}.chat-dialog.ordering textarea{min-height:60px}
+@media(max-width:600px){.chat-dialog.ordering{max-height:calc(100dvh - 90px)}.chat-dialog.ordering .chat-dialog-head h2{font-size:1.2rem}}

@@ -1,5 +1,5 @@
 /* App shell sin conexión. Las respuestas /api nunca se guardan aquí. */
-const CACHE = "guia-fit-horarios-rankings-v19";
+const CACHE = "guia-fit-chat-pedidos-v20";
 const SHELL = [
   "/",
   "/index.html",

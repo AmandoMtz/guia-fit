@@ -497,7 +497,7 @@
     };
     const renderOrderState = () => {
       orderState.innerHTML = chat.order_id
-        ? `<div class="chat-order-linked">${c.icon("check")}<span><strong>Pedido confirmado</strong><small>El pedido queda guardado aunque este chat desaparezca.</small></span><button class="btn secondary small" id="chat-track-order">Ver seguimiento</button></div>`
+        ? `<div class="chat-order-linked">${c.icon("check")}<span><strong>Solicitud de pedido enviada</strong><small>El pedido queda guardado aunque este chat desaparezca.</small></span><button class="btn secondary small" id="chat-track-order">Ver seguimiento</button></div>`
         : "";
       const track = d.querySelector("#chat-track-order");
       if (track)
@@ -508,7 +508,7 @@
       actions.innerHTML = chat.order_id
         ? `<button class="btn secondary small" id="chat-order-action">Ver pedido</button>`
         : chat.role === "buyer"
-          ? `<button class="btn small" id="chat-order-action">Hacer pedido</button>`
+          ? `<button class="btn small" id="chat-order-action">Ordenar este producto</button>`
           : "";
       const action = d.querySelector("#chat-order-action");
       if (action)
@@ -556,23 +556,35 @@
         refreshing = false;
       }
     };
+    const draftKey = 'fit-order-draft:' + c.state.user.id + ':' + chat.id;
+    const readDraft = () => { try { const x=JSON.parse(sessionStorage.getItem(draftKey));return x && x.expires>Date.now()?x:null; } catch { return null; } };
+    const saveDraft = (draft) => { try { sessionStorage.setItem(draftKey,JSON.stringify({...draft,expires:new Date(chat.expires_at).getTime()})); } catch {} };
+    const closeOrderComposer = () => { orderPanel.hidden=true; d.querySelector('.chat-dialog').classList.remove('ordering'); };
     const openOrderComposer = async () => {
       if (chat.role !== "buyer" || chat.order_id) return;
+      if (!orderPanel.hidden) return;
       orderPanel.hidden = false;
+      d.querySelector(".chat-dialog").classList.add("ordering");
       orderPanel.innerHTML = '<div class="chat-order-loading" role="status">Cargando datos del producto…</div>';
       try {
         const catalog = await call(c, "/catalog"),
           p = catalog.products.find((item) => item.id === chat.product_id);
         if (!p) throw Error("Este producto ya no está disponible para nuevos pedidos.");
-        const requestId = crypto.randomUUID();
-        orderPanel.innerHTML = `<div class="chat-order-compose"><div class="section-heading"><div><span class="eyebrow">CONFIRMAR PEDIDO</span><h3>${c.esc(p.name)}</h3></div><button type="button" class="text-button" id="close-chat-order">Cerrar</button></div><form id="chat-order-form"><label class="field">${p.sale_unit === "lot" ? "¿Cuántos lotes quieres?" : "¿Cuántas unidades quieres?"}<div class="quantity-control"><button type="button" class="btn secondary" data-chat-quantity="-1" aria-label="Quitar uno">−</button><input name="quantity" type="number" value="1" min="1" max="50" step="1" required><button type="button" class="btn secondary" data-chat-quantity="1" aria-label="Agregar uno">+</button></div></label><p class="hint">${money(p.price_cents)} MXN por ${sale(p)}.</p><label class="field">Nota para el vendedor <span class="hint">(opcional)</span><textarea name="note" maxlength="500" placeholder="Por ejemplo: sin cebolla"></textarea></label><div class="checkout-total"><span>Total del pedido</span><strong id="chat-order-total"></strong><small id="chat-order-pieces"></small></div><p class="hint">El chat sigue siendo temporal. Solo el pedido confirmado se guardará en tu historial.</p><p role="alert" class="field-error"></p><button class="btn full" type="submit">Confirmar pedido</button></form></div>`;
+        const draft = readDraft();
+        const requestId = draft?.requestId || crypto.randomUUID();
+        orderPanel.innerHTML = `<div class="chat-order-compose"><div class="section-heading"><div><span class="eyebrow">TU SOLICITUD AL VENDEDOR</span><h3>${c.esc(p.name)}</h3></div><button type="button" class="text-button" id="close-chat-order">Cerrar</button></div><form id="chat-order-form"><label class="field">${p.sale_unit === "lot" ? "¿Cuántos lotes quieres?" : "¿Cuántas unidades quieres?"}<div class="quantity-control"><button type="button" class="btn secondary" data-chat-quantity="-1" aria-label="Quitar uno">−</button><input name="quantity" type="number" value="1" min="1" max="50" step="1" required><button type="button" class="btn secondary" data-chat-quantity="1" aria-label="Agregar uno">+</button></div></label><p class="hint">${money(p.price_cents)} MXN por ${sale(p)}.</p><label class="field">Nota para el vendedor <span class="hint">(opcional)</span><textarea name="note" maxlength="500" placeholder="Por ejemplo: sin cebolla"></textarea></label><div class="checkout-total"><span>Total del pedido</span><strong id="chat-order-total"></strong><small id="chat-order-pieces"></small></div><p class="hint">Revisa la cantidad y el total. Al enviar, el vendedor recibirá tu solicitud para aceptarla.</p><p role="alert" class="field-error"></p><button class="btn full" type="submit">Enviar solicitud al vendedor</button></form></div>`;
         d.querySelector("#close-chat-order").onclick = () => {
-          orderPanel.hidden = true;
+          closeOrderComposer();
           orderPanel.innerHTML = "";
         };
         const form = d.querySelector("#chat-order-form"),
           quantity = form.elements.quantity;
+        quantity.value = draft?.quantity || '1';
+        form.elements.note.value = draft?.note || '';
+        const persist = () => saveDraft({quantity:quantity.value,note:form.elements.note.value,requestId});
+        form.elements.note.oninput = persist;
         const total = () => {
+          persist();
           const count = Number(quantity.value),
             valid = Number.isInteger(count) && count >= 1 && count <= 50;
           d.querySelector("#chat-order-total").textContent = valid
@@ -612,15 +624,17 @@
             chat_id: chat.id,
           });
           chat.order_id = order.id;
-          orderPanel.hidden = true;
+          try { sessionStorage.removeItem(draftKey); } catch {}
+          closeOrderComposer();
           orderPanel.innerHTML = "";
           renderOrderState();
-          c.toast("Pedido confirmado. El chat seguirá disponible hasta completar sus 12 horas.");
+          c.toast("Solicitud enviada al vendedor. Consulta su respuesta en Ver seguimiento.");
           c.poll();
           await refreshChats(c, session).catch(() => {});
         });
       } catch (e) {
-        orderPanel.innerHTML = `<div class="notice error" role="alert">${c.esc(e.message)}</div>`;
+        closeOrderComposer();
+        errorBox.textContent = e.message;
       }
     };
 

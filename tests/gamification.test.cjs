@@ -69,5 +69,25 @@ test('recompensas, canjes, categorías y valoraciones se validan en servidor',as
   }
   assert.equal((await api.get('/g/me').set('x-user',seller)).body.data.xp,50);
  });
+ await t.test('trato y producto: límites, compra entregada y media exacta',async()=>{
+  const id=await order();
+  await api.post('/g/ratings').send({order_id:id,service_stars:0,product_stars:5,category:'postres'}).expect(400);
+  await api.post('/g/ratings').send({order_id:id,service_stars:4,category:'postres'}).expect(400);
+  await api.post('/g/ratings').send({order_id:id,service_stars:4,product_stars:5,category:'postres'}).expect(200);
+  await api.post('/g/ratings').send({order_id:id,service_stars:4,product_stars:5,category:'postres'}).expect(409);
+  const saved=(await query('select service_stars,product_stars from fit_ratings where order_id=$1',[id])).rows[0];assert.deepEqual(saved,{service_stars:4,product_stars:5});
+  for(const sort of ['stars','reviews','score'])await api.get('/g/ranking?sort='+sort).expect(200);
+  await api.get('/g/ranking?sort=SQL').expect(400);
+ });
+ await t.test('ranking comunidad: orden de XP y saldo, sin correos ni identificadores',async()=>{
+  for(const [uid,name] of [[buyer,'Alumna'],[seller,'Docente']])await query('insert into profiles(id,full_name) values($1,$2)',[uid,name]);
+  await query("update users set email='a123@alumnos.uat.edu.mx' where id=$1",[buyer]);
+  await query('update fit_progress set xp=500,coins=20 where user_id=$1',[buyer]);
+  await query('update fit_progress set xp=100,coins=300 where user_id=$1',[seller]);
+  const xp=(await api.get('/g/community-ranking?sort=xp').expect(200)).body.data;assert.equal(xp[0].name,'Alumna');assert.equal(xp[0].account_type,'student');assert.ok(!JSON.stringify(xp).includes('@'));assert.ok(!JSON.stringify(xp).includes(buyer));
+  const coins=(await api.get('/g/community-ranking?sort=coins').expect(200)).body.data;assert.equal(coins[0].name,'Docente');
+  assert.equal((await api.get('/g/community-ranking?role=teacher').expect(200)).body.data.length,1);
+  await api.get('/g/community-ranking?sort=coins;drop').expect(400);
+ });
  await engine.close();
 });

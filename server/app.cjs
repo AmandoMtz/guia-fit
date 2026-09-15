@@ -1,4 +1,4 @@
-const { createGamificationRouter, catalog: rewardCatalog } = require("./gamification.cjs");
+const { createGamificationRouter, catalog: rewardCatalog, award } = require("./gamification.cjs");
 const express = require("express");
 const helmet = require("helmet");
 const cookieParser = require("cookie-parser");
@@ -607,18 +607,21 @@ function createApp({
       if (!UUID.test(req.params.id))
         throw fail(400, "validation_error", "Identificador inválido.");
       await limit(req, "admin-benefits:" + req.user.id, 60);
+      const xp = Number(req.body?.xp || 0), requestId=req.body?.request_id || null;
+      if(requestId && !UUID.test(requestId))throw fail(400,"validation_error","Solicitud inválida.");
       const coins = Number(req.body?.coins || 0),
         itemId = typeof req.body?.item === "string" ? req.body.item.trim() : "",
         note = typeof req.body?.note === "string" ? req.body.note.trim() : "",
         item = itemId ? rewardCatalog.find((x) => x.id === itemId) : null;
       if (
+        !Number.isInteger(xp) || xp<0 || xp>10000 ||
         !Number.isInteger(coins) ||
         coins < 0 ||
         coins > 10000 ||
         (itemId && !item) ||
         note.length < 3 ||
         note.length > 300 ||
-        (!coins && !item)
+        (!coins && !xp && !item)
       )
         throw fail(
           400,
@@ -631,10 +634,21 @@ function createApp({
           [req.params.id],
         )).rows[0];
         if (!target) throw fail(404, "not_found", "Cuenta no encontrada.");
+        if(requestId){
+          const old=(await client.query('select * from admin_benefit_grants where request_id=$1',[requestId])).rows[0];
+          if(old){
+            if(old.admin_id!==req.user.id||old.user_id!==req.params.id||old.coins!==coins||old.xp!==xp||old.item!==(item?.id||null)||old.note!==note)throw fail(409,'conflict','La solicitud ya corresponde a otra entrega.');
+            return {...(await client.query('select xp,coins from fit_progress where user_id=$1',[req.params.id])).rows[0],replayed:true,granted_item:old.item,item_granted:!!old.item};
+          }
+        }
+
         await client.query(
           "insert into fit_progress(user_id) values($1) on conflict do nothing",
           [req.params.id],
         );
+        const balance=(await client.query('select xp,coins from fit_progress where user_id=$1 for update',[req.params.id])).rows[0];
+        if(balance.xp+xp>2000000000||balance.coins+coins+Math.ceil(xp/100)*50>2000000000)throw fail(409,'balance_limit','Saldo máximo alcanzado.');
+        if(xp)await award(client,req.params.id,'admin:'+(requestId||require('node:crypto').randomUUID()),xp);
         if (coins)
           await client.query(
             "update fit_progress set coins=coins+$2 where user_id=$1",
@@ -647,12 +661,12 @@ function createApp({
             [req.params.id, item.id],
           );
           itemGranted = !!granted.rows[0];
-          if (!itemGranted && !coins)
+          if (!itemGranted && !coins && !xp)
             throw fail(409, "already_owned", "Esta cuenta ya tiene ese premio.");
         }
         await client.query(
-          "insert into admin_benefit_grants(admin_id,user_id,coins,item,note) values($1,$2,$3,$4,$5)",
-          [req.user.id, req.params.id, coins, item?.id || null, note],
+          "insert into admin_benefit_grants(admin_id,user_id,coins,item,note,xp,request_id) values($1,$2,$3,$4,$5,$6,$7)",
+          [req.user.id, req.params.id, coins, item?.id || null, note,xp,requestId],
         );
         const progress = (await client.query(
           "select xp,coins from fit_progress where user_id=$1",

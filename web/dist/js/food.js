@@ -738,7 +738,7 @@
         ? rows
             .map(
               (o) =>
-                `<article class="panel order-card flow-order status-${o.status} ${focus === o.id ? "focused-order" : ""}" data-order-card="${o.id}" tabindex="-1"><div class="section-heading"><div><span class="eyebrow">${seller ? "CLIENTE" : "PUESTO"}</span><strong class="order-person">${c.esc(seller ? o.buyer_name : o.business_name)}</strong></div><span class="order-status ${o.status}">${F.names[o.status] || c.esc(o.status)}</span></div><div class="order-line"><div><h3>${c.esc(o.product_name)}</h3><p>${c.esc(F.quantity(o))}</p></div><strong class="order-amount">${money(o.total_cents)}<small>MXN</small></strong></div>${progress(c, o)}<p class="order-next">${c.esc(F.hints[seller ? "seller" : "buyer"][o.status] || "Consulta el estado de tu pedido.")}</p><p class="pickup">${c.icon("pin")}<span><b>Punto de entrega:</b> ${c.esc(o.pickup_location)}</span></p>${o.note ? `<p class="order-note"><b>Nota del cliente:</b> ${c.esc(o.note)}</p>` : ""}<div class="order-footer"><small>Pedido #${o.id.slice(0, 8)} · ${new Date(o.created_at).toLocaleString("es-MX")}</small><div class="button-row">${o.chat_id ? `<button class="btn secondary small" data-order-chat="${o.chat_id}">${c.icon("chat")} Abrir chat</button>` : ""}${F.actions(
+                `<article class="panel order-card flow-order status-${o.status} ${focus === o.id ? "focused-order" : ""}" data-order-card="${o.id}" tabindex="-1"><div class="section-heading"><div><span class="eyebrow">${seller ? "CLIENTE" : "PUESTO"}</span><strong class="order-person">${c.esc(seller ? o.buyer_name : o.business_name)}</strong></div><span class="order-status ${o.status}">${F.names[o.status] || c.esc(o.status)}</span></div><div class="order-line"><div><h3>${c.esc(o.product_name)}</h3><p>${c.esc(F.quantity(o))}</p></div><strong class="order-amount">${money(o.total_cents)}<small>MXN</small></strong></div>${progress(c, o)}<p class="order-next">${c.esc(F.hints[seller ? "seller" : "buyer"][o.status] || "Consulta el estado de tu pedido.")}</p><p class="pickup">${c.icon("pin")}<span><b>Punto de entrega:</b> ${c.esc(o.pickup_location)}</span></p>${o.note ? `<p class="order-note"><b>Nota del cliente:</b> ${c.esc(o.note)}</p>` : ""}<div class="order-footer"><small>Pedido #${o.id.slice(0, 8)} · ${new Date(o.created_at).toLocaleString("es-MX")}</small><div class="button-row">${!seller && o.status==='completed' ? `<button class="btn secondary small" data-rate-order="${o.id}">Valorar compra ★</button>` : ""}${o.chat_id ? `<button class="btn secondary small" data-order-chat="${o.chat_id}">${c.icon("chat")} Abrir chat</button>` : ""}${F.actions(
                   o.status,
                   seller,
                 )
@@ -759,6 +759,7 @@
           ordersView(c, body, orders, seller, refresh);
         }),
     );
+    body.querySelectorAll("[data-rate-order]").forEach(b=>b.onclick=()=>root.FIT_PURCHASE_RATING.open(c,b.dataset.rateOrder));
     act(c, body.querySelector("#refresh-orders"), async () => {
       await refresh();
       await c.poll();

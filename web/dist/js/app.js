@@ -447,6 +447,7 @@
         "Comidas",
         "Elige qué comer, sigue tus compras o atiende a tus clientes.",
       ],
+      accounts: ["Cuentas y beneficios", "Listado de usuarios registrados y reconocimientos."],
       rewards: ["Mi progreso", "Participa, sube de nivel y haz tuya Guía FIT."],
       schedule: ["Mi horario", "Tu semana, tus materias y tu próximo salón."],
       events: ["Eventos", "Actividades, reuniones y asistencias verificadas de la facultad."],
@@ -488,6 +489,7 @@
     if (state.admin && !state.offline)
       menu.push(
         ["admin", "edit", "Administrar"],
+        ["accounts", "user", "Cuentas y beneficios"],
         ["food-admin", "store", "Revisar vendedores"],
       );
     const current = names[state.view],
@@ -523,6 +525,7 @@
       route: routeView,
       profile: profileView,
       admin: adminView,
+      accounts: () => { if(!state.admin)return; $("#view").innerHTML='<section class="panel"><h2>Usuarios registrados</h2><p id="admin-users-count"></p><label class="field">Buscar cuenta<input id="admin-user-search" type="search" placeholder="Nombre o correo"></label><div id="admin-users-list"></div></section>';renderAdminUsers(); },
       food: () => window.FIT_FOOD.render(moduleContext()),
       "food-admin": () => window.FIT_FOOD.render(moduleContext()),
       notifications: () => window.FIT_FOOD.render(moduleContext()),
@@ -1106,25 +1109,30 @@
     };
   }
   function openAdminBenefit(user, rewards, onSaved) {
+    let pendingGrant=null;
     const rewardOptions = (rewards || [])
       .map((item) => `<option value="${esc(item.id)}">${esc(item.name)} · ${item.price} monedas</option>`)
       .join("");
     const el = dialog(
-      `<div class="dialog-head"><div><span class="eyebrow">BENEFICIOS ADMIN</span><h2>${esc(user.full_name)}</h2><p class="hint">${esc(user.email)}</p></div><button class="close" data-close aria-label="Cerrar">${icon("close")}</button></div><form id="admin-benefit-form"><div class="admin-benefit-balance"><span>Saldo actual</span><strong>${Number(user.coins || 0)} monedas</strong><small>${Number(user.xp || 0)} EXP · ${Number(user.reward_count || 0)} premio(s)</small></div><label class="field">Monedas a regalar<input name="coins" type="number" min="0" max="10000" step="1" value="0"></label><label class="field">Premio directo (opcional)<select name="item"><option value="">Sin premio directo</option>${rewardOptions}</select></label><label class="field">Motivo / nota administrativa<textarea name="note" minlength="3" maxlength="300" required placeholder="Ej. Reconocimiento por participación en actividad FIT"></textarea></label><div class="notice">Puedes regalar monedas, un premio de personalización o ambos. La operación queda registrada para auditoría.</div><button class="btn full" type="submit">Entregar beneficio</button></form>`,
+      `<div class="dialog-head"><div><span class="eyebrow">BENEFICIOS ADMIN</span><h2>${esc(user.full_name)}</h2><p class="hint">${esc(user.email)}</p></div><button class="close" data-close aria-label="Cerrar">${icon("close")}</button></div><form id="admin-benefit-form"><div class="admin-benefit-balance"><span>Saldo actual</span><strong>${Number(user.coins || 0)} monedas</strong><small>${Number(user.xp || 0)} EXP · ${Number(user.reward_count || 0)} premio(s)</small></div><label class="field">Monedas a regalar<input name="coins" type="number" min="0" max="10000" step="1" value="0"></label><label class="field">XP a regalar<input name="xp" type="number" min="0" max="10000" step="1" value="0"></label><p class="hint">La XP también otorga 50 monedas por cada nivel alcanzado.</p><label class="field">Premio directo (opcional)<select name="item"><option value="">Sin premio directo</option>${rewardOptions}</select></label><label class="field">Motivo / nota administrativa<textarea name="note" minlength="3" maxlength="300" required placeholder="Ej. Reconocimiento por participación en actividad FIT"></textarea></label><div class="notice">Puedes regalar monedas, un premio de personalización o ambos. La operación queda registrada para auditoría.</div><button class="btn full" type="submit">Entregar beneficio</button></form>`,
     );
     $("#admin-benefit-form", el).onsubmit = async (e) => {
       e.preventDefault();
       const button = e.currentTarget.querySelector("button[type=submit]"),
         values = new FormData(e.currentTarget),
+        xp = Number(values.get("xp") || 0),
         coins = Number(values.get("coins") || 0),
         item = String(values.get("item") || ""),
         note = String(values.get("note") || "").trim();
-      if (!Number.isInteger(coins) || coins < 0 || coins > 10000 || (!coins && !item) || note.length < 3) {
+      if (!Number.isInteger(coins) || coins < 0 || coins > 10000 || !Number.isInteger(xp) || xp<0 || xp>10000 || (!coins && !xp && !item) || note.length < 3) {
         toast("Indica monedas o un premio y escribe el motivo.");
         return;
       }
+      if(button.disabled)return;
+      const signature=JSON.stringify({coins,xp,item,note});
+      if(!pendingGrant||pendingGrant.signature!==signature)pendingGrant={signature,id:crypto.randomUUID()};
       button.disabled = true;
-      const result = await client.request(`/api/admin/users/${encodeURIComponent(user.id)}/benefits`, "POST", { coins, item, note });
+      const result = await client.request(`/api/admin/users/${encodeURIComponent(user.id)}/benefits`, "POST", { coins, xp, item, note,request_id:pendingGrant.id });
       if (result.error) {
         toast(result.error.message || "No se pudo entregar el beneficio.");
         button.disabled = false;
@@ -1229,7 +1237,7 @@
     );
     $("#view").insertAdjacentHTML(
       "beforeend",
-      `<section class="panel admin-users-panel"><div class="admin-users-head"><div><span class="eyebrow">CUENTAS REGISTRADAS</span><h2>Usuarios y beneficios</h2><p class="hint">Consulta alumnos, docentes y administradores. Puedes entregar monedas o premios directos sin modificar el EXP ganado por actividad.</p></div><strong id="admin-users-count">Cargando…</strong></div><label class="field admin-user-search">Buscar por nombre, correo, matrícula, carrera o tipo de cuenta<input id="admin-user-search" type="search" autocomplete="off" placeholder="Ej. Andrea, @uat.edu.mx, Sistemas…"></label><div id="admin-users-list"></div></section>`,
+      `<section class="panel admin-users-panel"><div class="admin-users-head"><div><span class="eyebrow">CUENTAS REGISTRADAS</span><h2>Usuarios y beneficios</h2><p class="hint">Consulta alumnos, docentes y administradores. Puedes entregar monedas o premios directos y EXP como reconocimiento. Cada entrega queda registrada.</p></div><strong id="admin-users-count">Cargando…</strong></div><label class="field admin-user-search">Buscar por nombre, correo, matrícula, carrera o tipo de cuenta<input id="admin-user-search" type="search" autocomplete="off" placeholder="Ej. Andrea, @uat.edu.mx, Sistemas…"></label><div id="admin-users-list"></div></section>`,
     );
     renderAdminUsers();
     $("#view").insertAdjacentHTML(

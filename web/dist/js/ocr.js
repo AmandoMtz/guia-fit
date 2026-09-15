@@ -32,7 +32,21 @@
       roomWords = /aula|sal[oó]n|lugar/.test(text) ? 3 : 0;
     return (result.boxes?.length || 0) + dayHits * 12 + Math.min(times, 30) * 2 + tableWords + roomWords;
   }
+  async function prepareTeacher(source) {
+    const img=new Image();img.src=source;await img.decode();
+    const factor=Math.min(1,3200/Math.max(img.naturalWidth,img.naturalHeight));
+    const canvas=document.createElement('canvas');canvas.width=Math.round(img.naturalWidth*factor);canvas.height=Math.round(img.naturalHeight*factor);
+    const ctx=canvas.getContext('2d',{willReadFrequently:true});ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.drawImage(img,0,0,canvas.width,canvas.height);
+    const image=ctx.getImageData(0,0,canvas.width,canvas.height),{data}=image,w=canvas.width,h=canvas.height,mask=new Uint8Array(w*h);
+    const dark=(x,y)=>{const i=(y*w+x)*4;return Math.max(data[i],data[i+1],data[i+2])<180;};
+    for(let y=0;y<h;y++){let start=-1;for(let x=0;x<=w;x++){if(x<w&&dark(x,y)){if(start<0)start=x;}else if(start>=0){if(x-start>Math.max(80,w*.06))for(let xx=start;xx<x;xx++)for(let yy=Math.max(0,y-1);yy<Math.min(h,y+2);yy++)mask[yy*w+xx]=1;start=-1;}}}
+    for(let x=0;x<w;x++){let start=-1;for(let y=0;y<=h;y++){if(y<h&&dark(x,y)){if(start<0)start=y;}else if(start>=0){if(y-start>Math.max(45,h*.1))for(let yy=start;yy<y;yy++)for(let xx=Math.max(0,x-1);xx<Math.min(w,x+2);xx++)mask[yy*w+xx]=1;start=-1;}}}
+    for(let i=0;i<mask.length;i++)if(mask[i])data[i*4]=data[i*4+1]=data[i*4+2]=255;
+    ctx.putImageData(image,0,0);const out=document.createElement('canvas'),scale=Math.min(2,3200/Math.max(w,h));out.width=Math.round(w*scale);out.height=Math.round(h*scale);out.getContext('2d').drawImage(canvas,0,0,out.width,out.height);return out.toDataURL('image/png');
+  }
+
   async function read(source, onProgress = () => {}, options = {}) {
+    if(options.teacherMode) source = await prepareTeacher(source);
     if (!root.Tesseract)
       throw Error("No se pudo cargar el lector de imágenes. Recarga la página.");
     const base = new URL("vendor/tesseract/", document.baseURI).href;

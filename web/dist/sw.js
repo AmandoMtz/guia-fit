@@ -1,5 +1,5 @@
 /* App shell sin conexión. Las respuestas /api nunca se guardan aquí. */
-const CACHE = "guia-fit-shell-v19-teacher-ocr-native";
+const CACHE = "guia-fit-horarios-rankings-v19";
 const SHELL = [
   "/",
   "/index.html",
@@ -26,6 +26,7 @@ const SHELL = [
   "/js/events.js",
   "/js/chatbot.js",
   "/js/gamification.js",
+  "/js/purchase-rating.js",
   "/js/app.js",
 ];
 

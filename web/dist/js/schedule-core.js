@@ -128,7 +128,41 @@
       { pdfText: true },
     );
   }
+  function teacherRows(boxes) {
+    const subject=boxes.find(b=>/^(materia|asignatura)$/i.test(b.text.trim()));
+    if(!subject)return null;
+    const height=Math.max(10,subject.y1-subject.y0);
+    const header=boxes.filter(b=>Math.abs((b.y0+b.y1-subject.y0-subject.y1)/2)<height*2);
+    const daysHeader=Array.from({length:7},(_,i)=>header.find(b=>dayOf(b.text)===i+1));
+    const room=header.find(b=>/^(aula|sal[oó]n)$/i.test(b.text.trim()));
+    const sit=header.find(b=>/^sit[.]?$/i.test(b.text.trim()));
+    if(!room||!sit||!daysHeader.every(Boolean))return null;
+    const centers=daysHeader.map(b=>(b.x0+b.x1)/2),step=(centers[6]-centers[0])/6;
+    if(step<=0)return null;
+    const roomCenter=(room.x0+room.x1)/2;
+    const spans=[{left:subject.x0-8,right:sit.x0-8},...centers.map((v,i)=>({left:i?(centers[i-1]+v)/2:v-step/2,right:i<6?(v+centers[i+1])/2:v+step/2})),{left:roomCenter-step*.4,right:roomCenter+step*.4}];
+    const rows=[];
+    for(const b of boxes.filter(b=>b.y0>Math.max(...daysHeader.map(d=>d.y1),room.y1)).sort((a,b)=>a.y0-b.y0||a.x0-b.x0)){
+      const y=(b.y0+b.y1)/2;
+      let row=rows.find(r=>Math.abs(r.y-y)<Math.max(6,(b.y1-b.y0)*.55));
+      if(!row){row={y,items:[]};rows.push(row);}row.items.push(b);
+    }
+    const output=['MATERIA | LUNES | MARTES | MIERCOLES | JUEVES | VIERNES | SABADO | DOMINGO | AULA'];let pending=null,last=0;
+    const flush=()=>{if(pending&&pending.slice(1,8).some(x=>/\d/.test(x)))output.push(pending.join(' | '));pending=null;};
+    for(const row of rows.sort((a,b)=>a.y-b.y)){
+      const cells=Array(9).fill('');
+      for(const b of row.items.sort((a,b)=>a.x0-b.x0)){const center=(b.x0+b.x1)/2,i=spans.findIndex(s=>center>=s.left&&center<s.right);if(i>=0)cells[i]+=(cells[i]?' ':'')+b.text;}
+      if(cells[0]&&cells.slice(1,8).some(x=>/\d/.test(x))){flush();pending=cells;}
+      else if(pending&&row.y-last<height*2.5){pending=pending.map((v,i)=>[v,cells[i]].filter(Boolean).join(' '));}
+      else if(row.y-last>=height*2.5)flush();
+      last=row.y;
+    }
+    flush();return output.length>1?output:null;
+  }
+
   function rowsFromBoxes(boxes, options = {}) {
+    const exactTeacher = teacherRows(boxes);
+    if (exactTeacher) return exactTeacher;
     const rows = [];
     // Algunos lectores agrupan varios encabezados en un solo fragmento.
     const words = boxes.flatMap((b) => {
@@ -329,6 +363,8 @@
   // Normaliza el resultado de OCR. Tesseract puede devolver cajas de palabras
   // o únicamente texto plano según la plataforma/core cargado.
   function rowsFromOcr(result) {
+    const exactTeacher = teacherRows(Array.isArray(result?.boxes) ? result.boxes : []);
+    if (exactTeacher) return exactTeacher;
     const boxes = Array.isArray(result?.boxes) ? result.boxes : [],
       boxRows = boxes.length ? rowsFromBoxes(boxes) : [],
       textRows = String(result?.text || "")

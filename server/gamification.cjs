@@ -80,9 +80,13 @@ function createGamificationRouter({db,limit}) {
   if(typeof req.body?.enabled!=='boolean')throw fail(400,'Valor inválido.');
   await transaction(db,async c=>{await lock(c,req.user.id);await c.query('update fit_progress set animations=$2 where user_id=$1',[req.user.id,req.body.enabled]);});res.json({data:{}});
  });
- r.get('/orders',async(req,res)=>res.json({data:(await db.query("select o.id,o.product_name,v.business_name,o.vendor_id,r.stars,coalesce((select json_agg(category) from fit_vendor_categories where vendor_id=v.id),'[\"comida\"]'::json) as categories from food_orders o join food_vendors v on v.id=o.vendor_id left join fit_ratings r on r.order_id=o.id where o.buyer_id=$1 and o.status='completed' order by o.updated_at desc limit 100",[req.user.id])).rows}));
+ r.get('/orders',async(req,res)=>res.json({data:(await db.query("select o.id,o.product_name,v.business_name,o.vendor_id,r.stars,r.service_stars,r.product_stars,coalesce((select json_agg(category) from fit_vendor_categories where vendor_id=v.id),'[\"comida\"]'::json) as categories from food_orders o join food_vendors v on v.id=o.vendor_id left join fit_ratings r on r.order_id=o.id where o.buyer_id=$1 and o.status='completed' order by o.updated_at desc limit 100",[req.user.id])).rows}));
  r.post('/ratings',async(req,res)=>{
-  const {order_id,stars,category}=req.body||{};
+  const {order_id,category}=req.body||{};
+  const service=req.body?.service_stars, product=req.body?.product_stars;
+  const detailed=service!==undefined||product!==undefined;
+  if(detailed&&![service,product].every(n=>Number.isInteger(n)&&n>=1&&n<=5))throw fail(400,'Califica trato y producto de 1 a 5 estrellas.');
+  const stars=detailed?Math.round((service+product)/2):req.body?.stars;
   if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(order_id||'')||!Number.isInteger(stars)||stars<1||stars>5||!categories.includes(category))throw fail(400,'Elige de 1 a 5 estrellas y una categoría.');
   await transaction(db,async c=>{
    const o=(await c.query('select o.*,v.user_id as seller from food_orders o join food_vendors v on v.id=o.vendor_id where o.id=$1 for update of o',[order_id])).rows[0];
@@ -90,7 +94,7 @@ function createGamificationRouter({db,limit}) {
    const cats=(await c.query('select category from fit_vendor_categories where vendor_id=$1',[o.vendor_id])).rows.map(x=>x.category);
    if(!(cats.length?cats:['comida']).includes(category))throw fail(400,'Esa categoría no pertenece al puesto.');
    await lock(c,o.seller);
-   const inserted=await c.query('insert into fit_ratings(order_id,buyer_id,vendor_id,stars,category) values($1,$2,$3,$4,$5) on conflict do nothing returning order_id',[order_id,req.user.id,o.vendor_id,stars,category]);
+   const inserted=await c.query('insert into fit_ratings(order_id,buyer_id,vendor_id,stars,category,service_stars,product_stars) values($1,$2,$3,$4,$5,$6,$7) on conflict do nothing returning order_id',[order_id,req.user.id,o.vendor_id,stars,category,detailed?service:null,detailed?product:null]);
    if(!inserted.rows.length)throw fail(409,'Este pedido ya fue calificado.');
    const {day,week}=(await c.query("select to_char(now() at time zone 'America/Monterrey','YYYY-MM-DD') as day,to_char(date_trunc('week',now() at time zone 'America/Monterrey'),'YYYY-MM-DD') as week")).rows[0];
    const n=(await c.query("select count(*)::int n from fit_rewards where user_id=$1 and activity like 'rating:%' and (created_at at time zone 'America/Monterrey')::date=$2::date",[o.seller,day])).rows[0].n;
@@ -107,14 +111,26 @@ function createGamificationRouter({db,limit}) {
   });res.json({data:{}});
  });
  r.get('/ranking',async(req,res)=>{
+  const sort=req.query.sort||'score';if(!['score','reviews','stars'].includes(sort))throw fail(400,'Orden inválido.');
   const cat=req.query.category||'';if(cat&&!categories.includes(cat))throw fail(400,'Categoría inválida.');
-  const rows=(await db.query(`select v.id,v.business_name,v.pickup_location,count(r.order_id)::int as votes,coalesce(avg(r.stars),0)::float as average,
-   ((coalesce(sum(r.stars),0)+15.0)/(count(r.order_id)+5))::float as score,
+  const rows=(await db.query(`select v.id,v.business_name,v.pickup_location,count(r.order_id)::int as votes,coalesce(avg(coalesce((r.service_stars+r.product_stars)/2.0,r.stars)),0)::float as average,
+   ((coalesce(sum(coalesce((r.service_stars+r.product_stars)/2.0,r.stars)),0)+15.0)/(count(r.order_id)+5))::float as score,
    coalesce((select json_agg(category) from fit_vendor_categories where vendor_id=v.id),'["comida"]'::json) categories
    from food_vendors v left join fit_ratings r on r.vendor_id=v.id and ($1='' or r.category=$1)
    where v.status='approved' and v.is_active=true and ($1='' or exists(select 1 from fit_vendor_categories c where c.vendor_id=v.id and c.category=$1) or ($1='comida' and not exists(select 1 from fit_vendor_categories c where c.vendor_id=v.id)))
-   group by v.id order by (count(r.order_id)>0) desc,score desc,votes desc,v.business_name,v.id limit 100`,[cat])).rows;
+   group by v.id order by (count(r.order_id)>0) desc,${sort==='reviews'?'votes desc,average desc':sort==='stars'?'average desc,votes desc':'score desc,votes desc'},v.business_name,v.id limit 100`,[cat])).rows;
   res.json({data:rows});
+ });
+ r.get('/community-ranking',async(req,res)=>{
+  const sort=req.query.sort||'xp',role=req.query.role||'all';
+  if(!['xp','coins'].includes(sort)||!['all','student','teacher'].includes(role))throw fail(400,'Filtro inválido.');
+  const rows=(await db.query(`select u.id,p.full_name,u.email,u.role,coalesce(g.xp,0)::int xp,coalesce(g.coins,0)::int coins
+   from users u join profiles p on p.id=u.id left join fit_progress g on g.user_id=u.id
+   where u.email_confirmed_at is not null and u.role<>'admin'
+   and (u.email ~* '^a[0-9]+@alumnos\\.uat\\.edu\\.mx$' or u.email ~* '@(docentes\\.)?uat\\.edu\\.mx$')
+   and ($1='all' or ($1='student' and u.email ~* '^a[0-9]+@alumnos\\.uat\\.edu\\.mx$') or ($1='teacher' and u.email ~* '@(docentes\\.)?uat\\.edu\\.mx$'))
+   order by ${sort==='coins'?'coins desc,xp desc':'xp desc,coins desc'},p.full_name,u.id limit 100`,[role])).rows;
+  res.json({data:rows.map((u,i)=>({position:i+1,name:u.full_name||'Integrante FIT',account_type:accountType(u.email,u.role),xp:u.xp,coins:u.coins,level:1+Math.floor(u.xp/100),is_me:u.id===req.user.id}))});
  });
  return r;
 }

@@ -466,8 +466,8 @@
       route: ["Cómo llegar", "Elige tu punto de partida y tu destino."],
       profile: ["Mi cuenta", "Consulta tus datos y el estado de verificación."],
       admin: [
-        "Administrar espacios",
-        "Actualiza el directorio y los recorridos comprobados.",
+        "Administrar campus y cuentas",
+        "Gestiona espacios, usuarios registrados y beneficios.",
       ],
     };
     const menu = state.offline
@@ -480,7 +480,7 @@
           ["map", "map", "Mapa del campus"],
           ["route", "route", "Cómo llegar"],
           ["food", "food", "Comidas"],
-          ...(state.user ? [["events", "calendar", state.user.account_type === "teacher" ? "Eventos docentes" : "Eventos"]] : []),
+          ...(state.user ? [["events", "calendar", "Eventos"]] : []),
           ["schedule", "calendar", "Mi horario"],
           ["profile", "user", "Mi cuenta"],
           ...(state.user ? [["rewards", "star", "Mi progreso y premios"]] : []),
@@ -970,8 +970,15 @@
       `<section class="profile-hero"><div>${profileAvatar(null, true)}<div><span class="eyebrow">TU ESPACIO EN LA FIT</span><h2>${esc(p.full_name || "Mi cuenta")}</h2><p>${state.user.account_type === "teacher" ? "Docente" : state.user.account_type === "admin" ? "Administrador" : state.user.account_type === "student" ? (p.food_seller_intent ? "Alumno vendedor" : "Alumno") : "Cuenta externa"}</p></div></div><form id="profile-photo-form" class="photo-upload-card"><span class="photo-upload-title">Tu foto, tu estilo</span><label class="photo-file-picker"><span class="photo-picker-icon">${icon("photo")}</span><span><strong>Elegir una foto</strong><small>JPG, PNG o WebP · Hasta 5 MB</small></span>${icon("plus")}<input type="file" id="profile-photo" aria-label="Elegir foto de perfil" accept="image/jpeg,image/png,image/webp" required></label><p id="photo-file-name" class="photo-file-name" aria-live="polite">Elige una imagen para ajustar el encuadre.</p><div class="photo-upload-actions"><button class="btn photo-save" type="submit" disabled>${icon("check")}<span>Ajustar y guardar</span></button>${p.photo_updated_at ? '<button class="photo-remove" type="button" id="delete-avatar">Quitar foto</button>' : ""}</div></form></section><div class="profile-grid"><section class="panel"><h2>Mis datos</h2><form id="profile-form">${field("full_name", "Nombre completo", "text", "name")}<div class="field"><label>Correo electrónico</label><p>${esc(state.user.email)}</p><span class="account-detected ${esc(state.user.account_type || "other")}">${state.user.account_type === "teacher" ? "Cuenta docente detectada por dominio institucional" : state.user.account_type === "student" ? "Cuenta de alumno detectada por matrícula institucional" : state.user.account_type === "admin" ? "Cuenta administradora" : "Dominio institucional no clasificado"}</span></div>${state.user.account_type === "student" ? field("student_id", "Matrícula (opcional)", "text", "off", "Se validará únicamente con una fuente institucional autorizada.") + field("career", "Carrera / programa académico", "text", "off", "Se usa para mostrarte eventos cerrados dirigidos a tu carrera.") : ""}<button class="btn">Guardar cambios</button><p class="hint" style="margin-top:16px">Los docentes se identifican por correos <b>@uat.edu.mx</b> o <b>@docentes.uat.edu.mx</b>. Los alumnos usan el formato <b>a…@alumnos.uat.edu.mx</b>.</p></form></section><section class="panel"><h2>Estado de tu cuenta</h2><p class="hint">Identificador para revisión institucional:<br><span style="overflow-wrap:anywhere">${esc(state.user.id)}</span></p><div class="status-item">${badge(!!state.user.email_confirmed_at)}<p>Correo electrónico</p></div><div class="status-item">${badge(state.verification?.status === "verified")}<p>Vinculación con la facultad</p><p class="hint">${state.verification?.status === "verified" ? "Confirmada por un administrador con una fuente autorizada." : "Pendiente de contrastar tus datos con una fuente institucional autorizada."}</p></div><p class="hint" style="margin-top:20px">La clasificación alumno/docente proviene del formato del correo institucional; la verificación institucional sigue siendo un proceso separado.</p></section></div>`;
     $("#view").insertAdjacentHTML(
       "beforeend",
-      `${state.user.account_type === "student" ? `<section class="panel account-mode-panel"><div><span class="eyebrow">UNA CUENTA, MÁS POSIBILIDADES</span><h2>Mi tipo de cuenta</h2><p>Activa tu espacio de ventas cuando lo necesites. Conservas tu acceso de alumno y tus pedidos.</p></div><form id="account-mode-form"><label class="field">Usar mi cuenta como<select name="mode"><option value="student" ${!p.food_seller_intent ? "selected" : ""}>Alumno</option><option value="student_seller" ${p.food_seller_intent ? "selected" : ""}>Alumno vendedor</option></select></label><button class="btn" type="submit">Guardar tipo de cuenta</button><button class="text-button" id="go-my-shop" type="button">${p.food_seller_intent ? "Configurar mi puesto" : "Ver Comidas"} →</button><p class="hint">El puesto necesita aprobación antes de publicar. Si vuelves a Alumno, se oculta tu puesto y se pausan nuevos pedidos; puedes terminar los que ya recibiste.</p></form></section>` : `<section class="panel account-role-panel"><span class="eyebrow">ROL INSTITUCIONAL</span><h2>${state.user.account_type === "teacher" ? "Cuenta docente" : state.user.account_type === "admin" ? "Cuenta administradora" : "Cuenta sin clasificación institucional"}</h2><p>${state.user.account_type === "teacher" ? "Tu correo te habilita el horario simplificado para docentes y la creación de eventos exclusivos para docentes." : state.user.account_type === "admin" ? "Puedes administrar eventos para alumnos, generar códigos QR y descargar listas de asistencia verificadas." : "Las funciones de eventos se habilitan al reconocer un correo institucional de alumno o docente."}</p></section>`}`,
+      `${state.user.account_type === "student" ? `<section class="panel account-mode-panel"><div><span class="eyebrow">UNA CUENTA, MÁS POSIBILIDADES</span><h2>Mi tipo de cuenta</h2><p>Activa tu espacio de ventas cuando lo necesites. Conservas tu acceso de alumno y tus pedidos.</p></div><form id="account-mode-form"><label class="field">Usar mi cuenta como<select name="mode"><option value="student" ${!p.food_seller_intent ? "selected" : ""}>Alumno</option><option value="student_seller" ${p.food_seller_intent ? "selected" : ""}>Alumno vendedor</option></select></label><button class="btn" type="submit">Guardar tipo de cuenta</button><button class="text-button" id="go-my-shop" type="button">${p.food_seller_intent ? "Configurar mi puesto" : "Ver Comidas"} →</button><p class="hint">El puesto necesita aprobación antes de publicar. Si vuelves a Alumno, se oculta tu puesto y se pausan nuevos pedidos; puedes terminar los que ya recibiste.</p></form></section>` : `<section class="panel account-role-panel"><span class="eyebrow">ROL INSTITUCIONAL</span><h2>${state.user.account_type === "teacher" ? "Cuenta docente" : state.user.account_type === "admin" ? "Cuenta administradora" : "Cuenta sin clasificación institucional"}</h2><p>${state.user.account_type === "teacher" ? "Tu correo te habilita el horario simplificado para docentes y la creación de eventos exclusivos para docentes." : state.user.account_type === "admin" ? "Puedes administrar eventos para alumnos, consultar las cuentas registradas y entregar monedas o premios, además de generar QR y reportes de asistencia." : "Las funciones de eventos se habilitan al reconocer un correo institucional de alumno o docente."}</p></section>`}`,
     );
+    if (state.user && !state.offline) {
+      $("#view").insertAdjacentHTML(
+        "beforeend",
+        `<section class="panel account-reward-showcase"><div><span class="eyebrow">MIRA ANTES DE CANJEAR</span><h2>Así se verían tus recompensas</h2><p class="hint">Previsualiza marcos y estilos desde Mi cuenta sin gastar monedas.</p></div><div id="account-reward-preview"></div></section>`,
+      );
+      window.FIT_REWARDS?.profilePreview?.(moduleContext(), $("#account-reward-preview"));
+    }
     const refreshProfile = async () => {
       const owner = state.user?.id;
       const name = $("#full_name")?.value,
@@ -1098,6 +1105,61 @@
       }
     };
   }
+  function openAdminBenefit(user, rewards, onSaved) {
+    const rewardOptions = (rewards || [])
+      .map((item) => `<option value="${esc(item.id)}">${esc(item.name)} · ${item.price} monedas</option>`)
+      .join("");
+    const el = dialog(
+      `<div class="dialog-head"><div><span class="eyebrow">BENEFICIOS ADMIN</span><h2>${esc(user.full_name)}</h2><p class="hint">${esc(user.email)}</p></div><button class="close" data-close aria-label="Cerrar">${icon("close")}</button></div><form id="admin-benefit-form"><div class="admin-benefit-balance"><span>Saldo actual</span><strong>${Number(user.coins || 0)} monedas</strong><small>${Number(user.xp || 0)} EXP · ${Number(user.reward_count || 0)} premio(s)</small></div><label class="field">Monedas a regalar<input name="coins" type="number" min="0" max="10000" step="1" value="0"></label><label class="field">Premio directo (opcional)<select name="item"><option value="">Sin premio directo</option>${rewardOptions}</select></label><label class="field">Motivo / nota administrativa<textarea name="note" minlength="3" maxlength="300" required placeholder="Ej. Reconocimiento por participación en actividad FIT"></textarea></label><div class="notice">Puedes regalar monedas, un premio de personalización o ambos. La operación queda registrada para auditoría.</div><button class="btn full" type="submit">Entregar beneficio</button></form>`,
+    );
+    $("#admin-benefit-form", el).onsubmit = async (e) => {
+      e.preventDefault();
+      const button = e.currentTarget.querySelector("button[type=submit]"),
+        values = new FormData(e.currentTarget),
+        coins = Number(values.get("coins") || 0),
+        item = String(values.get("item") || ""),
+        note = String(values.get("note") || "").trim();
+      if (!Number.isInteger(coins) || coins < 0 || coins > 10000 || (!coins && !item) || note.length < 3) {
+        toast("Indica monedas o un premio y escribe el motivo.");
+        return;
+      }
+      button.disabled = true;
+      const result = await client.request(`/api/admin/users/${encodeURIComponent(user.id)}/benefits`, "POST", { coins, item, note });
+      if (result.error) {
+        toast(result.error.message || "No se pudo entregar el beneficio.");
+        button.disabled = false;
+        return;
+      }
+      el.close();
+      toast(item && !result.data.item_granted ? `Se agregaron ${coins} moneda(s). Ese premio ya pertenecía a la cuenta.` : "Beneficio entregado correctamente.");
+      await onSaved?.();
+    };
+  }
+  async function renderAdminUsers() {
+    const host = $("#admin-users-list"), search = $("#admin-user-search");
+    if (!host || !search) return;
+    host.innerHTML = '<p role="status">Cargando cuentas registradas…</p>';
+    const result = await client.request("/api/admin/users");
+    if (!host.isConnected) return;
+    if (result.error) {
+      host.innerHTML = `<div class="notice error">${esc(result.error.message || "No se pudo cargar el listado de cuentas.")}</div>`;
+      return;
+    }
+    const users = result.data?.users || [], rewards = result.data?.rewards || [];
+    const typeName = { student: "Alumno", teacher: "Docente", admin: "Administrador", other: "Cuenta externa" };
+    $("#admin-users-count").textContent = `${users.length} cuenta${users.length === 1 ? "" : "s"} registrada${users.length === 1 ? "" : "s"}`;
+    const draw = () => {
+      const q = search.value.trim().toLowerCase();
+      const filtered = users.filter((u) => !q || [u.full_name, u.email, u.student_id, u.career, typeName[u.account_type]].some((v) => String(v || "").toLowerCase().includes(q)));
+      host.innerHTML = filtered.length ? `<div class="admin-users-table" role="table" aria-label="Cuentas registradas">${filtered.map((u) => `<article class="admin-user-row" role="row"><div class="admin-user-main"><strong>${esc(u.full_name)}</strong><span>${esc(u.email)}</span><small>${esc(typeName[u.account_type] || "Cuenta")} · ${u.email_confirmed_at ? "Correo confirmado" : "Correo pendiente"}${u.career ? ` · ${esc(u.career)}` : ""}</small></div><div class="admin-user-stats"><span><b>${Number(u.coins || 0)}</b> monedas</span><span><b>${Number(u.xp || 0)}</b> EXP</span><span><b>${Number(u.reward_count || 0)}</b> premios</span></div><div class="admin-user-actions">${badge(u.verification_status === "verified")}<button class="btn secondary small" data-admin-benefit="${esc(u.id)}">Dar beneficio</button></div></article>`).join("")}</div>` : '<div class="empty">No hay cuentas que coincidan con la búsqueda.</div>';
+      host.querySelectorAll("[data-admin-benefit]").forEach((button) => button.onclick = () => {
+        const user = users.find((u) => u.id === button.dataset.adminBenefit);
+        if (user) openAdminBenefit(user, rewards, renderAdminUsers);
+      });
+    };
+    search.oninput = draw;
+    draw();
+  }
   function adminView() {
     if (!state.admin || state.demo) {
       state.view = "directory";
@@ -1165,6 +1227,11 @@
           }
         }),
     );
+    $("#view").insertAdjacentHTML(
+      "beforeend",
+      `<section class="panel admin-users-panel"><div class="admin-users-head"><div><span class="eyebrow">CUENTAS REGISTRADAS</span><h2>Usuarios y beneficios</h2><p class="hint">Consulta alumnos, docentes y administradores. Puedes entregar monedas o premios directos sin modificar el EXP ganado por actividad.</p></div><strong id="admin-users-count">Cargando…</strong></div><label class="field admin-user-search">Buscar por nombre, correo, matrícula, carrera o tipo de cuenta<input id="admin-user-search" type="search" autocomplete="off" placeholder="Ej. Andrea, @uat.edu.mx, Sistemas…"></label><div id="admin-users-list"></div></section>`,
+    );
+    renderAdminUsers();
     $("#view").insertAdjacentHTML(
       "beforeend",
       `<section class="panel"><h2>Verificación institucional de una cuenta</h2><p class="hint">Compara primero el nombre y la matrícula del perfil con una fuente institucional autorizada. El usuario puede compartir su identificador desde Mi cuenta.</p><form id="verify-user-form">${field("verify-user-id", "UUID de la cuenta")}<button type="button" class="btn secondary" id="lookup-user">Consultar perfil</button><div id="lookup-result" role="status" style="margin:16px 0"></div>${field("verify-source", "Referencia de la fuente institucional")}<label class="check"><input type="checkbox" id="verify-reviewed" required> He contrastado el perfil con una fuente autorizada de la facultad.</label><button class="btn" style="margin-top:18px">Confirmar vinculación institucional</button></form></section>`,

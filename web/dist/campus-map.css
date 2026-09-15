@@ -1,5 +1,5 @@
 /* Estilos aislados del explorador del campus. */
-.cm-campus { --cm-red:#7b0d29; --cm-text:#322024; --cm-line:#e8e2e4; color:var(--cm-text); background:#fff; }
+.cm-campus { --cm-red:#ff0000; --cm-text:#322024; --cm-line:#e8e2e4; color:var(--cm-text); background:#fff; }
 .cm-campus *, .cm-campus *::before, .cm-campus *::after { box-sizing:border-box; }
 .cm-heading { display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:20px; }
 .cm-heading h2 { font-size:clamp(1.4rem,2.4vw,2rem); margin:0 0 8px; }
@@ -10,9 +10,9 @@
 .cm-modes, .cm-controls { display:flex; align-items:center; gap:4px; flex-wrap:wrap; }
 .cm-campus button { min-height:44px; font:inherit; color:var(--cm-text); border-radius:10px; background:#fff; transition:background .18s,color .18s,box-shadow .18s; }
 .cm-campus button:hover { background:#f5f3f4; }
-.cm-campus button:focus-visible, .cm-campus [tabindex]:focus-visible, .cm-campus input:focus-visible { outline:3px solid #a41a39; outline-offset:3px; }
+.cm-campus button:focus-visible, .cm-campus [tabindex]:focus-visible, .cm-campus input:focus-visible { outline:3px solid #ff0000; outline-offset:3px; }
 .cm-modes button { padding:10px 16px; font-size:.85rem; font-weight:750; }
-.cm-modes button[aria-pressed="true"] { color:#fff; background:var(--cm-red); box-shadow:0 3px 8px #7b0d291c; }
+.cm-modes button[aria-pressed="true"] { color:#fff; background:var(--cm-red); box-shadow:0 3px 8px #ff00001c; }
 .cm-controls button { padding:8px 12px; border:1px solid var(--cm-line); font-size:.95rem; min-width:44px; }
 .cm-controls [data-zoom] { font-size:.75rem; min-width:42px; text-align:center; font-variant-numeric:tabular-nums; color:#705d62; }
 .cm-layout { display:grid; grid-template-columns:minmax(0,1fr) 310px; border:1px solid var(--cm-line); border-top:0; border-radius:0 0 18px 18px; overflow:hidden; }
@@ -31,7 +31,7 @@
 .cm-wall { fill:#d59ba9; stroke:#a8707e; stroke-width:1; }
 .cm-building:hover .cm-roof { fill:#e8c7d0; }
 .cm-building.is-selected .cm-roof { fill:var(--cm-red); stroke:#50071b; }
-.cm-building.is-selected .cm-wall { fill:#a83d58; stroke:#650a22; }
+.cm-building.is-selected .cm-wall { fill:#ff3333; stroke:#cc0000; }
 .cm-building:focus-visible .cm-roof, .cm-building:focus-visible .cm-ground { stroke:#111; stroke-width:4; stroke-dasharray:6 3; }
 .cm-ground { fill:#e3ecd9; stroke:#849773; stroke-width:1.8; transition:stroke .2s; }
 .cm-cancha { fill:#eee3ce; stroke:#998562; }
@@ -44,7 +44,7 @@
 .cm-unknown .cm-wall { fill:#d9d9d4; stroke:#bcbcb6; }
 .cm-label { pointer-events:none; }
 .cm-label circle { fill:#fff; stroke:#9a5a69; stroke-width:1.5; }
-.cm-label text { fill:#7b0d29; font:750 15px "Segoe UI",Arial,sans-serif; text-anchor:middle; }
+.cm-label text { fill:#ff0000; font:750 15px "Segoe UI",Arial,sans-serif; text-anchor:middle; }
 .cm-label.is-selected circle { stroke:#fff; stroke-width:3; fill:var(--cm-red); }
 .cm-label.is-selected text { fill:#fff; }
 .cm-location { pointer-events:none; }
@@ -74,7 +74,7 @@
 .cm-detail h4 { font-size:.88rem; margin:18px 0 8px; }
 .cm-detail p { font-size:.84rem; color:#705d62; line-height:1.6; margin:0 0 14px; }
 .cm-campus .cm-primary { width:100%; background:var(--cm-red); color:white; padding:12px 14px; font-size:.82rem; font-weight:700; margin-bottom:10px; }
-.cm-campus .cm-primary:hover { background:#650a22; }
+.cm-campus .cm-primary:hover { background:#cc0000; }
 .cm-detail .cm-small { font-size:.74rem; }
 .cm-places { padding:0; list-style:none; margin:0; }
 .cm-places button { display:flex; justify-content:space-between; gap:8px; align-items:center; text-align:left; width:100%; font-size:.8rem; padding:10px; border:1px solid var(--cm-line); margin-bottom:6px; }

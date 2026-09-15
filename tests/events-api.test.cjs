@@ -47,6 +47,22 @@ test('eventos: públicos cerrados, docentes, QR, asistencia y PDF validable', as
     assert.equal((await call(admin, 'get', '/api/auth/me').expect(200)).body.data.user.account_type, 'admin');
   });
 
+  await t.test('administración lista cuentas y puede entregar monedas o premios con auditoría', async () => {
+    await call(student, 'get', '/api/admin/users').expect(403);
+    const listing = (await call(admin, 'get', '/api/admin/users').expect(200)).body.data;
+    assert.ok(listing.users.some((x) => x.id === student.id && x.account_type === 'student'));
+    assert.ok(listing.rewards.some((x) => x.id === 'frame-ruby'));
+    const grant = (await call(admin, 'post', `/api/admin/users/${student.id}/benefits`).send({
+      coins: 75, item: 'frame-ruby', note: 'Reconocimiento de prueba',
+    }).expect(200)).body.data;
+    assert.equal(grant.coins, 75);
+    assert.equal(grant.item_granted, true);
+    const progress = (await call(student, 'get', '/api/gamification/me').expect(200)).body.data;
+    assert.equal(progress.coins, 75);
+    assert.ok(progress.inventory.includes('frame-ruby'));
+    assert.equal((await query('select count(*)::int n from admin_benefit_grants where user_id=$1', [student.id])).rows[0].n, 1);
+  });
+
   let studentEvent, studentQr;
   await t.test('solo administración crea eventos estudiantiles y puede dirigirlos a varias carreras', async () => {
     const body = {
@@ -60,6 +76,8 @@ test('eventos: públicos cerrados, docentes, QR, asistencia y PDF validable', as
     assert.ok(visible.some((x) => x.id === studentEvent.id));
     const hidden = (await call(otherStudent, 'get', '/api/events').expect(200)).body.data;
     assert.ok(!hidden.some((x) => x.id === studentEvent.id));
+    const teacherVisible = (await call(teacher, 'get', '/api/events').expect(200)).body.data;
+    assert.ok(teacherVisible.some((x) => x.id === studentEvent.id), 'el docente también debe poder consultar eventos para alumnos');
   });
 
   await t.test('QR registra una asistencia una sola vez y bloquea alumnos fuera del público', async () => {
@@ -136,6 +154,8 @@ test('eventos: públicos cerrados, docentes, QR, asistencia y PDF validable', as
     assert.equal(managed.find(x => x.id === teacherEvent.id).invitees[0].id, invitedTeacher.id);
     const hidden = (await call(otherTeacher, 'get', '/api/events').expect(200)).body.data;
     assert.ok(!hidden.some((x) => x.id === teacherEvent.id));
+    const studentView = (await call(student, 'get', '/api/events').expect(200)).body.data;
+    assert.ok(!studentView.some((x) => x.id === teacherEvent.id), 'los alumnos no deben ver eventos docentes');
     await call(invitedTeacher, 'patch', `/api/events/${teacherEvent.id}`).send({
       title: 'Intento', description: '', location: 'Sala', audience: 'teachers', visibility: 'public',
       starts_at: iso(clock.today_start), ends_at: iso(clock.today_end), careers: [], invitees: [],

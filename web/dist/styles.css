@@ -1,13 +1,13 @@
-/* Paleta Guía FIT: rojo del acceso (#7b0d29), con superficies claras. */
+/* Paleta Guía FIT: rojo institucional puro (#ff0000), con superficies claras. */
 :root {
   --ink: #322024;
   --muted: #7c6268;
-  --orange: #8a102b;
-  --orange-dark: #650a22;
-  --red: #e02630;
-  --line: #ebe3e5;
-  --soft: #f8f3f4;
-  --navy: #7b0d29;
+  --orange: #ff0000;
+  --orange-dark: #cc0000;
+  --red: #ff0000;
+  --line: #e8e8e8;
+  --soft: #fafafa;
+  --navy: #ff0000;
   --radius: 16px;
   font-family: Inter, "Segoe UI", Arial, sans-serif;
   color: var(--ink);
@@ -53,7 +53,7 @@ a:focus-visible,
 input:focus-visible,
 select:focus-visible,
 textarea:focus-visible {
-  outline: 3px solid #a41a39;
+  outline: 3px solid #ff0000;
   outline-offset: 3px;
 }
 button {
@@ -686,7 +686,7 @@ img {
   background: var(--navy);
   color: white;
   border: 3px solid white;
-  box-shadow: 0 2px 8px #7b0d2955;
+  box-shadow: 0 2px 8px #ff000055;
   font-size: 0.75rem;
   font-weight: 700;
 }
@@ -1168,7 +1168,7 @@ dialog::backdrop {
 .auth-layout {
   background:
     radial-gradient(ellipse at 4% 15%, #70283a66, transparent 52%),
-    radial-gradient(ellipse at 70% 115%, #e65a1544, transparent 45%), #7b0d29;
+    radial-gradient(ellipse at 70% 115%, #e65a1544, transparent 45%), #ff0000;
   grid-template-columns: 1.05fr 1fr;
   gap: 10px;
   padding: 0 3%;
@@ -1226,7 +1226,7 @@ dialog::backdrop {
 .auth-card h2 {
   font-size: 2rem;
   letter-spacing: -0.05em;
-  color: #7b0d29;
+  color: #ff0000;
   font-weight: 780;
 }
 .auth-card > .icon-circle {
@@ -1236,12 +1236,12 @@ dialog::backdrop {
   border: 1px solid #f4c2a3;
 }
 .auth-card .btn:not(.secondary) {
-  background: linear-gradient(110deg, #8a102b, #df5a16);
-  box-shadow: 0 8px 20px #8a102b29;
+  background: linear-gradient(110deg, #ff0000, #df5a16);
+  box-shadow: 0 8px 20px #ff000029;
   min-height: 50px;
 }
 .auth-card .btn:not(.secondary):hover {
-  background: linear-gradient(110deg, #a83806, #8a102b);
+  background: linear-gradient(110deg, #a83806, #ff0000);
 }
 .auth-tabs {
   margin: 24px 0;
@@ -1258,7 +1258,7 @@ dialog::backdrop {
 }
 .auth-tabs .active {
   background: white;
-  box-shadow: 0 2px 6px #7b0d2914;
+  box-shadow: 0 2px 6px #ff000014;
   color: #a23a09;
 }
 .auth-card .notice {
@@ -1278,8 +1278,8 @@ dialog::backdrop {
     box-shadow 0.18s;
 }
 .auth-card .field input:focus {
-  border-color: #8a102b;
-  box-shadow: 0 0 0 3px #8a102b12;
+  border-color: #ff0000;
+  box-shadow: 0 0 0 3px #ff000012;
   outline-offset: 2px;
 }
 .auth-card .auth-foot {
@@ -1315,7 +1315,7 @@ dialog::backdrop {
     display: block;
     min-height: calc(100svh - 85px);
     background:
-      radial-gradient(ellipse at 100% 0, #6b2939, transparent 70%), #7b0d29;
+      radial-gradient(ellipse at 100% 0, #cc0000, transparent 70%), #ff0000;
   }
   .auth-main {
     padding: 22px 16px 30px;
@@ -1367,7 +1367,7 @@ dialog::backdrop {
   width: 18px;
   height: 18px;
   flex-shrink: 0;
-  accent-color: #8a102b;
+  accent-color: #ff0000;
 }
 .seller-option span {
   display: grid;
@@ -1382,7 +1382,7 @@ dialog::backdrop {
   position: relative;
   border: 1px solid #e5d9dc;
   background: white;
-  color: #7b0d29;
+  color: #ff0000;
   border-radius: 50%;
   width: 42px;
   height: 42px;
@@ -1397,7 +1397,7 @@ dialog::backdrop {
   position: absolute;
   right: -4px;
   top: -5px;
-  background: #8a102b;
+  background: #ff0000;
   color: white;
   border: 2px solid white;
   border-radius: 20px;
@@ -1424,11 +1424,11 @@ dialog::backdrop {
   cursor: pointer;
 }
 .module-tabs button.active {
-  background: #7b0d29;
+  background: #ff0000;
   color: white;
 }
 .module-tabs button:focus-visible {
-  outline: 3px solid #8a102b;
+  outline: 3px solid #ff0000;
   outline-offset: 2px;
 }
 .food-banner {
@@ -1436,7 +1436,7 @@ dialog::backdrop {
   align-items: center;
   justify-content: space-between;
   gap: 26px;
-  background: #7b0d29;
+  background: #ff0000;
   color: #fff;
   border-radius: 22px;
   padding: 34px 40px;
@@ -1492,7 +1492,7 @@ dialog::backdrop {
   overflow: hidden;
   background: white;
   border: 1px solid #e9e0e2;
-  box-shadow: 0 5px 18px #7b0d2905;
+  box-shadow: 0 5px 18px #ff000005;
   display: flex;
   flex-direction: column;
   transition:
@@ -1501,7 +1501,7 @@ dialog::backdrop {
 }
 .food-card:hover {
   transform: translateY(-3px);
-  box-shadow: 0 12px 24px #7b0d290d;
+  box-shadow: 0 12px 24px #ff00000d;
 }
 .food-photo {
   height: 205px;
@@ -1532,7 +1532,7 @@ dialog::backdrop {
   flex-direction: column;
 }
 .food-card-body .eyebrow {
-  color: #8a102b;
+  color: #ff0000;
   font-size: 10px;
   letter-spacing: 1.7px;
 }
@@ -1573,7 +1573,7 @@ dialog::backdrop {
 .price-row strong {
   display: block;
   font-size: 24px;
-  color: #7b0d29;
+  color: #ff0000;
   letter-spacing: -0.5px;
 }
 .price-row small {
@@ -1631,7 +1631,7 @@ dialog::backdrop {
 .order-total {
   font-size: 22px;
   font-weight: 700;
-  color: #7b0d29;
+  color: #ff0000;
 }
 .danger {
   color: #ad3134 !important;
@@ -1654,7 +1654,7 @@ dialog::backdrop {
   border-radius: 16px;
   display: grid;
   place-items: center;
-  color: #8a102b;
+  color: #ff0000;
   font-size: 26px;
   font-weight: 650;
   margin-bottom: 16px;
@@ -1875,7 +1875,7 @@ dialog::backdrop {
 }
 .schedule-header {
   border-radius: 20px;
-  background: #7b0d29;
+  background: #ff0000;
   color: #fff;
   padding: 30px 34px;
   display: flex;
@@ -1956,7 +1956,7 @@ dialog::backdrop {
   font-weight: 600;
 }
 .calendar-day.today > header {
-  background: #7b0d29;
+  background: #ff0000;
   color: #fff;
   border-radius: 12px;
 }
@@ -2305,7 +2305,7 @@ dialog:has(.dialog-content) {
   border: 1px solid #e6dcde;
   border-radius: 18px;
   background: #fff;
-  box-shadow: 0 8px 24px #7b0d2905;
+  box-shadow: 0 8px 24px #ff000005;
 }
 .schedule-table {
   width: 100%;
@@ -2341,7 +2341,7 @@ dialog:has(.dialog-content) {
   font-weight: 600;
 }
 .schedule-table thead th.is-today {
-  background: #7b0d29;
+  background: #ff0000;
   color: white;
 }
 .schedule-table .time-column {
@@ -2566,7 +2566,7 @@ dialog:has(.dialog-content) {
   font-size: 13px;
 }
 .subjects-table thead th {
-  background: #7b0d29;
+  background: #ff0000;
   color: white;
   padding: 17px 12px;
   font-size: 11px;
@@ -2582,7 +2582,7 @@ dialog:has(.dialog-content) {
 }
 .subjects-table tbody th {
   min-width: 175px;
-  color: #7b0d29;
+  color: #ff0000;
 }
 .subjects-table tbody tr:nth-child(even) {
   background: #faf7f8;
@@ -2651,7 +2651,7 @@ dialog:has(.dialog-content) {
   padding: 16px;
   text-align: left;
   background: #fff;
-  color: var(--navy, #7b0d29);
+  color: var(--navy, #ff0000);
   border: 1px solid #e8d8dc;
   border-radius: 14px;
   cursor: pointer;
@@ -2681,10 +2681,10 @@ dialog:has(.dialog-content) {
   border-color: #d0602b;
 }
 .food-nav-item.active {
-  background: #7b0d29;
+  background: #ff0000;
   color: #fff;
-  border-color: #7b0d29;
-  box-shadow: 0 5px 16px #7b0d2916;
+  border-color: #ff0000;
+  box-shadow: 0 5px 16px #ff000016;
 }
 .food-nav-item.active small {
   color: #efe0e4;
@@ -2704,7 +2704,7 @@ dialog:has(.dialog-content) {
   height: 24px;
   padding: 0 6px;
   border-radius: 8px;
-  background: #8a102b;
+  background: #ff0000;
   color: #fff;
   font-size: 0.875rem;
   font-weight: 750;
@@ -2787,7 +2787,7 @@ dialog:has(.dialog-content) {
   height: 24px;
   border-radius: 50%;
   color: #fff;
-  background: #7b0d29;
+  background: #ff0000;
 }
 .food-tools {
   grid-template-columns: minmax(0, 1fr) minmax(160px, 240px);
@@ -2802,7 +2802,7 @@ dialog:has(.dialog-content) {
   bottom: 12px;
   left: 12px;
   background: #fff;
-  color: #7b0d29;
+  color: #ff0000;
   padding: 5px 10px;
   border-radius: 7px;
   font-size: 0.875rem;
@@ -2843,13 +2843,13 @@ dialog:has(.dialog-content) {
   padding: 1px 6px;
   border-radius: 5px;
   background: #f5edef;
-  color: #7b0d29;
+  color: #ff0000;
   font-weight: 700;
 }
 .order-filters button.active {
   color: #fff;
-  border-color: #7b0d29;
-  background: #7b0d29;
+  border-color: #ff0000;
+  background: #ff0000;
 }
 .flow-order {
   border-top: 3px solid #d5bdc3;
@@ -2862,7 +2862,7 @@ dialog:has(.dialog-content) {
   border-top-color: #26714a;
 }
 .flow-order.focused-order {
-  outline: 3px solid #8a102b;
+  outline: 3px solid #ff0000;
   outline-offset: 3px;
 }
 .order-person {
@@ -2973,8 +2973,8 @@ dialog:has(.dialog-content) {
   border-color: #5e2432;
 }
 .order-progress li.current > span {
-  background: #8a102b;
-  border-color: #8a102b;
+  background: #ff0000;
+  border-color: #ff0000;
 }
 .order-progress svg {
   width: 17px;
@@ -2985,7 +2985,7 @@ dialog:has(.dialog-content) {
   overflow-wrap: anywhere;
 }
 .order-progress li.current small {
-  color: #7b0d29;
+  color: #ff0000;
   font-weight: 700;
 }
 .flow-order .order-next {
@@ -3044,7 +3044,7 @@ dialog:has(.dialog-content) {
   grid-template-columns: 1fr auto;
   align-items: center;
   gap: 8px;
-  background: #7b0d29;
+  background: #ff0000;
   color: #fff;
   padding: 18px;
   border-radius: 12px;
@@ -3094,7 +3094,7 @@ dialog:has(.dialog-content) {
   padding: 26px;
   border-radius: 18px 18px 0 0;
   color: #fff;
-  background: #7b0d29;
+  background: #ff0000;
 }
 .seller-overview h2 {
   color: #fff;
@@ -3109,7 +3109,7 @@ dialog:has(.dialog-content) {
 }
 .seller-overview .secondary {
   background: #fff;
-  color: #7b0d29;
+  color: #ff0000;
 }
 .seller-status {
   padding: 16px 24px;
@@ -3143,7 +3143,7 @@ dialog:has(.dialog-content) {
   border: 1px solid #e8d6da;
   border-radius: 12px;
   cursor: pointer;
-  color: #7b0d29;
+  color: #ff0000;
 }
 .seller-metrics strong {
   display: block;
@@ -3427,7 +3427,7 @@ dialog:has(.chat-dialog) .module-dialog-close {
 }
 .chat-expiry-banner time {
   flex-shrink: 0;
-  color: #7b0d29;
+  color: #ff0000;
   font-size: 0.82rem;
   font-weight: 750;
   white-space: nowrap;
@@ -3465,7 +3465,7 @@ dialog:has(.chat-dialog) .module-dialog-close {
   transform: translateY(-1px);
 }
 .chat-list-item.unread {
-  border-left: 4px solid #8a102b;
+  border-left: 4px solid #ff0000;
   background: #fffaf6;
 }
 .chat-avatar {
@@ -3474,7 +3474,7 @@ dialog:has(.chat-dialog) .module-dialog-close {
   border-radius: 50%;
   display: grid;
   place-items: center;
-  background: #7b0d29;
+  background: #ff0000;
   color: #fff;
   font-weight: 800;
 }
@@ -3517,7 +3517,7 @@ dialog:has(.chat-dialog) .module-dialog-close {
   display: grid;
   place-items: center;
   border-radius: 999px;
-  background: #8a102b;
+  background: #ff0000;
   color: #fff;
   font-size: 0.75rem;
 }
@@ -3634,7 +3634,7 @@ dialog:has(.chat-dialog) .module-dialog-close {
   padding: 11px 13px;
   font: inherit;
   line-height: 1.4;
-  color: #7b0d29;
+  color: #ff0000;
   background: #fff;
 }
 .chat-composer textarea:focus {
@@ -3658,7 +3658,7 @@ dialog:has(.chat-dialog) .module-dialog-close {
 }
 .chat-send-button {
   border: 0;
-  background: #7b0d29;
+  background: #ff0000;
   color: #fff;
 }
 .chat-image-button svg,
@@ -3909,7 +3909,7 @@ dialog:has(.chat-dialog) .module-dialog-close {
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: #fff;
-  box-shadow: 0 8px 28px #7b0d290d;
+  box-shadow: 0 8px 28px #ff00000d;
 }
 .event-card-top {
   display: flex;
@@ -4153,7 +4153,7 @@ dialog:has(.chat-dialog) .module-dialog-close {
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  color: #6f1026;
+  color: #cc0000;
   font-weight: 800;
   letter-spacing: 0.1em;
   font-size: 0.75rem;
@@ -4168,7 +4168,7 @@ dialog:has(.chat-dialog) .module-dialog-close {
   overflow: hidden;
   background: #fff;
   border: 1px solid #ead9de;
-  box-shadow: 0 6px 18px #4b09171f;
+  box-shadow: 0 6px 18px #9900001f;
 }
 .guide-mark-icon img {
   width: 100%;
@@ -4196,7 +4196,7 @@ dialog:has(.chat-dialog) .module-dialog-close {
   border: 1px solid #e7c4cd;
   border-radius: 12px;
   background: #fff6f8;
-  color: #6f1026;
+  color: #cc0000;
   font-size: 0.82rem;
   line-height: 1.45;
 }
@@ -4205,9 +4205,9 @@ dialog:has(.chat-dialog) .module-dialog-close {
 /* Portada: rojo Facultad de Ingeniería con difuminado profundo. */
 .auth-layout {
   background:
-    radial-gradient(circle at 12% 16%, #d4476473 0, transparent 34%),
+    radial-gradient(circle at 12% 16%, #ff000073 0, transparent 34%),
     radial-gradient(circle at 82% 112%, #2f020f99 0, transparent 48%),
-    linear-gradient(135deg, #4b0917 0%, #741027 46%, #96122f 100%);
+    linear-gradient(135deg, #990000 0%, #d60000 46%, #ff0000 100%);
 }
 .auth-aside .accent { color: #ffd0d9; }
 .auth-aside .eyebrow { color: #fff1f4; }
@@ -4218,31 +4218,31 @@ dialog:has(.chat-dialog) .module-dialog-close {
 }
 .campus-teaser { box-shadow: 0 20px 55px #26020d80; }
 .teaser-label {
-  background: #5f0b20;
+  background: #cc0000;
   border-color: #a84860;
 }
 .auth-card > .icon-circle {
   background: linear-gradient(140deg, #fff2f5, #f8dbe2);
-  color: #8a102b;
+  color: #ff0000;
   border-color: #e6b7c3;
 }
 .auth-card .btn:not(.secondary) {
-  background: linear-gradient(110deg, #7b0d29, #b31c3d);
-  box-shadow: 0 8px 20px #7b0d2929;
+  background: linear-gradient(110deg, #ff0000, #ff3333);
+  box-shadow: 0 8px 20px #ff000029;
 }
 .auth-card .btn:not(.secondary):hover {
-  background: linear-gradient(110deg, #650a22, #941630);
+  background: linear-gradient(110deg, #cc0000, #e60000);
 }
-.auth-tabs .active { color: #7b0d29; }
+.auth-tabs .active { color: #ff0000; }
 .auth-card .field input:focus {
-  border-color: #8d1230;
-  box-shadow: 0 0 0 3px #8d123012;
+  border-color: #ff0000;
+  box-shadow: 0 0 0 3px #ff000012;
 }
 @media (max-width: 760px) {
   .auth-layout {
     background:
-      radial-gradient(circle at 100% 0, #c33d5b66 0, transparent 58%),
-      linear-gradient(145deg, #4b0917 0%, #7b0d29 58%, #96122f 100%);
+      radial-gradient(circle at 100% 0, #ff000066 0, transparent 58%),
+      linear-gradient(145deg, #990000 0%, #ff0000 58%, #ff0000 100%);
   }
   .guide-mark-text { display: none; }
   .guide-mark-icon { width: 42px; height: 42px; }
@@ -4272,12 +4272,12 @@ dialog:has(.chat-dialog) .module-dialog-close {
   background: #fff2f5;
 }
 .guide-mark-button:focus-visible {
-  outline: 3px solid #9d1735;
+  outline: 3px solid #ff0000;
   outline-offset: 2px;
 }
 .fit-chatbot {
-  --chat-red: #9c1534;
-  --chat-red-dark: #761027;
+  --chat-red: #ff0000;
+  --chat-red-dark: #d60000;
   --chat-soft: #fff4f6;
   position: fixed;
   right: 26px;
@@ -4384,7 +4384,7 @@ dialog:has(.chat-dialog) .module-dialog-close {
   align-items: center;
   justify-content: space-between;
   padding: 15px 16px;
-  background: linear-gradient(120deg, #7b0d29, #c22d4c);
+  background: linear-gradient(120deg, #ff0000, #ff3333);
   color: #fff;
 }
 .fit-chat-agent {
@@ -4484,7 +4484,7 @@ dialog:has(.chat-dialog) .module-dialog-close {
 }
 .fit-chat-quick button {
   border: 1px solid #ce3450;
-  color: #9b1735;
+  color: #ff0000;
   background: #fff;
   border-radius: 999px;
   padding: 7px 10px;
@@ -4514,8 +4514,8 @@ dialog:has(.chat-dialog) .module-dialog-close {
   outline: none;
 }
 .fit-chat-form textarea:focus {
-  border-color: #a41a39;
-  box-shadow: 0 0 0 3px #a41a3914;
+  border-color: #ff0000;
+  box-shadow: 0 0 0 3px #ff000014;
 }
 .fit-chat-form button {
   width: 44px;
@@ -4665,12 +4665,12 @@ dialog:has(.chat-dialog) .module-dialog-close {
 }
 
 /* Progreso y personalización FIT */
-.reward-hero{display:flex;flex-wrap:wrap;gap:24px;align-items:center;justify-content:space-between;padding:32px;border-radius:24px;color:#fff;background:linear-gradient(120deg,#650a22,#a41a39);box-shadow:0 12px 30px #7b0d2918}
-.reward-hero h2{font-size:2.8rem;margin:8px 0}.reward-hero p{margin:0}.reward-balance{display:grid;text-align:right}.reward-balance strong{font-size:2.5rem}.reward-progress{width:100%;display:grid;gap:8px}.reward-progress progress{width:100%;height:12px;accent-color:#f6c95b}.reward-tabs{display:flex;flex-wrap:wrap;gap:10px;margin:24px 0}.reward-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:20px}.reward-card{padding:24px;border:1px solid #ead7dc;border-radius:20px;background:#fff}.reward-card h3{margin:12px 0}.reward-card small{color:#65505a}.reward-card label{display:block;margin:12px 0}.reward-card select{width:100%}.reward-week{display:flex;gap:10px}.reward-week span{flex:1;border:1px solid #ead7dc;border-radius:12px;padding:12px 4px;text-align:center}.reward-week small{display:block}.reward-week .earned{background:#7b0d29;color:white}.reward-week .earned small{color:white}.reward-history{border:1px solid #ead7dc;border-radius:18px;overflow:hidden}.reward-history>div,.reward-history>article{padding:16px 22px;border-bottom:1px solid #f0e5e8;display:flex;align-items:center;justify-content:space-between;gap:18px}.reward-history>article{justify-content:flex-start}.reward-history small{display:block;color:#67505a}.reward-history h3,.reward-history p{margin:0}.reward-rank{font-size:1.6rem;color:#7b0d29;font-weight:800;min-width:35px}.reward-settings{margin-bottom:20px}.reward-preview{height:110px;border-radius:16px;display:grid;place-items:center;background:#fff8fa;border:1px solid #ead7dc;overflow:hidden}.reward-preview span{padding:14px;border-radius:14px;background:white;color:#650a22}.frame-ruby span{border:4px solid #9b1735}.frame-gold span{border:4px solid #ac7718}.frame-orbit span{border:4px dashed #9b1735}.chat-ruby span{border:2px solid #9b1735}.chat-gold span{border:2px solid #ac7718}.bot-petals{background:radial-gradient(#e8bac6 1px,transparent 2px) 0 0/16px 16px}.bot-night{background:#390817}.motion-rise span{animation:fit-rise 1s ease both}.motion-glow span{animation:fit-glow 1.2s ease both}
-body[data-fitframe="frame-ruby"] :is(.profile-avatar,.avatar){outline:3px solid #a41a39;outline-offset:3px}
+.reward-hero{display:flex;flex-wrap:wrap;gap:24px;align-items:center;justify-content:space-between;padding:32px;border-radius:24px;color:#fff;background:linear-gradient(120deg,#cc0000,#ff0000);box-shadow:0 12px 30px #ff000018}
+.reward-hero h2{font-size:2.8rem;margin:8px 0}.reward-hero p{margin:0}.reward-balance{display:grid;text-align:right}.reward-balance strong{font-size:2.5rem}.reward-progress{width:100%;display:grid;gap:8px}.reward-progress progress{width:100%;height:12px;accent-color:#f6c95b}.reward-tabs{display:flex;flex-wrap:wrap;gap:10px;margin:24px 0}.reward-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:20px}.reward-card{padding:24px;border:1px solid #ead7dc;border-radius:20px;background:#fff}.reward-card h3{margin:12px 0}.reward-card small{color:#65505a}.reward-card label{display:block;margin:12px 0}.reward-card select{width:100%}.reward-week{display:flex;gap:10px}.reward-week span{flex:1;border:1px solid #ead7dc;border-radius:12px;padding:12px 4px;text-align:center}.reward-week small{display:block}.reward-week .earned{background:#ff0000;color:white}.reward-week .earned small{color:white}.reward-history{border:1px solid #ead7dc;border-radius:18px;overflow:hidden}.reward-history>div,.reward-history>article{padding:16px 22px;border-bottom:1px solid #f0e5e8;display:flex;align-items:center;justify-content:space-between;gap:18px}.reward-history>article{justify-content:flex-start}.reward-history small{display:block;color:#67505a}.reward-history h3,.reward-history p{margin:0}.reward-rank{font-size:1.6rem;color:#ff0000;font-weight:800;min-width:35px}.reward-settings{margin-bottom:20px}.reward-preview{height:110px;border-radius:16px;display:grid;place-items:center;background:#fff8fa;border:1px solid #ead7dc;overflow:hidden}.reward-preview span{padding:14px;border-radius:14px;background:white;color:#cc0000}.frame-ruby span{border:4px solid #ff0000}.frame-gold span{border:4px solid #ac7718}.frame-orbit span{border:4px dashed #ff0000}.chat-ruby span{border:2px solid #ff0000}.chat-gold span{border:2px solid #ac7718}.bot-petals{background:radial-gradient(#e8bac6 1px,transparent 2px) 0 0/16px 16px}.bot-night{background:#390817}.motion-rise span{animation:fit-rise 1s ease both}.motion-glow span{animation:fit-glow 1.2s ease both}
+body[data-fitframe="frame-ruby"] :is(.profile-avatar,.avatar){outline:3px solid #ff0000;outline-offset:3px}
 body[data-fitframe="frame-gold"] :is(.profile-avatar,.avatar){outline:4px solid #ac7718;outline-offset:3px;box-shadow:0 0 18px #d1aa5355}
-body[data-fitframe="frame-orbit"] :is(.profile-avatar,.avatar){outline:3px dashed #a41a39;outline-offset:4px;animation:fit-halo 3s ease-in-out infinite}
-body[data-fitchat="chat-ruby"] :is(.fit-chat-panel,.food-chat-dialog,.chat-dialog){border:2px solid #a41a39}
+body[data-fitframe="frame-orbit"] :is(.profile-avatar,.avatar){outline:3px dashed #ff0000;outline-offset:4px;animation:fit-halo 3s ease-in-out infinite}
+body[data-fitchat="chat-ruby"] :is(.fit-chat-panel,.food-chat-dialog,.chat-dialog){border:2px solid #ff0000}
 body[data-fitchat="chat-gold"] :is(.fit-chat-panel,.food-chat-dialog,.chat-dialog){border:2px solid #ac7718}
 body[data-fitbackground="bot-petals"] .fit-chat-body{background:radial-gradient(#e8bac6 1px,transparent 2px) 0 0/16px 16px #fff}
 body[data-fitbackground="bot-night"] .fit-chat-body{background:#390817}
@@ -4678,15 +4678,23 @@ body[data-fitmotion="motion-rise"] :is(.fit-chat-message,.chat-message-row){anim
 body[data-fitmotion="motion-glow"] :is(.fit-chat-message,.chat-message-row){animation:fit-glow .6s ease both}
 @keyframes fit-rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 @keyframes fit-glow{from{filter:brightness(1.2)}to{filter:brightness(1)}}
-@keyframes fit-halo{50%{box-shadow:0 0 16px #a41a3944}}
+@keyframes fit-halo{50%{box-shadow:0 0 16px #ff000044}}
 body.fit-no-motion :is(.fit-chat-message,.chat-message-row,.profile-avatar,.avatar,.reward-preview span){animation:none!important;transition:none!important}
 @media(prefers-reduced-motion:reduce){.reward-preview span,body[data-fitframe] :is(.profile-avatar,.avatar),body[data-fitmotion] :is(.fit-chat-message,.chat-message-row){animation:none!important;transition:none!important}}
 @media(max-width:600px){.reward-hero{padding:22px}.reward-hero h2{font-size:2.2rem}.reward-tabs .btn{flex:1 1 42%}.reward-card{padding:18px}.reward-history>article{align-items:flex-start}}
 
-.reward-settings input,.reward-card input{accent-color:#7b0d29}
+.reward-settings input,.reward-card input{accent-color:#ff0000}
 
 /* Selector de foto accesible con el control nativo integrado. */
-.photo-upload-card{display:grid;gap:12px;min-width:0}.photo-upload-title{font-size:.8rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#7b0d29}.photo-file-picker{position:relative;display:flex;align-items:center;gap:14px;padding:18px;border:1px solid #dec3cb;border-radius:18px;background:#fff;cursor:pointer;transition:transform .2s ease,box-shadow .2s ease,border-color .2s ease}.photo-file-picker strong{display:block;color:#7b0d29;font-size:1rem}.photo-file-picker small{display:block;color:#705b62;margin-top:5px;font-size:.78rem}.photo-file-picker>svg{width:20px;height:20px;margin-left:auto;color:#7b0d29;flex-shrink:0}.photo-picker-icon{display:grid;place-items:center;width:44px;height:44px;flex-shrink:0;border-radius:13px;background:#7b0d29;color:white}.photo-picker-icon svg{width:23px;height:23px}.photo-file-picker input[type=file]{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;margin:0;padding:0}.photo-file-picker:hover{border-color:#9b1735;transform:translateY(-2px);box-shadow:0 8px 20px #7b0d2914}.photo-file-picker:focus-within{outline:3px solid #a41a39;outline-offset:3px}.photo-selected .photo-file-picker{border-color:#9b1735}.photo-file-name{font-size:.8rem;color:#705b62;margin:0;overflow-wrap:anywhere}.photo-upload-actions{display:flex;align-items:center;gap:14px;flex-wrap:wrap}.photo-save{display:inline-flex;align-items:center;justify-content:center;gap:8px;transition:transform .2s ease,box-shadow .2s ease}.photo-save svg{width:18px;height:18px}.photo-save:not(:disabled):hover{transform:translateY(-2px);box-shadow:0 6px 16px #7b0d2926}.photo-save:active{transform:translateY(0)}.photo-remove{background:transparent;color:#7b0d29;border:1px solid #dec3cb;border-radius:12px;padding:11px 14px;font-size:.85rem;font-weight:600}.photo-remove:hover{background:#fff1f4}.photo-save:disabled{opacity:.55}
+.photo-upload-card{display:grid;gap:12px;min-width:0}.photo-upload-title{font-size:.8rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#ff0000}.photo-file-picker{position:relative;display:flex;align-items:center;gap:14px;padding:18px;border:1px solid #dec3cb;border-radius:18px;background:#fff;cursor:pointer;transition:transform .2s ease,box-shadow .2s ease,border-color .2s ease}.photo-file-picker strong{display:block;color:#ff0000;font-size:1rem}.photo-file-picker small{display:block;color:#705b62;margin-top:5px;font-size:.78rem}.photo-file-picker>svg{width:20px;height:20px;margin-left:auto;color:#ff0000;flex-shrink:0}.photo-picker-icon{display:grid;place-items:center;width:44px;height:44px;flex-shrink:0;border-radius:13px;background:#ff0000;color:white}.photo-picker-icon svg{width:23px;height:23px}.photo-file-picker input[type=file]{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;margin:0;padding:0}.photo-file-picker:hover{border-color:#ff0000;transform:translateY(-2px);box-shadow:0 8px 20px #ff000014}.photo-file-picker:focus-within{outline:3px solid #ff0000;outline-offset:3px}.photo-selected .photo-file-picker{border-color:#ff0000}.photo-file-name{font-size:.8rem;color:#705b62;margin:0;overflow-wrap:anywhere}.photo-upload-actions{display:flex;align-items:center;gap:14px;flex-wrap:wrap}.photo-save{display:inline-flex;align-items:center;justify-content:center;gap:8px;transition:transform .2s ease,box-shadow .2s ease}.photo-save svg{width:18px;height:18px}.photo-save:not(:disabled):hover{transform:translateY(-2px);box-shadow:0 6px 16px #ff000026}.photo-save:active{transform:translateY(0)}.photo-remove{background:transparent;color:#ff0000;border:1px solid #dec3cb;border-radius:12px;padding:11px 14px;font-size:.85rem;font-weight:600}.photo-remove:hover{background:#fff1f4}.photo-save:disabled{opacity:.55}
 @media(prefers-reduced-motion:reduce){.photo-file-picker,.photo-save{transition:none;transform:none!important}}
 body.fit-no-motion .photo-file-picker,body.fit-no-motion .photo-save{transition:none;transform:none!important}
 @media(max-width:600px){.photo-file-picker{padding:14px;gap:10px}.photo-upload-actions .photo-save{flex:1}}
+
+
+/* Mi cuenta: vista previa de recompensas */
+.account-reward-showcase{margin-top:24px;display:grid;gap:18px}.account-reward-showcase>div:first-child h2{margin:8px 0}.account-reward-preview-head{display:flex;justify-content:space-between;align-items:center;gap:18px;margin-bottom:18px}.account-reward-preview-head>div{display:grid;gap:4px}.account-reward-preview-head span{font-size:.85rem;color:var(--muted)}.account-reward-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px}.account-reward-item{display:grid;grid-template-rows:auto 1fr auto;gap:10px;padding:14px;border:1px solid var(--line);border-radius:18px;background:#fff}.account-reward-item .reward-preview{height:86px}.account-reward-item>div:nth-child(2){display:grid;gap:5px}.account-reward-item small{color:var(--muted);line-height:1.4}.account-reward-item b{font-size:.85rem}.account-reward-item .text-button{text-align:left;padding:0}
+
+/* Administración: cuentas registradas y entrega controlada de beneficios */
+.admin-users-panel{margin-top:24px}.admin-users-head{display:flex;align-items:flex-start;justify-content:space-between;gap:24px}.admin-users-head h2{margin:8px 0}.admin-users-head>strong{white-space:nowrap;color:#ff0000}.admin-user-search{max-width:640px;margin:18px 0}.admin-users-table{border:1px solid var(--line);border-radius:18px;overflow:hidden}.admin-user-row{display:grid;grid-template-columns:minmax(240px,1.7fr) minmax(210px,1fr) auto;gap:18px;align-items:center;padding:16px 18px;border-bottom:1px solid var(--line);background:#fff}.admin-user-row:last-child{border-bottom:0}.admin-user-main{display:grid;gap:4px;min-width:0}.admin-user-main strong,.admin-user-main span,.admin-user-main small{overflow-wrap:anywhere}.admin-user-main span{font-size:.9rem}.admin-user-main small{color:var(--muted)}.admin-user-stats{display:flex;gap:12px;flex-wrap:wrap}.admin-user-stats span{padding:7px 9px;border-radius:10px;background:#fafafa;font-size:.78rem;white-space:nowrap}.admin-user-stats b{color:#ff0000}.admin-user-actions{display:flex;align-items:center;justify-content:flex-end;gap:10px;flex-wrap:wrap}.admin-benefit-balance{display:grid;gap:4px;padding:16px;margin:16px 0;border-radius:16px;background:#fff5f5;border:1px solid #ffd1d1}.admin-benefit-balance strong{font-size:1.35rem;color:#ff0000}.admin-benefit-balance small{color:var(--muted)}
+@media(max-width:800px){.admin-user-row{grid-template-columns:1fr}.admin-user-actions{justify-content:flex-start}.admin-users-head,.account-reward-preview-head{align-items:flex-start;flex-direction:column}.account-reward-preview-head .button-row{width:100%}}

@@ -18,6 +18,26 @@
  }
  function mount(c){ctx=c;if(!eligible(c)){clear();return;}if(identity!==c.state.user.id){clear();identity=c.state.user.id;refresh();}else apply();}
  async function scheduleSaved(uid,saved){if(!eligible(ctx)||uid!==identity)return;try{const r=await api('/schedule',{classes:saved.classes.map(x=>({subject:x.subject,day:x.day,start:x.start,end:x.end}))});if(r.earned)ctx.toast(`+${r.earned} EXP por tu primer horario`);await refresh();}catch(e){ctx?.toast('Tu horario quedó guardado. La recompensa se comprobará al volver a entrar.');}}
+ async function profilePreview(c,host){
+  ctx=c;if(!host||!eligible(c)){if(host)host.innerHTML='<p class="hint">Inicia sesión con una cuenta institucional para ver las recompensas.</p>';return;}
+  host.innerHTML='<p role="status">Cargando vista previa de recompensas…</p>';
+  try{
+   if(identity!==c.state.user.id){identity=c.state.user.id;data=null;}
+   if(!data)data=await api('/me');
+   if(!host.isConnected)return;
+   const items=data.catalog||[];
+   host.innerHTML=`<div class="account-reward-preview-head"><div><b>${data.coins} monedas disponibles</b><span>Nivel ${data.level} · ${data.xp} EXP</span></div><div class="button-row"><button class="btn secondary small" type="button" data-preview-reset hidden>Restaurar mis estilos</button><button class="btn small" type="button" data-open-rewards>Ver todos los premios</button></div></div><div class="account-reward-grid">${items.map(item=>`<article class="account-reward-item"><div class="reward-preview ${esc(item.id)}" aria-hidden="true"><span>${item.slot==='frame'?'FIT':'Hola, ¿cómo va tu día?'}</span></div><div><strong>${esc(item.name)}</strong><small>${esc(item.description)}</small><b>${data.inventory.includes(item.id)?'Ya es tuyo':item.price+' monedas'}</b></div><button class="text-button" type="button" data-preview-item="${esc(item.id)}">Previsualizar</button></article>`).join('')}</div><p class="hint" data-preview-status>Prueba un estilo aquí sin gastar monedas. Solo se guarda cuando lo canjeas y lo equipas desde Mi progreso y premios.</p>`;
+   const reset=host.querySelector('[data-preview-reset]'),status=host.querySelector('[data-preview-status]');
+   const restore=()=>{apply();reset.hidden=true;status.textContent='Prueba un estilo aquí sin gastar monedas. Solo se guarda cuando lo canjeas y lo equipas desde Mi progreso y premios.';};
+   reset.onclick=restore;
+   host.querySelector('[data-open-rewards]').onclick=()=>{restore();c.state.view='rewards';c.render();};
+   host.querySelectorAll('[data-preview-item]').forEach(button=>button.onclick=()=>{
+    const item=items.find(x=>x.id===button.dataset.previewItem);if(!item)return;
+    apply();document.body.dataset['fit'+item.slot]=item.id;reset.hidden=false;
+    status.textContent=`Vista previa activa: ${item.name}. No se han gastado monedas.`;
+   });
+  }catch(e){if(host.isConnected)host.innerHTML=`<div class="notice error">${esc(e.message||'No se pudo cargar la vista previa de premios.')}</div>`;}
+ }
  async function mutate(path,body){if(busy)return;busy=true;try{await api(path,body);await render(ctx);}catch(e){ctx.toast(e.message);}finally{busy=false;}}
  const label=a=>a.startsWith('day:')?'Visita diaria':a.startsWith('week:')?'Semana completa':a.startsWith('event:')?'Asistencia a evento':a.startsWith('rating:')?'Valoración recibida':'Primer horario';
  async function render(c){
@@ -53,5 +73,5 @@
    }
   }catch(e){if(host.isConnected){host.innerHTML='<p role="alert">'+esc(e.message)+'</p><button class="btn" id="reward-retry">Reintentar</button>';host.querySelector('button').onclick=()=>render(c);}}
  }
- root.FIT_REWARDS={mount,render,refresh,scheduleSaved,clearIfGuest:s=>{if(!s.user||s.demo||s.offline)clear();}};
+ root.FIT_REWARDS={mount,render,refresh,scheduleSaved,profilePreview,clearIfGuest:s=>{if(!s.user||s.demo||s.offline)clear();}};
 })(window);

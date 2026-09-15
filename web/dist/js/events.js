@@ -48,7 +48,10 @@
       : e.audience === "students"
         ? `Carreras: ${(e.careers || []).join(", ") || "Por definir"}`
         : `Invitados: ${(e.invitees || []).map((x) => x.full_name).join(", ") || "Por definir"}`;
-    const status = e.attended ? '<span class="event-pill attended">Asistencia verificada</span>' : e.checkin_open ? '<span class="event-pill today">Verificación habilitada hoy</span>' : '';
+    const canAttend = (accountType === "student" && e.audience === "students") || (accountType === "teacher" && e.audience === "teachers");
+    const status = e.attended ? '<span class="event-pill attended">Asistencia verificada</span>'
+      : e.checkin_open && canAttend ? '<span class="event-pill today">Verificación habilitada hoy</span>'
+      : accountType === "teacher" && e.audience === "students" ? '<span class="event-pill">Solo informativo para docentes</span>' : '';
     return `<article class="panel event-card" data-event-id="${c.esc(e.id)}">
       <div class="event-card-top"><div><span class="eyebrow">${e.audience === "students" ? "EVENTO PARA ALUMNOS" : "EVENTO PARA DOCENTES"}</span><h3>${c.esc(e.title)}</h3></div><div class="event-card-badges"><span class="event-pill">${e.visibility === "public" ? "Público" : "Cerrado"}</span>${status}</div></div>
       <p class="event-date">${c.icon("calendar")} <strong>${c.esc(fmt(e.starts_at))}</strong> — ${c.esc(fmt(e.ends_at))}</p>
@@ -260,9 +263,14 @@
         setTimeout(async () => { try { await checkin(c.state.pendingEventToken); } catch (e) { c.toast(e.message); c.state.pendingEventToken = null; const url = new URL(location.href); url.searchParams.delete("e"); history.replaceState(null, "", url.pathname + url.search + url.hash); } finally { c.state.eventCheckinBusy = false; } }, 0);
       }
       if (current === "events") {
-        const visible = events.filter((e) => e.audience === (accountType === "student" ? "students" : accountType === "teacher" ? "teachers" : e.audience));
-        const checkinToday = visible.some((e) => e.checkin_open);
-        content.innerHTML = `<section class="events-intro panel"><div><span class="eyebrow">${typeLabel(accountType).toUpperCase()}</span><h2>${accountType === "student" ? "Eventos para ti" : accountType === "teacher" ? "Eventos para docentes" : "Eventos de la facultad"}</h2><p>${accountType === "student" ? "Los eventos cerrados aparecen según la carrera guardada en Mi cuenta." : accountType === "teacher" ? "Aquí verás eventos públicos para docentes y aquellos a los que fuiste invitado." : "Administración puede consultar y gestionar los eventos para alumnos; también puede apoyar con eventos docentes."}</p></div>${accountType !== "admin" ? `<button class="btn" id="scan-event-qr" ${checkinToday ? "" : "disabled"}>${checkinToday ? "Escanear QR de asistencia" : "Verificación disponible el día del evento"}</button>` : ""}</section>${accountType === "student" && !c.state.profile?.career ? '<div class="notice">Completa tu carrera en <b>Mi cuenta</b> para recibir eventos cerrados dirigidos a tu programa académico.</div>' : ""}<div class="event-grid">${visible.length ? visible.map((e) => eventCard(c, e, accountType)).join("") : '<div class="empty">No hay eventos disponibles para tu cuenta.</div>'}</div>`;
+        // El servidor ya aplica la privacidad. El alumno solo recibe eventos de
+        // alumnos; el docente recibe esos eventos informativos y sus eventos docentes.
+        const visible = accountType === "student" ? events.filter((e) => e.audience === "students") : events;
+        const checkinToday = visible.some((e) => e.checkin_open && (
+          accountType === "student" ? e.audience === "students" :
+          accountType === "teacher" ? e.audience === "teachers" : false
+        ));
+        content.innerHTML = `<section class="events-intro panel"><div><span class="eyebrow">${typeLabel(accountType).toUpperCase()}</span><h2>${accountType === "student" ? "Eventos para ti" : accountType === "teacher" ? "Eventos de alumnos y docentes" : "Eventos de la facultad"}</h2><p>${accountType === "student" ? "Los eventos cerrados aparecen según la carrera guardada en Mi cuenta." : accountType === "teacher" ? "Puedes consultar los eventos para alumnos y también los eventos docentes públicos, propios o a los que fuiste invitado. El QR de asistencia docente solo se habilita en eventos para docentes." : "Administración puede consultar y gestionar los eventos para alumnos; también puede apoyar con eventos docentes."}</p></div>${accountType !== "admin" ? `<button class="btn" id="scan-event-qr" ${checkinToday ? "" : "disabled"}>${checkinToday ? "Escanear QR de asistencia" : "Verificación disponible el día del evento"}</button>` : ""}</section>${accountType === "student" && !c.state.profile?.career ? '<div class="notice">Completa tu carrera en <b>Mi cuenta</b> para recibir eventos cerrados dirigidos a tu programa académico.</div>' : ""}<div class="event-grid">${visible.length ? visible.map((e) => eventCard(c, e, accountType)).join("") : '<div class="empty">No hay eventos disponibles para tu cuenta.</div>'}</div>`;
         if (content.querySelector("#scan-event-qr")) content.querySelector("#scan-event-qr").onclick = () => scanner(c, checkin);
         bind();
       } else if (current === "manage") {

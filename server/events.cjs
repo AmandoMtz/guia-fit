@@ -166,7 +166,11 @@ function createEventsRouter({ db, limit, siteUrl }) {
         sql += ` where e.audience='students' and (e.visibility='public' or exists(select 1 from event_careers c join profiles me on me.id=$1 where c.event_id=e.id and me.career is not null and lower(btrim(c.career))=lower(btrim(me.career))))`;
       } else if (type === "teacher") {
         params.push(req.user.id);
-        sql += ` where e.audience='teachers' and (e.visibility='public' or e.created_by=$1 or exists(select 1 from event_teacher_invites i where i.event_id=e.id and i.user_id=$1))`;
+        // Los docentes pueden consultar todos los eventos para alumnos como información
+        // de la facultad, además de los eventos docentes públicos/propios/invitados.
+        // La asistencia QR sigue validando el público, así que un docente no puede
+        // registrar asistencia en un evento estudiantil.
+        sql += ` where e.audience='students' or (e.audience='teachers' and (e.visibility='public' or e.created_by=$1 or exists(select 1 from event_teacher_invites i where i.event_id=e.id and i.user_id=$1)))`;
       } else {
         return res.json({ data: [] });
       }

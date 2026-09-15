@@ -1,4 +1,4 @@
-const { createGamificationRouter } = require("./gamification.cjs");
+const { createGamificationRouter, catalog: rewardCatalog } = require("./gamification.cjs");
 const express = require("express");
 const helmet = require("helmet");
 const cookieParser = require("cookie-parser");
@@ -573,6 +573,101 @@ function createApp({
       res.json({ data: {} });
     },
   );
+  app.get(
+    "/api/admin/users",
+    authenticate,
+    administrator,
+    async (req, res) => {
+      const { rows } = await db.query(`select
+        u.id,u.email,u.role,u.email_confirmed_at,u.created_at,u.food_seller_intent,
+        p.full_name,p.student_id,p.career,
+        coalesce(iv.status,'pending') as verification_status,
+        coalesce(fp.xp,0)::int as xp,coalesce(fp.coins,0)::int as coins,
+        (select count(*)::int from fit_inventory fi where fi.user_id=u.id) as reward_count
+        from users u join profiles p on p.id=u.id
+        left join institutional_verifications iv on iv.user_id=u.id
+        left join fit_progress fp on fp.user_id=u.id
+        order by u.created_at desc,p.full_name asc`);
+      res.json({
+        data: {
+          users: rows.map((row) => ({
+            ...row,
+            account_type: accountType(row.email, row.role),
+          })),
+          rewards: rewardCatalog,
+        },
+      });
+    },
+  );
+  app.post(
+    "/api/admin/users/:id/benefits",
+    authenticate,
+    administrator,
+    async (req, res) => {
+      if (!UUID.test(req.params.id))
+        throw fail(400, "validation_error", "Identificador inválido.");
+      await limit(req, "admin-benefits:" + req.user.id, 60);
+      const coins = Number(req.body?.coins || 0),
+        itemId = typeof req.body?.item === "string" ? req.body.item.trim() : "",
+        note = typeof req.body?.note === "string" ? req.body.note.trim() : "",
+        item = itemId ? rewardCatalog.find((x) => x.id === itemId) : null;
+      if (
+        !Number.isInteger(coins) ||
+        coins < 0 ||
+        coins > 10000 ||
+        (itemId && !item) ||
+        note.length < 3 ||
+        note.length > 300 ||
+        (!coins && !item)
+      )
+        throw fail(
+          400,
+          "validation_error",
+          "Indica monedas (1 a 10000) o un premio válido y una nota breve.",
+        );
+      const data = await transaction(db, async (client) => {
+        const target = (await client.query(
+          "select id from users where id=$1 for update",
+          [req.params.id],
+        )).rows[0];
+        if (!target) throw fail(404, "not_found", "Cuenta no encontrada.");
+        await client.query(
+          "insert into fit_progress(user_id) values($1) on conflict do nothing",
+          [req.params.id],
+        );
+        if (coins)
+          await client.query(
+            "update fit_progress set coins=coins+$2 where user_id=$1",
+            [req.params.id, coins],
+          );
+        let itemGranted = false;
+        if (item) {
+          const granted = await client.query(
+            "insert into fit_inventory(user_id,item) values($1,$2) on conflict do nothing returning item",
+            [req.params.id, item.id],
+          );
+          itemGranted = !!granted.rows[0];
+          if (!itemGranted && !coins)
+            throw fail(409, "already_owned", "Esta cuenta ya tiene ese premio.");
+        }
+        await client.query(
+          "insert into admin_benefit_grants(admin_id,user_id,coins,item,note) values($1,$2,$3,$4,$5)",
+          [req.user.id, req.params.id, coins, item?.id || null, note],
+        );
+        const progress = (await client.query(
+          "select xp,coins from fit_progress where user_id=$1",
+          [req.params.id],
+        )).rows[0];
+        return {
+          ...progress,
+          granted_item: item?.id || null,
+          item_granted: itemGranted,
+        };
+      });
+      res.json({ data });
+    },
+  );
+
   app.get(
     "/api/admin/users/:id",
     authenticate,

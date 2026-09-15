@@ -17,11 +17,11 @@
   const aliases = [
     ["lunes", "lun", "lu"],
     ["martes", "mar", "ma"],
-    ["miercoles", "mie", "mi"],
-    ["jueves", "jue", "ju"],
-    ["viernes", "vie", "vi"],
-    ["sabado", "sab", "sa"],
-    ["domingo", "dom", "do"],
+    ["miercoles", "miercol", "mier", "mie", "mi"],
+    ["jueves", "juev", "jue", "ju"],
+    ["viernes", "vier", "vie", "vi"],
+    ["sabado", "saba", "sab", "sa"],
+    ["domingo", "domi", "dom", "do"],
   ];
   const dayOf = (s) => {
     const a = norm(s).replace(/[.:]/g, "").trim();
@@ -176,14 +176,20 @@
       const dayHeads = Array.from({ length: 7 }, (_, i) =>
         xs.find((x) => dayOf(x.text) === i + 1),
       );
-      if (subjectHead && roomHead && dayHeads.every(Boolean)) {
+      const detectedDays = dayHeads
+        .map((head, i) => head ? { head, day: i + 1 } : null)
+        .filter(Boolean);
+      // En capturas o escaneos Tesseract a veces pierde Viernes/Sábado/Domingo
+      // porque sus columnas están vacías. Con cuatro encabezados de día ya hay
+      // suficiente geometría para reconocer de forma segura el horario docente.
+      if (subjectHead && roomHead && detectedDays.length >= 4) {
         flush();
         bounds = null;
         const centers = xs
           .map((x) => (x.x0 + x.x1) / 2)
           .sort((a, b) => a - b)
           .filter((x, i, a) => !i || Math.abs(x - a[i - 1]) > 3);
-        const targets = [subjectHead, ...dayHeads, roomHead];
+        const targets = [subjectHead, ...detectedDays.map((x) => x.head), roomHead];
         teacherSpans = targets.map((x) => {
           const center = (x.x0 + x.x1) / 2;
           const prior = [...centers].reverse().find((v) => v < center - 3);
@@ -193,18 +199,18 @@
             right: next == null ? Infinity : (center + next) / 2,
           };
         });
-        output.push(["MATERIA", ...days.map((x) => x.toUpperCase()), "AULA"].join(" | "));
+        output.push(["MATERIA", ...detectedDays.map((x) => days[x.day - 1].toUpperCase()), "AULA"].join(" | "));
         lastY = r.y;
         continue;
       }
       if (teacherSpans) {
-        const cells = Array(9).fill("");
+        const cells = Array(teacherSpans.length).fill("");
         for (const x of xs) {
           const center = (x.x0 + x.x1) / 2;
           const col = teacherSpans.findIndex((span) => center >= span.left && center < span.right);
           if (col >= 0) cells[col] += (cells[col] ? " " : "") + x.text.trim();
         }
-        const anyTime = cells.slice(1, 8).some((x) => /\d/.test(x));
+        const anyTime = cells.slice(1, -1).some((x) => /\d/.test(x));
         if (cells[0]) flush();
         const continuation = pending && r.y - lastY < Math.max(28, (xs[0]?.y1 - xs[0]?.y0 || 8) * 3);
         if (!pending && (cells[0] || anyTime)) pending = cells;

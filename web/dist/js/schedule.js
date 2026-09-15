@@ -167,8 +167,10 @@
       const img = new Image();
       img.src = url;
       await img.decode();
+      // Las capturas docentes suelen ser muy anchas y con texto pequeño.
+      // Permitimos ampliar hasta 2× antes del OCR local para conservar Clave/Materia/días/Aula.
       const scale = Math.min(
-        1,
+        2,
         3200 / Math.max(img.naturalWidth, img.naturalHeight),
       );
       const canvas = document.createElement("canvas");

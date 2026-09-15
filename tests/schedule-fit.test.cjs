@@ -68,3 +68,22 @@ test("horario docente: ignora Clave/Sit/Hrs. y conserva solo materia, aula y hor
     [1, 2, 3, 4].map((day) => ["METODOS NUMERICOS", "D-405", day, "10:00", "11:00"]),
   );
 });
+test("horario docente: detecta captura aunque OCR pierda encabezados de días vacíos", () => {
+  const box = (text, x, y, w = 54) => ({ text, x0: x - w / 2, x1: x + w / 2, y0: y, y1: y + 10 });
+  const heads = [
+    ["G", 20], ["Clave", 75], ["Materia", 220], ["Sit", 385], ["F.F.", 425],
+    ["Lunes", 500], ["Martes", 590], ["Miercol", 680], ["Juev", 770],
+    ["Hrs.", 1120], ["Hrs.", 1190], ["Hrs.", 1260], ["Aula", 1340],
+  ].map(([text, x]) => box(text, x, 30));
+  const row = [
+    box("R", 20, 75), box("RC.05053.1115.", 75, 75, 82), box("CALCULO VECTORIAL", 220, 75, 140),
+    box("T", 385, 75), box("UAT", 425, 75), box("7:00 - 8:00", 500, 75, 78),
+    box("7:00 - 8:00", 590, 75, 78), box("7:00 - 8:00", 680, 75, 78), box("7:00 - 8:00", 770, 75, 78),
+    box("04:00", 1120, 75), box("4", 1190, 75), box("4", 1260, 75), box("B-213", 1340, 75),
+  ];
+  const parsed = S.parse(S.rowsFromBoxes([...heads, ...row]));
+  assert.deepEqual(
+    parsed.classes.map((x) => [x.subject, x.classroom, x.day, x.start, x.end]),
+    [1, 2, 3, 4].map((day) => ["CALCULO VECTORIAL", "B-213", day, "07:00", "08:00"]),
+  );
+});

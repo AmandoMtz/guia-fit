@@ -9,7 +9,7 @@ if (-not (Test-Path ".git")) {
 
 git status
 git add .
-git commit -m "Agrega temas, tipografias y mejora premios"
+git commit -m "Aplica temas globales y mejora personalizacion"
 git push origin main
 
 Write-Host "Listo. Cambios enviados a GitHub." -ForegroundColor Green

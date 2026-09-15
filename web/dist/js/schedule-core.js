@@ -45,6 +45,27 @@
       ? { start, end, raw: m[0] }
       : null;
   }
+  function rangesInCell(value) {
+    const source = String(value || "");
+    const explicit = [
+      ...source.matchAll(
+        /\b\d{1,2}(?::\d{2})?\s*(?:-|–|—|a)\s*\d{1,2}(?::\d{2})?\b/gi,
+      ),
+    ]
+      .map((m) => range(m[0]))
+      .filter(Boolean);
+    if (explicit.length) return explicit;
+
+    // OCR de tablas puede borrar solo el guion: “9:00 10:00”.
+    // Dos horas completas y crecientes en una celda siguen siendo un bloque
+    // seguro; nunca completamos una hora si solo apareció un extremo.
+    const tokens = [...source.matchAll(/\b([01]?\d|2[0-3]):([0-5]\d)\b/g)]
+      .map((m) => `${String(Number(m[1])).padStart(2, "0")}:${m[2]}`);
+    if (tokens.length === 2 && time(tokens[1]) > time(tokens[0]))
+      return [{ start: tokens[0], end: tokens[1], raw: source.trim() }];
+    return [];
+  }
+
   function validate(c) {
     if ((c.group || "").length > 40)
       return "El grupo debe tener hasta 40 caracteres.";
@@ -124,7 +145,7 @@
     for (const b of words.sort((a, b) => a.y0 - b.y0 || a.x0 - b.x0)) {
       const center = (b.y0 + b.y1) / 2;
       let r = rows.find(
-        (x) => Math.abs(x.y - center) < Math.max(9, (b.y1 - b.y0) * 0.8),
+        (x) => Math.abs(x.y - center) < Math.max(12, (b.y1 - b.y0) * 0.9),
       );
       if (!r) {
         r = { y: center, items: [] };
@@ -393,22 +414,44 @@
         const daily = header
           .map((h, i) => ({ day: dayOf(h), cell: cells[i] || "" }))
           .filter((x) => x.day);
+        const teacherGrid = header.some((h) => /^(aula|salon)$/.test(h)) &&
+          !header.some((h) => /docente|maestro|profesor/.test(h));
         if (daily.length) {
           for (const x of daily) {
-            const ranges = [
-              ...x.cell.matchAll(
-                /\b\d{1,2}(?::\d{2})?\s*(?:-|–|—|a)\s*\d{1,2}(?::\d{2})?\b/gi,
-              ),
-            ]
-              .map((m) => range(m[0]))
-              .filter(Boolean);
-            if (x.cell && !/^[-–—.\s]*$/.test(x.cell) && !ranges.length)
+            x.ranges = rangesInCell(x.cell);
+          }
+          // En horarios docentes cada fila suele repetir el mismo bloque en
+          // varios días. Si OCR dañó una celda pero al menos dos días legibles
+          // coinciden, recuperamos SOLO las celdas no vacías/no “-” de esa fila.
+          const counts = new Map();
+          for (const x of daily)
+            for (const r of x.ranges || []) {
+              const key = `${r.start}-${r.end}`;
+              counts.set(key, (counts.get(key) || 0) + 1);
+            }
+          const consensus = [...counts.entries()].sort((a, b) => b[1] - a[1])[0];
+          const consensusRange = consensus && consensus[1] >= 2
+            ? (() => { const [start, end] = consensus[0].split("-"); return { start, end, raw: consensus[0] }; })()
+            : null;
+          for (const x of daily) {
+            let ranges = x.ranges || [];
+            const meaningful = x.cell && !/^[-–—.\s]*$/.test(x.cell);
+            const completeTimes = [...String(x.cell || "").matchAll(/\b(?:[01]?\d|2[0-3]):[0-5]\d\b/g)];
+            const looksLikeDamagedTime = completeTimes.length > 0;
+            if (consensusRange && meaningful && looksLikeDamagedTime) {
+              // “1 0- 11:00” puede convertirse falsamente en 00:00–11:00.
+              // Si solo quedó una hora completa y la mayoría de la fila coincide,
+              // preferimos el bloque repetido en vez de inventar medianoche.
+              if (!ranges.length || (ranges.length === 1 && completeTimes.length < 2 && ranges[0].start === "00:00"))
+                ranges = [consensusRange];
+            }
+            if (meaningful && !ranges.length && (!teacherGrid || looksLikeDamagedTime))
               warnings.push(
                 `${subject || "Materia pendiente"}, ${days[x.day - 1]}: revisa «${x.cell}». No se inventó una hora de salida.`,
               );
             for (const r of ranges)
               add(
-                subject,
+                subject.replace(/[!|]+$/g, "").trim(),
                 teacher,
                 room ||
                   x.cell.match(/(?:sal[oó]n|aula)\s*:?\s*([^|,;]+)/i)?.[1] ||
@@ -491,6 +534,7 @@
     dayOf,
     time,
     range,
+    rangesInCell,
     validate,
     overlaps,
     rowsFromItems,

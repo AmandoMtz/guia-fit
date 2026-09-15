@@ -1,5 +1,5 @@
 /* App shell sin conexión. Las respuestas /api nunca se guardan aquí. */
-const CACHE = "guia-fit-shell-v15-red-admin";
+const CACHE = "guia-fit-shell-v16-teacher-ocr";
 const SHELL = [
   "/",
   "/index.html",

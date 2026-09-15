@@ -87,3 +87,27 @@ test("horario docente: detecta captura aunque OCR pierda encabezados de días va
     [1, 2, 3, 4].map((day) => ["CALCULO VECTORIAL", "B-213", day, "07:00", "08:00"]),
   );
 });
+test("horario docente realista: PSM 11 separa Aula y puede borrar guiones", () => {
+  const box = (text, x, y, w = 54, h = 10) => ({ text, x0: x - w / 2, x1: x + w / 2, y0: y, y1: y + h });
+  // Tesseract PSM 11 puede colocar Hrs./Aula ~9 px arriba del resto del encabezado.
+  const heads = [
+    ["Clave", 75, 59], ["Materia", 220, 59], ["Sit", 385, 59], ["F.F.", 425, 59],
+    ["Lunes", 500, 59], ["Martes", 590, 59], ["Miercoles", 680, 59], ["Jueves", 770, 59],
+    ["Viernes", 860, 59], ["Sabado", 950, 59], ["Domingo", 1040, 59],
+    ["Hrs.", 1120, 50], ["Hrs.", 1190, 50], ["Hrs.", 1260, 50], ["Aula", 1340, 50],
+  ].map(([text, x, y]) => box(text, x, y));
+  const rowA = [
+    box("RC.07072.1122", 75, 100, 84), box("METODOS NUMERICOS", 220, 100, 145), box("T", 385, 100), box("UAT", 425, 100),
+    box("9:00 10:00", 500, 100, 78), box("9:00 10:00", 590, 100, 78), box("9:00 10:00", 680, 100, 78), box("9:00 10:00", 770, 100, 78),
+    box("04:00", 1120, 100), box("4", 1190, 100), box("4", 1260, 100), box("D-406", 1340, 100),
+  ];
+  const rowB = [
+    box("RC.07072.1122", 75, 145, 84), box("METODOS NUMERICOS", 220, 145, 145), box("T", 385, 145), box("UAT", 425, 145),
+    box("10:00 11:00", 500, 145, 78), box("1 0- 11:00", 590, 145, 78), box("1 11:00 -", 680, 145, 78), box("10:00 11:00", 770, 145, 78),
+    box("04:00", 1120, 145), box("4", 1190, 145), box("4", 1260, 145), box("D-405", 1340, 145),
+  ];
+  const parsed = S.parse(S.rowsFromBoxes([...heads, ...rowA, ...rowB]));
+  assert.equal(parsed.classes.length, 8, JSON.stringify(parsed));
+  assert.deepEqual(parsed.classes.slice(0, 4).map((x) => [x.day, x.start, x.end, x.classroom]), [1,2,3,4].map((d) => [d,"09:00","10:00","D-406"]));
+  assert.deepEqual(parsed.classes.slice(4).map((x) => [x.day, x.start, x.end, x.classroom]), [1,2,3,4].map((d) => [d,"10:00","11:00","D-405"]));
+});

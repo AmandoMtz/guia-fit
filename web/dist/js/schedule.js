@@ -210,6 +210,7 @@
         const result = await root.FIT_OCR.read(
           canvas.toDataURL("image/png"),
           announce,
+          { teacherMode: c.state.user?.account_type === "teacher" },
         );
         return S.rowsFromOcr
           ? S.rowsFromOcr(result)

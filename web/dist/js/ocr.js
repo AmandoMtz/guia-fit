@@ -1,6 +1,6 @@
 /* OCR en el dispositivo. Solo se descargan motor e idioma de nuestro propio sitio. */
 (function (root) {
-  async function read(source, onProgress = () => {}) {
+  async function read(source, onProgress = () => {}, options = {}) {
     if (!root.Tesseract)
       throw Error(
         "No se pudo cargar el lector de imágenes. Recarga la página.",
@@ -22,7 +22,10 @@
           ),
       });
       await worker.setParameters({
-        tessedit_pageseg_mode: "6",
+        // Los horarios docentes de FIT son tablas muy anchas. En PSM 6,
+        // Tesseract suele omitir por completo la fila de encabezados; PSM 11
+        // conserva Materia/Lunes…Domingo/Aula y sus posiciones.
+        tessedit_pageseg_mode: options.teacherMode ? "11" : "6",
         preserve_interword_spaces: "1",
       });
       const result = await worker.recognize(

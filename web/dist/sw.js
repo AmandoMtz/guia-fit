@@ -1,6 +1,7 @@
 /* App shell sin conexión. Las respuestas /api nunca se guardan aquí. */
-const CACHE = "guia-fit-shell-contrast-v1";
+const CACHE = "guia-fit-shell-photo-color-v1";
 const SHELL = [
+  "/photo-color-fix.css?v=1",
   "/contrast-fix.css?v=1",
   "/",
   "/index.html",

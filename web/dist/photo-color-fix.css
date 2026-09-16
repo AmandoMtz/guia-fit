@@ -1,0 +1,20 @@
+/* Ajuste exclusivo del selector de foto del perfil. */
+body .photo-upload-card{--photo-action:var(--read-action,#c40000);--photo-hover:var(--read-hover,#a60000);--photo-text:var(--read-link,#b80000);background:var(--fit-surface,#fff);padding:20px;border-radius:18px;color:var(--fit-ink,#322024)}
+body[data-fittheme="theme-pink"] .photo-upload-card{--photo-action:#ae285b;--photo-hover:#91204b;--photo-text:#a02353}
+body[data-fittheme="theme-blue"] .photo-upload-card{--photo-action:#2165a7;--photo-hover:#195187;--photo-text:#205f9c}
+body[data-fittheme="theme-purple"] .photo-upload-card{--photo-action:#7040b4;--photo-hover:#59318f;--photo-text:#6637a8}
+body[data-fittheme="theme-lilac"] .photo-upload-card{--photo-action:#7c46a8;--photo-hover:#633687;--photo-text:#73409d}
+body[data-fittheme="theme-mint"] .photo-upload-card{--photo-action:#206c55;--photo-hover:#195440;--photo-text:#20664f}
+body[data-fittheme="theme-dark"] .photo-upload-card{--photo-action:#bc243c;--photo-hover:#9d1b30;--photo-text:#ff9ca8}
+body .photo-upload-card .photo-upload-title{color:var(--photo-text)}
+body .photo-upload-card .photo-file-picker{background:var(--photo-action);color:#fff;border-color:var(--photo-action);box-shadow:none;opacity:1}
+body .photo-upload-card .photo-file-picker :is(strong,small,svg){color:#fff;opacity:1;text-shadow:none}
+body .photo-upload-card .photo-picker-icon{background:transparent;color:#fff;border:1px solid #fff}
+body .photo-upload-card .photo-file-picker:hover{background:var(--photo-hover);border-color:var(--photo-hover);box-shadow:none}
+body .photo-upload-card .photo-file-picker:focus-within{outline-color:var(--photo-text)}
+body .photo-upload-card .photo-file-name{color:var(--fit-ink,#322024);opacity:1}
+body .photo-upload-card .photo-save{background:var(--photo-action);color:#fff;box-shadow:none}
+body .photo-upload-card .photo-save:not(:disabled):hover{background:var(--photo-hover);filter:none;box-shadow:none}
+body .photo-upload-card .photo-save:disabled{background:var(--fit-soft,#f3f3f3);color:var(--fit-ink,#51464b);border:1px solid var(--fit-line,#d9d3d5);opacity:1;cursor:not-allowed;box-shadow:none}
+body .photo-upload-card .photo-remove{background:var(--fit-surface,#fff);color:var(--photo-text);border-color:var(--photo-text)}
+body .photo-upload-card .photo-remove:hover{background:var(--fit-soft,#fafafa);color:var(--photo-text)}

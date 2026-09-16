@@ -25,7 +25,7 @@
 .cm-compass svg { width:100%; height:100%; }
 .cm-compass circle { fill:#fff; stroke:#d8cbd0; }
 .cm-compass path { fill:var(--cm-red); }
-.cm-compass text { text-anchor:middle; font:700 11px "Segoe UI",sans-serif; fill:var(--cm-red); }
+.cm-compass text { text-anchor:middle; font-weight:700;font-size:11px;font-family:inherit; fill:var(--cm-red); }
 .cm-building { cursor:pointer; outline:none; }
 .cm-roof { fill:#f6e9ec; stroke:#9a5a69; stroke-width:1.6; stroke-linejoin:round; transition:fill .2s; }
 .cm-wall { fill:#d59ba9; stroke:#a8707e; stroke-width:1; }
@@ -44,12 +44,12 @@
 .cm-unknown .cm-wall { fill:#d9d9d4; stroke:#bcbcb6; }
 .cm-label { pointer-events:none; }
 .cm-label circle { fill:#fff; stroke:#9a5a69; stroke-width:1.5; }
-.cm-label text { fill:#ff0000; font:750 15px "Segoe UI",Arial,sans-serif; text-anchor:middle; }
+.cm-label text { fill:#ff0000; font-weight:750;font-size:15px;font-family:inherit; text-anchor:middle; }
 .cm-label.is-selected circle { stroke:#fff; stroke-width:3; fill:var(--cm-red); }
 .cm-label.is-selected text { fill:#fff; }
 .cm-location { pointer-events:none; }
 .cm-location rect { fill:#322024; stroke:#fff; stroke-width:2; }
-.cm-location text { fill:#fff; text-anchor:middle; font:650 11px "Segoe UI",Arial,sans-serif; }
+.cm-location text { fill:#fff; text-anchor:middle; font-weight:650;font-size:11px;font-family:inherit; }
 .cm-location path { stroke:#322024; stroke-width:2; }
 .cm-location-ring { fill:none; stroke:#322024; stroke-width:3; stroke-dasharray:5 4; transform-box:fill-box; transform-origin:center; animation:cm-reference 3s ease-in-out infinite; }
 @keyframes cm-reference { 0%,100% { opacity:1; } 50% { opacity:.45; } }
@@ -64,7 +64,7 @@
 .cm-disclaimer { max-width:620px; margin:18px auto 8px; padding-top:12px; border-top:1px solid var(--cm-line); font-size:.76rem; line-height:1.55; color:#705d62; text-align:center; }
 .cm-sidebar { padding:20px; border-left:1px solid var(--cm-line); min-width:0; background:#fff; }
 .cm-search-label { display:block; font-size:.8rem; font-weight:700; }
-.cm-search-label input { display:block; width:100%; min-height:46px; margin:8px 0 12px; padding:10px 12px; border:1px solid #cfbdc2; border-radius:10px; background:#fff; color:var(--cm-text); font:400 .85rem "Segoe UI",Arial,sans-serif; }
+.cm-search-label input { display:block; width:100%; min-height:46px; margin:8px 0 12px; padding:10px 12px; border:1px solid #cfbdc2; border-radius:10px; background:#fff; color:var(--cm-text); font-weight:400;font-size:.85rem;font-family:inherit; }
 .cm-list { display:flex; flex-direction:column; gap:3px; max-height:344px; overflow:auto; padding:4px; margin:0 -4px 18px; }
 .cm-list button { display:flex; align-items:center; gap:10px; width:100%; padding:9px 10px; text-align:left; line-height:1.3; font-size:.83rem; }
 .cm-list button[aria-pressed="true"] { background:var(--cm-red); color:#fff; }

@@ -34,6 +34,11 @@
     search: "M21 21l-5-5m2-6a8 8 0 11-16 0 8 8 0 0116 0",
     user: "M20 21v-2a7 7 0 00-14 0v2 M16 7a4 4 0 11-8 0 4 4 0 018 0",
     grid: "M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7h-7z",
+    building: "M3 21h18M5 21V9h14v12M3 9l9-6 9 6M9 21v-6h6v6M9 11h.01M12 11h.01M15 11h.01",
+    facebook: "M14 8h4V4h-4c-3 0-5 2-5 5v3H6v4h3v5h4v-5h4l1-4h-5V9c0-.6.4-1 1-1z",
+    graduation: "M2 9l10-5 10 5-10 5L2 9zm4 3v5c3 2 9 2 12 0v-5M22 9v6",
+    external: "M14 4h6v6M20 4l-9 9M20 14v5a1 1 0 01-1 1H5a1 1 0 01-1-1V5a1 1 0 011-1h5",
+    globe: "M12 22a10 10 0 100-20 10 10 0 000 20zm0-20c2.5 2.7 4 6.1 4 10s-1.5 7.3-4 10c-2.5-2.7-4-6.1-4-10s1.5-7.3 4-10zM2 12h20",
     route:
       "M5 4v10a5 5 0 005 5h4a5 5 0 000-10h-1m-3-3 3 3-3 3 M8 4a3 3 0 11-6 0 3 3 0 016 0",
     lock: "M5 10h14v11H5z M8 10V6a4 4 0 018 0v4",
@@ -49,10 +54,10 @@
   const brand = () => '<div class="brand institutional-brand"><img class="institutional-uat" src="assets/brand/uat.png" alt="Universidad Autónoma de Tamaulipas"><span class="divider"></span><img class="institutional-fit" src="assets/brand/fit.png" alt="Facultad de Ingeniería Tampico"></div>';
   const institutionalFooter = () => `<footer class="institutional-footer"><div>${brand()}<p>Comunidad, conocimiento y futuro.</p></div><img class="footer-corre" src="assets/brand/correcaminos.png" alt="Correcaminos UAT"><img class="footer-campaign" src="assets/brand/ingenieria-hoy.png" alt="Ingeniería es lo de hoy"></footer>`;
   const facultyLinks = () => `<section class="faculty-section" aria-label="Enlaces oficiales de la facultad"><div class="faculty-heading"><span class="eyebrow">CONECTA CON TU FACULTAD</span><h2>Tu próximo paso empieza aquí.</h2><p>Descubre la FIT, sigue a nuestra comunidad y forma parte de ella.</p></div><div class="faculty-cards">${[
-    ['https://fiuat.mx/', 'grid', '01 / DESCUBRE', 'Conoce la facultad', 'Explora la oferta educativa, los servicios y la información institucional.', 'Visitar sitio oficial', 'faculty-web'],
-    ['https://www.facebook.com/FIUAT.MX', 'chat', '02 / CONECTA', 'Somos comunidad', 'Sigue las noticias, actividades y momentos de la Facultad de Ingeniería Tampico.', 'Ir a Facebook', 'faculty-social'],
-    ['https://aspirantes.uat.edu.mx/', 'arrow', '03 / COMIENZA', 'Tu futuro en la UAT', 'Consulta el proceso de admisión y realiza tu registro como aspirante.', 'Registrarme como aspirante', 'faculty-admission']
-  ].map(([url, symbol, label, title, description, action, style]) => `<a class="faculty-card ${style}" href="${url}" target="_blank" rel="noopener noreferrer"><div class="faculty-card-top"><span>${label}</span>${icon(symbol)}</div><h3>${title}</h3><p>${description}</p><span class="faculty-card-action">${action} ${icon('arrow')}</span><small>Abre en una pestaña nueva</small></a>`).join('')}</div></section>`;
+    ['https://fiuat.mx/', 'building', 'external', '01 / DESCUBRE', 'Conoce la facultad', 'Explora la oferta educativa, los servicios y la información institucional.', 'Visitar sitio oficial', 'faculty-web'],
+    ['https://www.facebook.com/FIUAT.MX', 'facebook', 'send', '02 / CONECTA', 'Síguenos en Facebook', 'Entérate de avisos, noticias y contenido de la Facultad de Ingeniería Tampico.', 'Ir a Facebook', 'faculty-social'],
+    ['https://www.uat.edu.mx', 'graduation', 'globe', '03 / COMIENZA', 'Tu futuro en la UAT', 'Consulta el proceso de admisión y realiza tu registro como aspirante.', 'Visitar www.uat.edu.mx', 'faculty-admission']
+  ].map(([url, symbol, actionIcon, label, title, description, action, style]) => `<a class="faculty-card ${style}" href="${url}" target="_blank" rel="noopener noreferrer"><div class="faculty-card-top"><span>${label}</span>${icon(symbol)}</div><h3>${title}</h3><p>${description}</p><span class="faculty-card-action"><span>${action}</span>${icon(actionIcon)}</span><small>Abre en una pestaña nueva</small></a>`).join('')}</div></section>`;
   const guideMark = (compact = false, interactive = false) => {
     const inner = `<span class="guide-mark-icon"><img src="assets/guia-fit-mascota.png" alt="Mascota de Guía FIT"></span><span class="guide-mark-text">${compact ? "Guía FIT" : "GUÍA DEL CAMPUS"}</span>`;
     return interactive

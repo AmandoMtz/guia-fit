@@ -1,6 +1,6 @@
 /* App shell sin conexión. Las respuestas /api nunca se guardan aquí. */
 importScripts('/push-worker.js?v=1');
-const CACHE = "guia-fit-shell-web-push-v1";
+const CACHE = "guia-fit-shell-web-push-v2";
 const SHELL = [
   "/js/push-notifications.js?v=1",
   "/manifest.webmanifest",
@@ -37,8 +37,8 @@ const SHELL = [
   "/assets/fonts/VisbyCF-RegularOblique.otf",
   "/assets/fonts/VisbyCF-Thin.otf",
   "/assets/fonts/VisbyCF-ThinOblique.otf",
-  "/styles.css?v=20260916",
-  "/js/app.js?v=20260916",
+  "/styles.css?v=20260916b",
+  "/js/app.js?v=20260916b",
   "/assets/guia-fit-mascota.png",
   "/assets/croquis.png",
   "/js/api.js",

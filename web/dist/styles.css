@@ -1219,7 +1219,9 @@ dialog::backdrop {
   padding: 11px;
   border-radius: 18px;
   box-shadow: 0 20px 55px #1c060b80;
-  transform: rotate(-2deg);
+  transform: none;
+  width: min(100%, 430px);
+  align-self: center;
   border: 1px solid #ffffff80;
 }
 .aside-bottom {
@@ -4863,12 +4865,12 @@ body[data-fittheme="theme-dark"] :is(input,select,textarea){background:#16181d;}
 .institutional-brand img{display:block;object-fit:contain;height:auto;max-width:100%}
 .institutional-brand .institutional-uat{width:220px}
 .institutional-brand .institutional-fit{width:190px}
-.institutional-footer{display:flex;align-items:center;justify-content:space-between;gap:32px;padding:32px clamp(20px,5vw,72px);border-top:1px solid var(--line);background:#fff;color:#655b5d}
+.institutional-footer{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:32px;padding:32px clamp(20px,5vw,72px);border-top:1px solid var(--line);background:#fff;color:#655b5d}
 .institutional-footer p{font-size:.85rem;margin:16px 0 0}
 .institutional-footer .institutional-uat{width:175px}
 .institutional-footer .institutional-fit{width:150px}
-.footer-corre{width:140px;height:70px;object-fit:contain}
-.footer-campaign{width:220px;height:85px;object-fit:contain;background:#080808;border-radius:8px;padding:10px}
+.footer-corre{width:140px;height:70px;object-fit:contain;justify-self:center;display:block}
+.footer-campaign{width:220px;height:85px;object-fit:contain;background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px;justify-self:end}
 .faculty-section{margin:0 auto;padding:48px clamp(20px,5vw,72px) 64px;max-width:1600px}
 .content .faculty-section{padding:12px 0 28px}
 .faculty-heading{max-width:650px;margin-bottom:28px}
@@ -4888,8 +4890,8 @@ body[data-fittheme="theme-dark"] :is(input,select,textarea){background:#16181d;}
 .faculty-admission{color:#fff;background:#d90000;border-color:#d90000;background-image:linear-gradient(135deg,#ff0000,#be0000)}
 .faculty-admission:before{content:"";position:absolute;inset:0;background:url('assets/brand/textura.png') bottom right/150% auto no-repeat;opacity:.08;pointer-events:none}
 .faculty-admission>*{position:relative}
-@media(max-width:1100px){.institutional-brand .institutional-uat{width:175px}.institutional-brand .institutional-fit{width:145px}.institutional-brand{gap:12px}.faculty-card{padding:22px}.institutional-footer{flex-wrap:wrap}}
-@media(max-width:760px){.faculty-cards{grid-template-columns:1fr}.faculty-section{padding-top:32px;padding-bottom:36px}.faculty-card h3{margin-top:24px}.institutional-brand .institutional-uat{width:150px}.institutional-brand .institutional-fit{width:120px}.topbar{flex-wrap:wrap;gap:16px}.institutional-footer{gap:24px}.institutional-footer>div{width:100%}.footer-campaign{width:180px}.footer-corre{width:105px}.faculty-card{padding:24px}}
+@media(max-width:1100px){.institutional-brand .institutional-uat{width:175px}.institutional-brand .institutional-fit{width:145px}.institutional-brand{gap:12px}.faculty-card{padding:22px}.institutional-footer{grid-template-columns:1fr auto}.institutional-footer>div{grid-column:1/-1}.footer-corre{justify-self:start}.footer-campaign{justify-self:end}}
+@media(max-width:760px){.faculty-cards{grid-template-columns:1fr}.faculty-section{padding-top:32px;padding-bottom:36px}.faculty-card h3{margin-top:24px}.institutional-brand .institutional-uat{width:150px}.institutional-brand .institutional-fit{width:120px}.topbar{flex-wrap:wrap;gap:16px}.institutional-footer{grid-template-columns:1fr;gap:24px;text-align:center}.institutional-footer>div{width:100%}.institutional-footer .institutional-brand{justify-content:center}.footer-campaign{width:180px;justify-self:center}.footer-corre{width:105px;justify-self:center}.faculty-card{padding:24px}}
 @media(prefers-reduced-motion:reduce){.faculty-card{transition:none}.faculty-card:hover{transform:none}}
 body[data-fittheme="theme-dark"] .institutional-brand{background:#fff;border-radius:10px;padding:10px}
 @media(max-width:760px){.app-top .institutional-brand{gap:12px}.app-top .institutional-brand .divider{display:block}}

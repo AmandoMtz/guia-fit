@@ -154,6 +154,7 @@
   function render() {
     if (state.user || state.demo) shell();
     else authView();
+    window.FIT_PUSH?.mount(moduleContext());
   }
   function authView() {
     const mode = state.mode;

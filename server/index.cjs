@@ -21,6 +21,7 @@ const { migrate } = require("./migrate.cjs");
     corsOrigins: (process.env.CORS_ORIGINS || "").split(",").filter(Boolean),
     chatbot: createGeminiClient(),
   });
+  app.locals.fitPush?.start();
   const server = app.listen(Number(process.env.PORT || 3000), "0.0.0.0", () =>
     console.log(
       "Guía FIT iniciada" +
@@ -40,6 +41,7 @@ const { migrate } = require("./migrate.cjs");
     : null;
   cleanup?.unref();
   const stop = () => {
+    app.locals.fitPush?.stop();
     if (cleanup) clearInterval(cleanup);
     server.close(async () => {
       await db?.end();

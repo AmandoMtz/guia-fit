@@ -1,4 +1,5 @@
 const { createGamificationRouter, catalog: rewardCatalog, award } = require("./gamification.cjs");
+const { createPushService } = require("./push.cjs");
 const express = require("express");
 const helmet = require("helmet");
 const cookieParser = require("cookie-parser");
@@ -30,6 +31,8 @@ function createApp({
   const app = express(),
     origin = new URL(siteUrl).origin,
     allowed = new Set([origin, ...corsOrigins]);
+  const push = db ? createPushService({ db, siteUrl }) : null;
+  app.locals.fitPush = push;
   app.disable("x-powered-by");
   app.set("trust proxy", 1);
   app.use(
@@ -726,6 +729,7 @@ function createApp({
   );
   app.use("/api/events", createPublicEventsRouter({ db, limit }));
   app.use("/api/chatbot/public", createPublicChatbotRouter({ db, limit, chatbot }));
+  if (push) app.use("/api/push", authenticate, push.router(limit));
   app.use("/api/gamification", authenticate, createGamificationRouter({ db, limit }));
   app.use("/api/profile", authenticate, createProfileRouter({ db, limit }));
   app.use("/api/events", authenticate, createEventsRouter({ db, limit, siteUrl }));
@@ -733,7 +737,7 @@ function createApp({
   app.use(
     "/api/food",
     authenticate,
-    createFoodRouter({ db, siteUrl, administrator, limit }),
+    createFoodRouter({ db, siteUrl, administrator, limit, push }),
   );
   app.use("/api", (req, res, next) =>
     next(fail(404, "not_found", "Recurso no encontrado.")),

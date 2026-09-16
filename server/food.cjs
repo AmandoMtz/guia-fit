@@ -37,10 +37,10 @@ const statusLabels = {
   rejected: "Rechazado",
   cancelled: "Cancelado",
 };
-function createFoodRouter({ db, siteUrl, administrator, limit }) {
+function createFoodRouter({ db, siteUrl, administrator, limit, push = null }) {
   const router = Router(),
     origin = new URL(siteUrl).origin,
-    chat = createTemporaryFoodChat({ db });
+    chat = createTemporaryFoodChat({ db, onMessage: push?.enqueue });
   const withChat = (userId, row) =>
     row ? { ...row, chat_id: chat.chatIdForOrder(userId, row.id) } : row;
   const picture = (r) => ({

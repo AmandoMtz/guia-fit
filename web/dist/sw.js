@@ -1,6 +1,11 @@
 /* App shell sin conexión. Las respuestas /api nunca se guardan aquí. */
-const CACHE = "guia-fit-shell-photo-color-v1";
+importScripts('/push-worker.js?v=1');
+const CACHE = "guia-fit-shell-web-push-v1";
 const SHELL = [
+  "/js/push-notifications.js?v=1",
+  "/manifest.webmanifest",
+  "/assets/push-icon-192.png",
+  "/assets/push-icon-512.png",
   "/photo-color-fix.css?v=1",
   "/contrast-fix.css?v=1",
   "/",

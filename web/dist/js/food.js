@@ -277,6 +277,12 @@
       const body = c.$("#food-body");
       if (tab === "products") products(c, body, catalog, mine);
       if (tab === "chats") chatsView(c, body, chats, session);
+      // FIT push deep link
+      if (tab === "chats" && c.state.foodFocusChat) {
+        const focusedChat = c.state.foodFocusChat;
+        delete c.state.foodFocusChat;
+        await openChat(c, focusedChat, session);
+      }
       if (tab === "vendors") vendors(c, body, catalog);
       if (tab === "mine") own(c, body, mine);
       if (tab === "orders" || tab === "sales") {

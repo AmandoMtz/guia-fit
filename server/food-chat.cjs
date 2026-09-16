@@ -14,7 +14,7 @@ function chatError(status, message, code = "validation_error") {
   return Object.assign(new Error(message), { status, code });
 }
 
-function createTemporaryFoodChat({ db }) {
+function createTemporaryFoodChat({ db, onMessage = null }) {
   const chats = new Map();
   const streams = new Map();
   let storedImageBytes = 0;
@@ -137,6 +137,16 @@ function createTemporaryFoodChat({ db }) {
   }
 
   function notify(chat, type, senderId = null) {
+    // FIT Web Push recipient: solo la otra persona, sin exponer texto o imagenes.
+    if (type === "message" && onMessage && senderId) {
+      const message = chat.messages.at(-1);
+      Promise.resolve().then(() => onMessage({
+        id: message.id,
+        userId: senderId === chat.buyer_id ? chat.seller_user_id : chat.buyer_id,
+        chatId: chat.id,
+        expiresAt: chat.expires_at,
+      })).catch(() => console.warn("No se pudo encolar el aviso push del chat."));
+    }
     for (const userId of [chat.buyer_id, chat.seller_user_id])
       sendEvent(userId, {
         type,

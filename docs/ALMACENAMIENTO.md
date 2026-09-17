@@ -9,6 +9,7 @@ La separación se revisó en las migraciones y llamadas de la API de este proyec
 | Tipo Alumno/Alumno vendedor, puesto y aprobación                                                     | Aiven                                                                | Deben ser consistentes entre dispositivos. Cambiar el tipo de cuenta no concede permisos de administrador ni verificación institucional.                                   |
 | Productos, precios, pedidos y avisos                                                                 | Aiven                                                                | Comprador y vendedor necesitan consultar el mismo pedido. El servidor valida propietario, estado y precio.                                                                 |
 | Chat de Comidas: mensajes e imágenes                                                                 | Memoria temporal del proceso de Render                               | No se escriben en PostgreSQL. Cada conversación expira 12 h después de abrirse; las imágenes también. Un reinicio o despliegue puede descartarla antes porque no existe copia persistente. |
+| Chat entre alumnos y docentes: mensajes                                                              | PostgreSQL en Aiven                                                  | Se conservan de forma persistente aunque Render se reinicie o se despliegue una nueva versión. Cada mensaje deja de estar disponible al cumplir 7 días y después se elimina.             |
 | Foto de perfil                                                                                       | Aiven, una fila por cuenta                                           | Imagen WebP optimizada, hasta 512 × 512 y 512 KiB. La API exige la sesión de su propietario para leer, cambiar o borrar. No existe directorio público de fotos de alumnos. |
 | Fotografías de productos y espacios                                                                  | Tabla `photos` de Aiven                                              | Conserva la arquitectura actual; los compradores necesitan ver las fotos. Límite actual de 5 MiB por archivo.                                                              |
 | Nombre, matrícula y carrera extraídos del horario; materias, grupos, aulas, profesores, días y horas | Solo el dispositivo, con la clave de la cuenta                       | Se guardan como datos editables. No se envían a Aiven ni sustituyen automáticamente los datos del perfil.                                                                  |
@@ -21,6 +22,13 @@ La separación se revisó en las migraciones y llamadas de la API de este proyec
 El chat se mantiene en memoria del servidor y se elimina automáticamente al vencer su temporizador de 12 horas. Las imágenes recibidas se validan, se optimizan a WebP y permanecen en la misma memoria temporal; no se crea una tabla de chat ni una fila de imagen en Aiven. Solo los participantes de la conversación pueden leer sus mensajes o imágenes.
 
 Esta decisión evita conservar conversaciones, pero tiene una consecuencia intencional: si Render reinicia el proceso o haces un nuevo deploy, los chats activos se pierden antes de vencer. Los pedidos ya confirmados no se afectan porque esos sí están en `food_orders`.
+
+
+## Chat entre alumnos y docentes
+
+Las conversaciones académicas usan `academic_chats` y `academic_chat_messages`. Solo los dos participantes pueden consultar la conversación. El servidor valida que una cuenta de alumno converse con una cuenta docente registrada y confirmada; la búsqueda no expone correos electrónicos.
+
+Cada mensaje tiene su propia fecha de expiración de 7 días. Las consultas dejan de mostrarlo al vencer y la limpieza periódica elimina los registros expirados. Al estar en PostgreSQL, un reinicio o deploy de Render no borra las conversaciones vigentes. Los avisos externos reutilizan el sistema Web Push del proyecto y abren directamente la conversación cuando el navegador tiene permiso para notificaciones.
 
 ## Horarios locales por cuenta
 

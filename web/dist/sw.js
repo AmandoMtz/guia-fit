@@ -1,9 +1,10 @@
 /* App shell sin conexión. Las respuestas /api nunca se guardan aquí. */
-importScripts('/push-worker.js?v=2');
-const CACHE = "guia-fit-shell-security-v7";
+importScripts('/push-worker.js?v=3');
+const CACHE = "guia-fit-shell-academic-chat-v1";
 const SHELL = [
   "/js/attendance-security.js",
-  "/js/push-notifications.js?v=3",
+  "/js/push-notifications.js?v=4",
+  "/js/academic-chat.js?v=1",
   "/manifest.webmanifest",
   "/assets/push-icon-192.png",
   "/assets/push-icon-512.png",
@@ -38,8 +39,8 @@ const SHELL = [
   "/assets/fonts/VisbyCF-RegularOblique.otf",
   "/assets/fonts/VisbyCF-Thin.otf",
   "/assets/fonts/VisbyCF-ThinOblique.otf",
-  "/styles.css?v=20260916e",
-  "/js/app.js?v=20260916c",
+  "/styles.css?v=20260917a",
+  "/js/app.js?v=20260917a",
   "/assets/guia-fit-mascota.png",
   "/assets/croquis.png",
   "/js/api.js",

@@ -117,14 +117,16 @@
     if(recipientId&&recipientId!==c.state.user.id){if(wrongAccount!==recipientId){wrongAccount=recipientId;c.toast('Este aviso pertenece a otra cuenta. Inicia sesión con la cuenta que recibió el mensaje.');}return;}
     if(chatId&&!/^[a-f0-9-]{36}$/i.test(chatId))return;
     const u=new URL(location.href);u.searchParams.delete('fitChat');u.searchParams.delete('fitUser');u.searchParams.delete('fitPush');u.searchParams.delete('fitView');history.replaceState(null,'',u);
-    c.state.view=chatId?'food':(['food','events','profile'].includes(view)?view:'profile');if(chatId){c.state.foodTab='chats';c.state.foodFocusChat=chatId;}c.render();
+    const target=['food','events','profile','messages'].includes(view)?view:'profile';c.state.view=chatId?(target==='messages'?'messages':'food'):target;if(chatId){if(c.state.view==='messages')c.state.messagesFocusChat=chatId;else{c.state.foodTab='chats';c.state.foodFocusChat=chatId;}}c.render();
   }
   async function activity(c,view){
     const panel=document.createElement('section');panel.className='panel';panel.style.marginTop='24px';view.append(panel);
     const user=c.state.user.id;
     try{const rows=await api(c,'/activity');if(!panel.isConnected||c.state.user?.id!==user)return;
-      panel.innerHTML='<h2>Mis avisos</h2><button class="btn secondary" data-read>Marcar como leídos</button>'+ (rows.map(n=>`<article><p><strong>${c.esc(n.title)}${n.read_at?'':' · Nuevo'}</strong><br>${c.esc(n.body)}<br><small>${c.esc(new Date(n.created_at).toLocaleString())}</small></p></article>`).join('')||'<p>No tienes avisos recientes.</p>');
+      const allowed=new Set(['food','events','profile','messages']);
+      panel.innerHTML='<h2>Mis avisos</h2><button class="btn secondary" data-read>Marcar como leídos</button>'+ (rows.map(n=>`<article><p><strong>${c.esc(n.title)}${n.read_at?'':' · Nuevo'}</strong><br>${c.esc(n.body)}<br><small>${c.esc(new Date(n.created_at).toLocaleString())}</small></p>${allowed.has(n.view_name)?`<button type="button" class="btn secondary small" data-activity-view="${c.esc(n.view_name)}">Abrir</button>`:''}</article>`).join('')||'<p>No tienes avisos recientes.</p>');
       panel.querySelector('[data-read]').onclick=async()=>{try{await api(c,'/activity/read','PATCH',{});panel.remove();activity(c,view);}catch(e){c.toast(e.message);}};
+      panel.querySelectorAll('[data-activity-view]').forEach(b=>b.onclick=()=>{c.state.view=b.dataset.activityView;c.render();});
     }catch(e){panel.textContent=e.message;}
   }
   function mount(c){

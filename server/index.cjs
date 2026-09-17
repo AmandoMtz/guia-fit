@@ -33,7 +33,7 @@ const { migrate } = require("./migrate.cjs");
         () =>
           db
             .query(
-              "delete from sessions where expires_at<now(); delete from auth_tokens where expires_at<now(); delete from rate_limits where expires_at<now(); delete from chatbot_logs where created_at < now()-interval '90 days'",
+              "delete from sessions where expires_at<now(); delete from auth_tokens where expires_at<now(); delete from rate_limits where expires_at<now(); delete from chatbot_logs where created_at < now()-interval '90 days'; delete from academic_chat_messages where expires_at<=now(); delete from academic_chats c where c.created_at < now()-interval '7 days' and not exists(select 1 from academic_chat_messages m where m.chat_id=c.id and m.expires_at>now())",
             )
             .catch(() => {}),
         900000,

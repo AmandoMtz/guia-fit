@@ -53,7 +53,7 @@ try {
         throw "No se pudieron revisar los cambios preparados."
     }
 
-    Invoke-Git -Argumentos @("commit", "-m", "Mejora portada footer chatbot y notificaciones")
+    Invoke-Git -Argumentos @("commit", "-m", "Agrega chat entre alumnos y docentes")
 
     Write-Host "4/4 Subiendo a GitHub..." -ForegroundColor Cyan
     Invoke-Git -Argumentos @("push", "origin", $Rama)

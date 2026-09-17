@@ -463,6 +463,7 @@
       rewards: ["Mi progreso", "Participa, sube de nivel y haz tuya Guía FIT."],
       schedule: ["Mi horario", "Tu semana, tus materias y tu próximo salón."],
       events: ["Eventos", "Actividades, reuniones y asistencias verificadas de la facultad."],
+      messages: ["Mensajes", "Comunicación directa entre alumnos y docentes de la facultad."],
       notifications: ["Mis avisos", "Activa las notificaciones del dispositivo y consulta tus novedades."],
       "food-admin": [
         "Revisar vendedores",
@@ -492,6 +493,7 @@
       : [
           ["directory", "grid", "Directorio"],
           ["faculty", "star", "Conecta con la FIT"],
+          ...(["student", "teacher"].includes(state.user?.account_type) ? [["messages", "chat", "Mensajes"]] : []),
           ["map", "map", "Mapa del campus"],
           ["route", "route", "Cómo llegar"],
           ["food", "food", "Comidas"],
@@ -511,12 +513,14 @@
         .charAt(0)
         .toUpperCase();
     $("#app").innerHTML =
-      `<div class="shell"><header class="topbar app-top">${brand()}<div class="top-actions">${guideMark(true, !!state.user && !state.demo && !state.offline)}${state.user && !state.offline ? `<button class="notification-bell" data-view="notifications" aria-label="Mis avisos">${icon("bell")}<span id="notification-count" hidden></span></button>` : ""}${profileAvatar(initial)}<button class="btn ghost small" id="logout">${icon("exit")}${state.demo ? "Salir de demo" : state.offline ? "Salir del modo offline" : "Cerrar sesión"}</button></div></header><div class="workspace"><nav class="sidebar" aria-label="Navegación principal"><div class="eyebrow">EXPLORA LA FIT</div>${menu.map(([id, i, label]) => `<button class="nav-item ${state.view === id ? "active" : ""}" data-view="${id}" ${state.view === id ? 'aria-current="page"' : ""}>${icon(i)}${label}</button>`).join("")}<p class="sidebar-note">Facultad de Ingeniería Tampico<br>Universidad Autónoma de Tamaulipas</p></nav><main class="content" id="main"><div class="page-head"><div><span class="eyebrow muted">GUÍA DEL CAMPUS</span><h1>${current[0]}</h1><p>${current[1]}</p></div>${state.demo ? '<span class="badge pending">Modo demostración</span>' : badge(state.verification?.status === "verified")}</div>${state.demo ? '<div class="notice">Demostración: no has iniciado sesión. Los lugares proceden del croquis; sus recorridos todavía deben verificarse.</div>' : ""}${state.offline ? `<div class="offline-banner" role="status"><b>Modo sin conexión</b><span>Solo puedes consultar el horario guardado en este dispositivo y los eventos sincronizados antes de perder la red.${state.offlineSyncedAt ? ` Última sincronización: ${esc(new Date(state.offlineSyncedAt).toLocaleString("es-MX"))}.` : ""}</span></div>` : ""}${state.dataError ? `<div class="notice error" role="alert">${esc(state.dataError)} <button id="retry-data" class="text-button">Reintentar</button></div>` : ""}<div id="view"></div></main></div>${institutionalFooter()}</div>`;
+      `<div class="shell"><header class="topbar app-top">${brand()}<div class="top-actions">${guideMark(true, !!state.user && !state.demo && !state.offline)}${state.user && !state.offline ? `<button class="notification-bell" data-view="notifications" aria-label="Mis avisos">${icon("bell")}<span id="notification-count" hidden></span></button>` : ""}${profileAvatar(initial)}<button class="btn ghost small" id="logout">${icon("exit")}${state.demo ? "Salir de demo" : state.offline ? "Salir del modo offline" : "Cerrar sesión"}</button></div></header><div class="workspace"><nav class="sidebar" aria-label="Navegación principal"><div class="eyebrow">EXPLORA LA FIT</div>${menu.map(([id, i, label]) => `<button class="nav-item ${state.view === id ? "active" : ""}" data-view="${id}" ${state.view === id ? 'aria-current="page"' : ""}>${icon(i)}<span class="nav-label">${label}</span>${id === "messages" ? '<span class="nav-count" id="academic-chat-count" hidden></span>' : ""}</button>`).join("")}<p class="sidebar-note">Facultad de Ingeniería Tampico<br>Universidad Autónoma de Tamaulipas</p></nav><main class="content" id="main"><div class="page-head"><div><span class="eyebrow muted">GUÍA DEL CAMPUS</span><h1>${current[0]}</h1><p>${current[1]}</p></div>${state.demo ? '<span class="badge pending">Modo demostración</span>' : badge(state.verification?.status === "verified")}</div>${state.demo ? '<div class="notice">Demostración: no has iniciado sesión. Los lugares proceden del croquis; sus recorridos todavía deben verificarse.</div>' : ""}${state.offline ? `<div class="offline-banner" role="status"><b>Modo sin conexión</b><span>Solo puedes consultar el horario guardado en este dispositivo y los eventos sincronizados antes de perder la red.${state.offlineSyncedAt ? ` Última sincronización: ${esc(new Date(state.offlineSyncedAt).toLocaleString("es-MX"))}.` : ""}</span></div>` : ""}${state.dataError ? `<div class="notice error" role="alert">${esc(state.dataError)} <button id="retry-data" class="text-button">Reintentar</button></div>` : ""}<div id="view"></div></main></div>${institutionalFooter()}</div>`;
     document.querySelectorAll("[data-view]").forEach(
       (b) =>
         (b.onclick = () => {
           if (state.view === "food" && b.dataset.view !== "food")
             window.FIT_FOOD?.disconnect?.();
+          if (state.view === "messages" && b.dataset.view !== "messages")
+            window.FIT_ACADEMIC_CHAT?.disconnect?.();
           state.view = b.dataset.view;
           render();
         }),
@@ -542,6 +546,7 @@
       admin: adminView,
       accounts: () => { if(!state.admin)return; $("#view").innerHTML='<section class="panel"><h2>Usuarios registrados</h2><p id="admin-users-count"></p><label class="field">Buscar cuenta<input id="admin-user-search" type="search" placeholder="Nombre o correo"></label><div id="admin-users-list"></div></section>';renderAdminUsers(); },
       food: () => window.FIT_FOOD.render(moduleContext()),
+      messages: () => window.FIT_ACADEMIC_CHAT.render(moduleContext()),
       "food-admin": () => window.FIT_FOOD.render(moduleContext()),
       notifications: async () => { await window.FIT_FOOD.render(moduleContext()); if(state.view === "notifications") window.FIT_PUSH?.mount(moduleContext()); },
       schedule: () => window.FIT_SCHEDULE.render(moduleContext()),
@@ -585,20 +590,26 @@
     polling = true;
     const userId = state.user.id;
     try {
-      const result = await client.request("/api/food/notifications");
+      const canMessage = ["student", "teacher"].includes(state.user?.account_type);
+      const [foodResult, academicResult] = await Promise.all([
+        client.request("/api/food/notifications"),
+        canMessage ? client.request("/api/academic-chat/unread") : Promise.resolve({ data: { unread_count: 0 } }),
+      ]);
       if (state.user?.id !== userId) return;
-      const persistent = Number(result.data?.unread_count || 0),
-        temporary = Number(result.data?.chat_unread_count || 0),
-        count = persistent + temporary;
+      const persistent = Number(foodResult.data?.unread_count || 0),
+        temporary = Number(foodResult.data?.chat_unread_count || 0),
+        academic = Number(academicResult.data?.unread_count || 0),
+        count = persistent + temporary + academic;
       const el = $("#notification-count");
-      if (el && result.data) {
+      if (el) {
         el.textContent = count > 99 ? "99+" : String(count);
         el.hidden = count === 0;
       }
-      if (result.data)
+      window.FIT_ACADEMIC_CHAT?.updateUnreadBadge?.(academic);
+      if (foodResult.data)
         await window.FIT_FOOD?.updateNotifications(
           moduleContext(),
-          result.data,
+          foodResult.data,
         );
     } catch {
       // The last known counts remain visible; the next poll or manual refresh retries.
@@ -617,6 +628,7 @@
   async function signOut() {
     try {
       window.FIT_FOOD?.disconnect?.();
+      window.FIT_ACADEMIC_CHAT?.disconnect?.();
       const priorUserId = state.user?.id;
       if (client && !state.demo && !state.offline) {
         const { error } = await client.auth.signOut();
@@ -644,6 +656,7 @@
         "ordersFilter",
         "eventsTab",
         "eventCheckinBusy",
+        "messagesFocusChat",
       ])
         delete state[key];
       render();

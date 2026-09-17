@@ -5061,3 +5061,61 @@ body[data-fittheme="theme-dark"] .institutional-brand{background:#fff;border-rad
     width: min(100%, 430px);
   }
 }
+
+
+/* Ajuste final: centrar completamente el bloque informativo y el croquis. */
+.auth-aside {
+  align-items: center;
+  text-align: center;
+}
+.auth-aside > .eyebrow,
+.auth-aside > h1,
+.auth-aside > .intro,
+.auth-aside > .campus-teaser,
+.auth-aside > .aside-bottom {
+  width: min(100%, 650px);
+  margin-left: auto;
+  margin-right: auto;
+  align-self: center;
+}
+.auth-aside > .eyebrow,
+.auth-aside > h1,
+.auth-aside > .intro {
+  text-align: center;
+}
+.auth-aside > .intro {
+  max-width: 650px;
+}
+.campus-teaser {
+  width: min(100%, 650px);
+  max-width: 650px;
+  height: clamp(420px, 36vw, 560px);
+  margin-top: 6px;
+  margin-bottom: 0;
+}
+.campus-teaser img {
+  display: block;
+  margin: 0 auto;
+}
+.aside-bottom {
+  width: min(100%, 650px);
+  margin: 2px auto 0;
+  text-align: center;
+}
+
+@media (max-width: 1100px) {
+  .campus-teaser {
+    height: clamp(390px, 48vw, 500px);
+  }
+}
+
+@media (max-width: 760px) {
+  .campus-teaser {
+    width: min(100%, 430px);
+    max-width: 430px;
+    height: clamp(360px, 118vw, 500px);
+  }
+  .aside-bottom {
+    width: min(100%, 430px);
+  }
+}

@@ -1,6 +1,6 @@
 /* App shell sin conexión. Las respuestas /api nunca se guardan aquí. */
 importScripts('/push-worker.js?v=1');
-const CACHE = "guia-fit-shell-web-push-v5";
+const CACHE = "guia-fit-shell-web-push-v6";
 const SHELL = [
   "/js/push-notifications.js?v=2",
   "/manifest.webmanifest",

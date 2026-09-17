@@ -1,7 +1,7 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param(
     [string]$Rama = "main",
-    [string]$Remoto = "ssh://git@ssh.github.com:443/AmandoMtz/guia-fit.git"
+    [string]$Remoto = "https://github.com/AmandoMtz/guia-fit.git"
 )
 
 $ErrorActionPreference = "Stop"

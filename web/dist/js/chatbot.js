@@ -94,8 +94,12 @@
 
   function enableDragging(launcher) {
     let drag = null;
+
+    // Un solo clic sostenido + movimiento arrastra al Castor FIT.
+    // Un clic normal, sin arrastrar, sigue abriendo/cerrando el chat.
     launcher.addEventListener("pointerdown", (event) => {
       if (event.pointerType === "mouse" && event.button !== 0) return;
+
       const rect = launcher.getBoundingClientRect();
       drag = {
         pointerId: event.pointerId,
@@ -105,27 +109,49 @@
         offsetY: event.clientY - rect.top,
         moved: false,
       };
+
       launcher.setPointerCapture?.(event.pointerId);
       host?.classList.add("dragging", "nudge-soft");
     });
+
     launcher.addEventListener("pointermove", (event) => {
       if (!drag || event.pointerId !== drag.pointerId) return;
+
+      // En PC solo se mueve mientras el botón izquierdo continúe presionado.
+      if (event.pointerType === "mouse" && (event.buttons & 1) === 0) return;
+
       const distance = Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY);
-      if (!drag.moved && distance < 6) return;
+      // Umbral muy pequeño para que se sienta como arrastrar desde el primer clic.
+      if (!drag.moved && distance < 2) return;
+
       drag.moved = true;
       event.preventDefault();
       setStoredPosition(event.clientX - drag.offsetX, event.clientY - drag.offsetY);
     });
+
     const finish = (event) => {
       if (!drag || event.pointerId !== drag.pointerId) return;
-      if (drag.moved) suppressLauncherClickUntil = performance.now() + 350;
+
+      if (drag.moved) {
+        // Evita que al soltar después de mover también se abra el chat.
+        suppressLauncherClickUntil = performance.now() + 450;
+      }
+
       launcher.releasePointerCapture?.(event.pointerId);
       host?.classList.remove("dragging");
       updatePanelPlacement();
       drag = null;
     };
+
     launcher.addEventListener("pointerup", finish);
     launcher.addEventListener("pointercancel", finish);
+    launcher.addEventListener("lostpointercapture", (event) => {
+      if (drag && event.pointerId === drag.pointerId) {
+        host?.classList.remove("dragging");
+        drag = null;
+      }
+    });
+    launcher.addEventListener("dragstart", (event) => event.preventDefault());
   }
 
   function createHost() {

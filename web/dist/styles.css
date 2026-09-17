@@ -5009,3 +5009,55 @@ body[data-fittheme="theme-dark"] .institutional-brand{background:#fff;border-rad
     transform-origin: bottom right;
   }
 }
+
+/* Portada de acceso: croquis más grande y centrado debajo del bloque principal. */
+.auth-aside {
+  gap: 18px;
+  padding-top: clamp(34px, 3.4vw, 58px);
+  padding-bottom: clamp(34px, 3.4vw, 58px);
+}
+.auth-aside > .eyebrow,
+.auth-aside > h1,
+.auth-aside > .intro,
+.auth-aside > .campus-teaser,
+.auth-aside > .aside-bottom {
+  width: min(100%, 650px);
+  margin-left: auto;
+  margin-right: auto;
+}
+.auth-aside > .intro {
+  max-width: 650px;
+}
+.campus-teaser {
+  max-width: 650px;
+  height: clamp(410px, 30vw, 470px);
+  margin-top: 2px;
+}
+.campus-teaser img {
+  display: block;
+  margin: 0 auto;
+}
+.aside-bottom {
+  max-width: 650px;
+  margin-top: 0;
+  padding-top: 12px;
+}
+
+@media (max-width: 1100px) {
+  .campus-teaser {
+    height: clamp(360px, 43vw, 430px);
+  }
+}
+
+@media (max-width: 760px) {
+  .auth-aside {
+    gap: 16px;
+  }
+  .campus-teaser {
+    width: min(100%, 430px);
+    height: clamp(360px, 118vw, 500px);
+  }
+  .aside-bottom {
+    width: min(100%, 430px);
+  }
+}

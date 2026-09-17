@@ -182,7 +182,10 @@ function createAcademicChatRouter({ db, limit }) {
       await client.query(`update academic_chats set ${readColumn}=now() where id=$1`, [chat.id]);
       const notice = (await client.query(`insert into fit_activity_notifications(user_id,kind,title,body,view_name)
         values($1,'academic_chat','Nuevo mensaje',$2,'messages') returning id`, [recipientId, `${sender?.full_name || 'Alguien de la FIT'} te envió un mensaje.`])).rows[0];
-      await client.query(`update fit_push_outbox set chat_id=$2,payload=coalesce(payload,'{}'::jsonb)||jsonb_build_object('chatId',$2) where id=$1`, [notice.id, chat.id]);
+      await client.query(`update fit_push_outbox
+        set chat_id=$2::uuid,
+            payload=coalesce(payload,'{}'::jsonb)||jsonb_build_object('chatId',$2::text)
+        where id=$1::uuid`, [notice.id, chat.id]);
       return message;
     });
     res.status(201).json({ data: {...row, mine: true} });

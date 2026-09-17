@@ -16,6 +16,7 @@
     "@electric-sql/pglite": "0.3.14",
     "@tesseract.js-data/spa": "1.0.0",
     "fake-indexeddb": "6.2.5",
+    "jsdom": "26.1.0",
     "pdfjs-dist": "5.4.624",
     "supertest": "7.1.4",
     "tesseract.js": "6.0.1"

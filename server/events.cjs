@@ -1,4 +1,5 @@
 const express = require("express");
+const {geoConfig,secureCheckin}=require("./attendance-security.cjs");
 const { randomBytes } = require("node:crypto");
 const { transaction } = require("./db.cjs");
 const { accountType } = require("./account.cjs");
@@ -80,7 +81,7 @@ function eventPayload(body) {
   const invitees = [...new Set((Array.isArray(body.invitees) ? body.invitees : []).filter((x) => UUID.test(String(x))))].slice(0, 200);
   if (visibility === "targeted" && audience === "students" && !careers.length) throw fail(400, "validation_error", "Selecciona al menos una carrera para el evento cerrado.");
   if (visibility === "targeted" && audience === "teachers" && !invitees.length) throw fail(400, "validation_error", "Invita al menos a un docente para el evento cerrado.");
-  return { title, description, location, audience, visibility, starts_at: starts.toISOString(), ends_at: ends.toISOString(), careers, invitees };
+  return { ...geoConfig(body), title, description, location, audience, visibility, starts_at: starts.toISOString(), ends_at: ends.toISOString(), careers, invitees };
 }
 async function canManage(db, event, user) {
   if (user.role === "admin") return true;
@@ -99,6 +100,13 @@ async function replaceTargets(client, id, data) {
       for (const idUser of data.invitees) await client.query("insert into event_teacher_invites(event_id,user_id) values($1,$2)", [id, idUser]);
     }
   }
+}
+async function notifyEvent(client,event,body) {
+  await client.query(`insert into fit_activity_notifications(user_id,kind,title,body,view_name)
+    select u.id,'event','Eventos FIT',$2,'events' from users u join profiles p on p.id=u.id
+    where u.email_confirmed_at is not null and (
+     ($3='students' and u.email ~* '^a[0-9]+@alumnos\\.uat\\.edu\\.mx$' and ($4='public' or exists(select 1 from event_careers c where c.event_id=$1 and lower(btrim(c.career))=lower(btrim(p.career)))))
+     or ($3='teachers' and (u.email ~* '@docentes\\.uat\\.edu\\.mx$' or (u.email ~* '@uat\\.edu\\.mx$' and u.email !~* '@alumnos\\.uat\\.edu\\.mx$')) and ($4='public' or u.id=$5 or exists(select 1 from event_teacher_invites i where i.event_id=$1 and i.user_id=u.id))))`,[event.id,body,event.audience,event.visibility,event.created_by]);
 }
 async function decorate(db, rows, user) {
   if (!rows.length) return [];
@@ -156,7 +164,7 @@ function createEventsRouter({ db, limit, siteUrl }) {
     const type = accountType(req.user.email, req.user.role);
     let sql = `select e.*,p.full_name as creator_name,
       to_char(e.starts_at at time zone 'America/Monterrey','YYYY-MM-DD') as event_day,
-      ((e.starts_at at time zone 'America/Monterrey')::date=(now() at time zone 'America/Monterrey')::date) as checkin_open,
+      (now() between e.starts_at and e.ends_at and e.latitude is not null and e.longitude is not null) as checkin_open,
       (select count(*)::int from event_attendance a where a.event_id=e.id) as attendance_count
       from events e join profiles p on p.id=e.created_by`;
     const params = [];
@@ -185,8 +193,9 @@ function createEventsRouter({ db, limit, siteUrl }) {
     if (data.audience === "students" && req.user.role !== "admin") throw fail(403, "forbidden", "Solo administración puede crear eventos para alumnos.");
     if (data.audience === "teachers" && req.user.role !== "admin" && type !== "teacher") throw fail(403, "forbidden", "Solo docentes y administración pueden crear eventos para docentes.");
     const row = await transaction(db, async (client) => {
-      const { rows } = await client.query("insert into events(title,description,location,audience,visibility,starts_at,ends_at,created_by) values($1,$2,$3,$4,$5,$6,$7,$8) returning *", [data.title, data.description, data.location, data.audience, data.visibility, data.starts_at, data.ends_at, req.user.id]);
+      const { rows } = await client.query("insert into events(title,description,location,audience,visibility,starts_at,ends_at,created_by,latitude,longitude,radius_m,max_accuracy_m) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) returning *", [data.title, data.description, data.location, data.audience, data.visibility, data.starts_at, data.ends_at, req.user.id,data.latitude,data.longitude,data.radius_m,data.max_accuracy_m]);
       await replaceTargets(client, rows[0].id, data);
+      await notifyEvent(client,rows[0],"Hay un nuevo evento disponible. Consulta Eventos.");
       return rows[0];
     });
     res.status(201).json({ data: row });
@@ -201,8 +210,9 @@ function createEventsRouter({ db, limit, siteUrl }) {
     if (current.audience === "students" && data.audience !== "students" && req.user.role !== "admin") throw fail(403, "forbidden", "No puedes cambiar el público del evento.");
     if (data.audience === "students" && req.user.role !== "admin") throw fail(403, "forbidden", "Solo administración puede gestionar eventos para alumnos.");
     const row = await transaction(db, async (client) => {
-      const { rows } = await client.query("update events set title=$1,description=$2,location=$3,audience=$4,visibility=$5,starts_at=$6,ends_at=$7,updated_at=now() where id=$8 returning *", [data.title, data.description, data.location, data.audience, data.visibility, data.starts_at, data.ends_at, req.params.id]);
+      const { rows } = await client.query("update events set title=$1,description=$2,location=$3,audience=$4,visibility=$5,starts_at=$6,ends_at=$7,updated_at=now(),latitude=$9,longitude=$10,radius_m=$11,max_accuracy_m=$12 where id=$8 returning *", [data.title, data.description, data.location, data.audience, data.visibility, data.starts_at, data.ends_at, req.params.id,data.latitude,data.longitude,data.radius_m,data.max_accuracy_m]);
       await replaceTargets(client, req.params.id, data);
+      await notifyEvent(client,rows[0],"Se actualizó un evento. Consulta sus datos y horario.");
       await client.query("delete from event_checkin_tokens where event_id=$1", [req.params.id]);
       return rows[0];
     });
@@ -214,7 +224,7 @@ function createEventsRouter({ db, limit, siteUrl }) {
     const current = (await db.query("select * from events where id=$1", [req.params.id])).rows[0];
     if (!current) throw fail(404, "not_found", "Evento no encontrado.");
     if (!(await canManage(db, current, req.user))) throw fail(403, "forbidden", "No puedes eliminar este evento.");
-    await db.query("delete from events where id=$1", [req.params.id]);
+    await transaction(db,async client=>{await notifyEvent(client,current,"Se canceló un evento. Consulta la lista actualizada.");await client.query("delete from events where id=$1", [req.params.id]);});
     res.json({ data: {} });
   });
 
@@ -246,8 +256,8 @@ function createEventsRouter({ db, limit, siteUrl }) {
     if (token.startsWith("FIT-EVENT:")) token = token.slice(10);
     if (!/^[A-Za-z0-9_-]{16,80}$/.test(token)) throw fail(400, "invalid_qr", "El código QR no es válido.");
     const row = (await db.query(`select e.* from event_checkin_tokens t join events e on e.id=t.event_id
-      where t.token_hash=$1 and t.expires_at>now() and (e.starts_at at time zone 'America/Monterrey')::date=(now() at time zone 'America/Monterrey')::date`, [hashToken(token)])).rows[0];
-    if (!row) throw fail(400, "checkin_closed", "La verificación solo está habilitada el día del evento o el QR ya no es válido.");
+      where t.token_hash=$1 and t.expires_at>now() and now() between e.starts_at and e.ends_at`, [hashToken(token)])).rows[0];
+    if (!row) throw fail(400, "checkin_closed", "El registro está fuera del horario del evento o el QR ya no es válido.");
     const type = accountType(req.user.email, req.user.role);
     if (row.audience === "students") {
       if (type !== "student") throw fail(403, "forbidden", "Este evento corresponde a alumnos.");
@@ -262,7 +272,7 @@ function createEventsRouter({ db, limit, siteUrl }) {
         if (!invited) throw fail(403, "forbidden", "No estás en la lista de docentes invitados.");
       }
     }
-    const result = await db.query("insert into event_attendance(event_id,user_id) values($1,$2) on conflict(event_id,user_id) do nothing returning checked_in_at", [row.id, req.user.id]);
+    const result = await secureCheckin(db,req,row,token);
     res.json({ data: { event_id: row.id, title: row.title, already_registered: !result.rows[0], checked_in_at: result.rows[0]?.checked_in_at || (await db.query("select checked_in_at from event_attendance where event_id=$1 and user_id=$2", [row.id, req.user.id])).rows[0].checked_in_at } });
   });
 

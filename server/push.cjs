@@ -36,18 +36,19 @@ function createPushService({db,siteUrl,transport,logger=console}) {
   async function run() {
     if (working) return;working=true;
     try {
-      await db.query('delete from fit_push_outbox where expires_at<=now() or attempts>=5');
+      await db.query(`with removed as (delete from fit_push_outbox where (expires_at<=now() or attempts>=5) and (lease_until is null or lease_until<now()) returning *) insert into fit_push_delivery_log(job_id,user_id,outcome,attempts) select id,user_id,'expired_or_exhausted',attempts from removed`);
       const jobs=(await db.query(`update fit_push_outbox set lease_until=now()+interval '10 minutes',attempts=attempts+1
         where id in (select id from fit_push_outbox where next_attempt<=now() and (lease_until is null or lease_until<now())
         order by next_attempt for update skip locked limit 5) returning *`)).rows;
       for (const job of jobs) {
-        let retry=false;
+        let retry=false, delivered=0, deviceCount=0;
         try {
           const devices=(await db.query(`select p.* from fit_push_subscriptions p join sessions s on s.token_hash=p.session_hash
             where p.user_id=$1 and s.user_id=p.user_id and s.expires_at>now()`,[job.user_id])).rows;
+          deviceCount=devices.length;
           const ttl=Math.max(0,Math.min(3600,Math.floor((new Date(job.expires_at)-Date.now())/1000)));
           if (ttl) for (const device of devices) {
-            try { await send(device,{title:'Nuevo mensaje · Guía FIT',body:'Tienes un mensaje en un chat de Comidas. Toca para abrirlo.',chatId:job.chat_id,recipientId:job.user_id,tag:'fit-chat-'+job.chat_id},ttl); }
+            try { await send(device,job.payload||{title:'Nuevo mensaje · Guía FIT',body:'Tienes un mensaje en un chat de Comidas. Toca para abrirlo.',chatId:job.chat_id,recipientId:job.user_id,tag:'fit-chat-'+job.chat_id},ttl); delivered++; }
             catch(e) {
               if ([404,410].includes(e.statusCode)) await db.query('delete from fit_push_subscriptions where endpoint=$1 and user_id=$2',[device.endpoint,job.user_id]);
               else if (!e.statusCode || e.statusCode===429 || e.statusCode>=500) retry=true;
@@ -56,7 +57,7 @@ function createPushService({db,siteUrl,transport,logger=console}) {
           }
         } catch { retry=true; }
         if (retry) await db.query("update fit_push_outbox set lease_until=null,next_attempt=now()+($2 * interval '1 second') where id=$1",[job.id,Math.min(300,15*2**job.attempts)]);
-        else await db.query('delete from fit_push_outbox where id=$1',[job.id]);
+        else await db.query(`with removed as (delete from fit_push_outbox where id=$1 returning *) insert into fit_push_delivery_log(job_id,user_id,outcome,attempts) select id,user_id,$2,attempts from removed`,[job.id,delivered?'accepted_by_provider':deviceCount?'rejected_or_expired':'no_active_subscription']);
       }
     } finally {working=false;}
   }
@@ -68,6 +69,8 @@ function createPushService({db,siteUrl,transport,logger=console}) {
   function router(limit) {
     const r=require('express').Router();
     r.use(async(req,res,next)=>{await limit(req,'push:'+req.user.id,60);next();});
+    r.get('/activity',async(req,res)=>res.json({data:(await db.query('select id,kind,title,body,view_name,created_at,read_at from fit_activity_notifications where user_id=$1 order by created_at desc limit 100',[req.user.id])).rows}));
+    r.patch('/activity/read',async(req,res)=>{await db.query('update fit_activity_notifications set read_at=now() where user_id=$1 and read_at is null',[req.user.id]);res.json({data:{}});});
     r.get('/config',async(req,res)=>res.json({data:{publicKey:(await keys()).public_key}}));
     r.post('/subscription',async(req,res)=>{
       const sub=validateSubscription(req.body);

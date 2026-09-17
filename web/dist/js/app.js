@@ -160,6 +160,7 @@
     if (state.user || state.demo) shell();
     else authView();
     window.FIT_PUSH?.mount(moduleContext());
+    window.FIT_ATTENDANCE?.mount(moduleContext());
   }
   function authView() {
     const mode = state.mode;
@@ -462,7 +463,7 @@
       rewards: ["Mi progreso", "Participa, sube de nivel y haz tuya Guía FIT."],
       schedule: ["Mi horario", "Tu semana, tus materias y tu próximo salón."],
       events: ["Eventos", "Actividades, reuniones y asistencias verificadas de la facultad."],
-      notifications: ["Mis avisos", "Novedades de tus pedidos y de tu puesto."],
+      notifications: ["Mis avisos", "Activa las notificaciones del dispositivo y consulta tus novedades."],
       "food-admin": [
         "Revisar vendedores",
         "Valida los puestos de la comunidad FIT.",
@@ -542,7 +543,7 @@
       accounts: () => { if(!state.admin)return; $("#view").innerHTML='<section class="panel"><h2>Usuarios registrados</h2><p id="admin-users-count"></p><label class="field">Buscar cuenta<input id="admin-user-search" type="search" placeholder="Nombre o correo"></label><div id="admin-users-list"></div></section>';renderAdminUsers(); },
       food: () => window.FIT_FOOD.render(moduleContext()),
       "food-admin": () => window.FIT_FOOD.render(moduleContext()),
-      notifications: () => window.FIT_FOOD.render(moduleContext()),
+      notifications: async () => { await window.FIT_FOOD.render(moduleContext()); if(state.view === "notifications") window.FIT_PUSH?.mount(moduleContext()); },
       schedule: () => window.FIT_SCHEDULE.render(moduleContext()),
       events: () => window.FIT_EVENTS.render(moduleContext()),
     })[state.view]();

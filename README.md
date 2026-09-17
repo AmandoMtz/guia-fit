@@ -1,3 +1,5 @@
+> **Actualización de asistencia y avisos:** consulta [la guía de activación](docs/ACTIVAR_SEGURIDAD_Y_NOTIFICACIONES.md). Incluye geocerca obligatoria, navegador autorizado, botón de notificaciones en Mi cuenta y Mis avisos, y bitácora administrativa. Los eventos anteriores deben configurar su área antes de aceptar registros.
+
 # Guía FIT 5 · Docentes, horarios y eventos
 
 Web responsiva y aplicación Flutter/Dart para encontrar espacios, comprar comida en la facultad y organizar el horario personal. La web/API añade clasificación de alumnos y docentes por correo institucional, horario simplificado para docentes, recorte de foto de perfil y eventos con QR, asistencia y PDF validable. Conserva acceso, registro, confirmación de correo, recuperación, perfiles, mapa y logotipos originales de UAT/FIT.

@@ -12,7 +12,7 @@ function harness() {
     match:async(key)=>saved.get(key),
   };
   const self={location:{origin:"https://campus.test"},addEventListener:(name,fn)=>{handlers[name]=fn;}};
-  vm.runInNewContext(worker,{self,caches,URL,importScripts:(url)=>assert.equal(url,"/push-worker.js?v=1"),fetch:async(req)=>{
+  vm.runInNewContext(worker,{self,caches,URL,importScripts:(url)=>assert.equal(url,"/push-worker.js?v=2"),fetch:async(req)=>{
     if(offline) throw new Error("offline");
     return {ok:true,body:typeof req==="string"?req:req.url,clone(){return {...this};}};
   }});

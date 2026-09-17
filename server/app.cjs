@@ -1,3 +1,5 @@
+const {auditedDb,auditMiddleware}=require('./audit.cjs');
+const {securityRouter}=require('./attendance-security.cjs');
 const { createGamificationRouter, catalog: rewardCatalog, award } = require("./gamification.cjs");
 const { createPushService } = require("./push.cjs");
 const express = require("express");
@@ -28,6 +30,7 @@ function createApp({
   corsOrigins = [],
   chatbot = null,
 }) {
+  db = auditedDb(db);
   const app = express(),
     origin = new URL(siteUrl).origin,
     allowed = new Set([origin, ...corsOrigins]);
@@ -68,6 +71,7 @@ function createApp({
         ),
     }),
   );
+  if(db) app.use("/api",auditMiddleware(db));
   app.use(express.json({ limit: "32kb" }));
   app.use(cookieParser());
   app.use("/api", (req, res, next) => {
@@ -262,6 +266,7 @@ function createApp({
         "email_not_confirmed",
         "Confirma tu correo antes de iniciar sesión.",
       );
+    req.user={id:user.id}; // Actor verificado para la bitácora del inicio de sesión.
     const token = S.randomToken();
     await db.query(
       "insert into sessions(token_hash,user_id,expires_at) values($1,$2,$3)",
@@ -729,6 +734,7 @@ function createApp({
   );
   app.use("/api/events", createPublicEventsRouter({ db, limit }));
   app.use("/api/chatbot/public", createPublicChatbotRouter({ db, limit, chatbot }));
+  app.use("/api/attendance-security",authenticate,securityRouter({db,limit}));
   if (push) app.use("/api/push", authenticate, push.router(limit));
   app.use("/api/gamification", authenticate, createGamificationRouter({ db, limit }));
   app.use("/api/profile", authenticate, createProfileRouter({ db, limit }));
@@ -752,6 +758,7 @@ function createApp({
     }),
   );
   app.use((error, req, res, next) => {
+    res.locals.auditError=error.code||"internal_error";
     if (res.headersSent) return next(error);
     if (error.type === "entity.parse.failed") error = fail(400, "invalid_json", "La solicitud contiene JSON inválido.");
     else if (error.type === "entity.too.large") error = fail(413, "payload_too_large", "La solicitud supera el tamaño permitido.");

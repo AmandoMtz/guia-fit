@@ -11,10 +11,9 @@ test('Push: rechaza destinos internos, credenciales y claves invalidas',()=>{
 });
 test('Push: solo destinatario, sesiones vigentes, bajas 410 y reintentos',async t=>{
  const db=new PGlite();t.after(()=>db.close());
- await db.exec('create table users(id uuid primary key);create table sessions(token_hash text primary key,user_id uuid references users(id),expires_at timestamptz);');
- await db.exec(fs.readFileSync(path.join(__dirname,'../backend/migrations/010_web_push.sql'),'utf8'));
+ for(const name of fs.readdirSync(path.join(__dirname,'../backend/migrations')).sort().filter(n=>n.endsWith('.sql')))await db.exec(fs.readFileSync(path.join(__dirname,'../backend/migrations',name),'utf8'));
  const buyer=randomUUID(),seller=randomUUID(),chat=randomUUID();
- for(const id of [buyer,seller]){await db.query('insert into users values($1)',[id]);await db.query("insert into sessions values($1,$2,now()+interval '1 day')",[id,id]);}
+ for(const id of [buyer,seller]){await db.query("insert into users(id,email,password_hash) values($1,$2,'fixture')",[id,id+'@example.test']);await db.query("insert into sessions(token_hash,user_id,expires_at) values($1,$2,now()+interval '1 day')",[id,id]);}
  const devices=[sub('buyer'),sub('seller'),sub('gone'),sub('retry')];
  for(let i=0;i<devices.length;i++){const s=devices[i],id=i===0?buyer:seller;await db.query('insert into fit_push_subscriptions(endpoint,user_id,session_hash,p256dh,auth) values($1,$2,$3,$4,$5)',[s.endpoint,id,id,s.keys.p256dh,s.keys.auth]);}
  let sends=[],retry=true;
@@ -58,9 +57,8 @@ test('Service worker: muestra avisos sin ventanas y abre enlace seguro',async()=
 test('API push: alta, estado y baja ligados a la cuenta autenticada',async t=>{
  const express=require('express'),request=require('supertest'),engine=new PGlite();
  t.after(()=>engine.close());
- await engine.exec('create table users(id uuid primary key);create table sessions(token_hash text primary key,user_id uuid references users(id),expires_at timestamptz);');
- await engine.exec(fs.readFileSync(path.join(__dirname,'../backend/migrations/010_web_push.sql'),'utf8'));
- const ids=[randomUUID(),randomUUID()];for(const id of ids){await engine.query('insert into users values($1)',[id]);await engine.query("insert into sessions values($1,$2,now()+interval '1 day')",[id,id]);}
+ for(const name of fs.readdirSync(path.join(__dirname,'../backend/migrations')).sort().filter(n=>n.endsWith('.sql')))await engine.exec(fs.readFileSync(path.join(__dirname,'../backend/migrations',name),'utf8'));
+ const ids=[randomUUID(),randomUUID()];for(const id of ids){await engine.query("insert into users(id,email,password_hash) values($1,$2,'fixture')",[id,id+'@example.test']);await engine.query("insert into sessions(token_hash,user_id,expires_at) values($1,$2,now()+interval '1 day')",[id,id]);}
  const query=(...args)=>engine.query(...args),db={query,connect:async()=>({query,release(){}})};
  const push=createPushService({db,siteUrl:'https://fit.example.test'});t.after(()=>push.stop());
  const app=express();app.use(express.json());app.use((req,res,next)=>{const id=req.get('x-fixture-user');if(!ids.includes(id))return res.sendStatus(401);req.user={id};req.sessionHash=id;next();});app.use('/api/push',push.router(async()=>{}));app.use((e,req,res,next)=>res.status(e.status||500).json({error:e.message}));

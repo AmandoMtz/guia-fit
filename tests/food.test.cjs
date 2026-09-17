@@ -24,6 +24,7 @@ test("Comidas: permisos, dinero, pedidos y notificaciones persistentes", async (
       "utf8",
     ),
   );
+  for(const name of fs.readdirSync(path.join(__dirname,'../backend/migrations')).sort().filter(n=>n.endsWith('.sql')&&n>'003_profiles.sql')) await engine.exec(fs.readFileSync(path.join(__dirname,'../backend/migrations',name),'utf8'));
   const query = (sql, args) => engine.query(sql, args),
     db = { query, connect: async () => ({ query, release() {} }) };
   const emails = [];

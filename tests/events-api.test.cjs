@@ -1,3 +1,4 @@
+const {geo,enroll,proof}=require('./fixtures/attendance.cjs');
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -34,11 +35,13 @@ test('eventos: públicos cerrados, docentes, QR, asistencia y PDF validable', as
   const otherTeacher = await account('calculo@uat.edu.mx', 'Docente No Invitado');
   const call = (who, method, url) => api[method](url).set('Authorization', 'Bearer ' + who.token);
 
+  const studentKey=await enroll(call,student,admin), teacherKey=await enroll(call,invitedTeacher,admin);
   const clock = (await query(`select
     (((now() at time zone 'America/Monterrey')::date + time '12:00') at time zone 'America/Monterrey') as today_start,
     (((now() at time zone 'America/Monterrey')::date + time '14:00') at time zone 'America/Monterrey') as today_end,
     ((((now() at time zone 'America/Monterrey')::date + 1) + time '12:00') at time zone 'America/Monterrey') as tomorrow_start,
     ((((now() at time zone 'America/Monterrey')::date + 1) + time '14:00') at time zone 'America/Monterrey') as tomorrow_end`)).rows[0];
+  clock.today_start=new Date(Date.now()-60000);clock.today_end=new Date(Date.now()+3600000);
   const iso = (v) => new Date(v).toISOString();
 
   await t.test('la sesión expone la clasificación solicitada por correo', async () => {
@@ -66,7 +69,7 @@ test('eventos: públicos cerrados, docentes, QR, asistencia y PDF validable', as
   let studentEvent, studentQr;
   await t.test('solo administración crea eventos estudiantiles y puede dirigirlos a varias carreras', async () => {
     const body = {
-      title: 'Encuentro de Sistemas y Negocios', description: 'Evento conjunto', location: 'Auditorio',
+      ...geo,title: 'Encuentro de Sistemas y Negocios', description: 'Evento conjunto', location: 'Auditorio',
       audience: 'students', visibility: 'targeted', starts_at: iso(clock.today_start), ends_at: iso(clock.today_end),
       careers: ['ING. SISTEMAS', 'ING. NEGOCIOS'], invitees: [],
     };
@@ -86,9 +89,9 @@ test('eventos: públicos cerrados, docentes, QR, asistencia y PDF validable', as
     studentQr = (await call(admin, 'post', `/api/events/${studentEvent.id}/qr`).expect(200)).body.data;
     assert.match(studentQr.svg, /^<svg/);
     assert.match(studentQr.payload, /^https:\/\/castoresfit\.com\/\?e=/);
-    const first = await call(student, 'post', '/api/events/checkin').send({ token: studentQr.token }).expect(200);
+    const first = await call(student, 'post', '/api/events/checkin').send(await proof(call,student,studentKey,studentQr.token)).expect(200);
     assert.equal(first.body.data.already_registered, false);
-    const duplicate = await call(student, 'post', '/api/events/checkin').send({ token: studentQr.token }).expect(200);
+    const duplicate = await call(student, 'post', '/api/events/checkin').send(await proof(call,student,studentKey,studentQr.token)).expect(200);
     assert.equal(duplicate.body.data.already_registered, true);
     await call(otherStudent, 'post', '/api/events/checkin').send({ token: studentQr.token }).expect(403);
     const rows = (await call(admin, 'get', `/api/events/${studentEvent.id}/attendees`).expect(200)).body.data;
@@ -115,7 +118,7 @@ test('eventos: públicos cerrados, docentes, QR, asistencia y PDF validable', as
 
   await t.test('la verificación se cierra fuera del día del evento', async () => {
     const future = (await call(admin, 'post', '/api/events').send({
-      title: 'Evento de mañana', description: '', location: 'Sala 1', audience: 'students', visibility: 'public',
+      ...geo,title: 'Evento de mañana', description: '', location: 'Sala 1', audience: 'students', visibility: 'public',
       starts_at: iso(clock.tomorrow_start), ends_at: iso(clock.tomorrow_end), careers: [], invitees: [],
     }).expect(201)).body.data;
     const qr = (await call(admin, 'post', `/api/events/${future.id}/qr`).expect(200)).body.data;
@@ -144,7 +147,7 @@ test('eventos: públicos cerrados, docentes, QR, asistencia y PDF validable', as
   let teacherEvent;
   await t.test('un docente crea un evento cerrado e invita docentes registrados', async () => {
     teacherEvent = (await call(teacher, 'post', '/api/events').send({
-      title: 'Junta docente', description: 'Reunión académica', location: 'Sala de maestros', audience: 'teachers', visibility: 'targeted',
+      ...geo,title: 'Junta docente', description: 'Reunión académica', location: 'Sala de maestros', audience: 'teachers', visibility: 'targeted',
       starts_at: iso(clock.today_start), ends_at: iso(clock.today_end), careers: [], invitees: [invitedTeacher.id],
     }).expect(201)).body.data;
     const invited = (await call(invitedTeacher, 'get', '/api/events').expect(200)).body.data;
@@ -157,16 +160,16 @@ test('eventos: públicos cerrados, docentes, QR, asistencia y PDF validable', as
     const studentView = (await call(student, 'get', '/api/events').expect(200)).body.data;
     assert.ok(!studentView.some((x) => x.id === teacherEvent.id), 'los alumnos no deben ver eventos docentes');
     await call(invitedTeacher, 'patch', `/api/events/${teacherEvent.id}`).send({
-      title: 'Intento', description: '', location: 'Sala', audience: 'teachers', visibility: 'public',
+      ...geo,title: 'Intento', description: '', location: 'Sala', audience: 'teachers', visibility: 'public',
       starts_at: iso(clock.today_start), ends_at: iso(clock.today_end), careers: [], invitees: [],
     }).expect(403);
   });
 
   await t.test('el creador docente puede reagendar y el QR anterior queda invalidado', async () => {
     const oldQr = (await call(teacher, 'post', `/api/events/${teacherEvent.id}/qr`).expect(200)).body.data;
-    await call(invitedTeacher, 'post', '/api/events/checkin').send({ token: oldQr.token }).expect(200);
+    await call(invitedTeacher, 'post', '/api/events/checkin').send(await proof(call,invitedTeacher,teacherKey,oldQr.token)).expect(200);
     await call(teacher, 'patch', `/api/events/${teacherEvent.id}`).send({
-      title: 'Junta docente reagendada', description: 'Reunión académica', location: 'Sala de maestros', audience: 'teachers', visibility: 'targeted',
+      ...geo,title: 'Junta docente reagendada', description: 'Reunión académica', location: 'Sala de maestros', audience: 'teachers', visibility: 'targeted',
       starts_at: iso(clock.tomorrow_start), ends_at: iso(clock.tomorrow_end), careers: [], invitees: [invitedTeacher.id],
     }).expect(200);
     await call(invitedTeacher, 'post', '/api/events/checkin').send({ token: oldQr.token }).expect(400);

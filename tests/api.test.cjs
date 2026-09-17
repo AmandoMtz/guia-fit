@@ -32,6 +32,7 @@ test("API Render/Aiven: autenticación real, permisos y verificación", async (t
       "utf8",
     ),
   );
+  for(const name of fs.readdirSync(path.join(root,'backend/migrations')).sort().filter(n=>n.endsWith('.sql')&&n>'004_events.sql')) await engine.exec(fs.readFileSync(path.join(root,'backend/migrations',name),'utf8'));
   const query = (sql, args) => engine.query(sql, args);
   const db = { query, connect: async () => ({ query, release() {} }) };
   const emails = [];

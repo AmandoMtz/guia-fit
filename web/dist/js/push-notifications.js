@@ -1,8 +1,7 @@
 /* Web Push: activo por defecto cuando el navegador lo permite; el usuario puede desactivarlo. */
 (function(root){
   'use strict';
-  let context=null, owner=null, revision=0, wrongAccount=null;
-  const autoPrepared=new Set();
+  let context=null, owner=null, revision=0, wrongAccount=null, syncingOwner=null, syncedOwner=null;
   const supported=()=>isSecureContext && 'serviceWorker' in navigator && 'PushManager' in root && 'Notification' in root;
   const eligible=c=>c?.state.user&&!c.state.demo&&!c.state.offline&&c.client;
   const prefKey=id=>'fit_push_disabled:'+id;
@@ -49,51 +48,33 @@
   }
   async function autoEnableGranted(c){
     if(!eligible(c)||!supported()||disabledByUser(c.state.user.id)||Notification.permission!=='granted')return false;
-    try{const prepared=await prepare(c);await subscribePrepared(c,prepared);return true;}catch{return false;}
-  }
-  function scheduleDefaultPermission(c){
-    if(!eligible(c)||!supported()||disabledByUser(c.state.user.id))return;
     const id=c.state.user.id;
-    if(Notification.permission==='granted'){autoEnableGranted(c);return;}
-    if(Notification.permission!=='default'||autoPrepared.has(id))return;
-    autoPrepared.add(id);
-    const ask=()=>{
-      cleanup();
-      if(!eligible(c)||c.state.user?.id!==id||disabledByUser(id))return;
-      // Se pide en la primera interacción para respetar las reglas de Chrome/Safari.
-      Promise.resolve(Notification.requestPermission()).then(permission=>{
-        if(permission==='granted'&&eligible(c)&&c.state.user?.id===id&&!disabledByUser(id))autoEnableGranted(c);
-      }).catch(()=>{});
-    };
-    const cleanup=()=>{
-      document.removeEventListener('pointerdown',ask,true);
-      document.removeEventListener('keydown',ask,true);
-    };
-    document.addEventListener('pointerdown',ask,true);
-    document.addEventListener('keydown',ask,true);
+    if(syncedOwner===id||syncingOwner===id)return true;
+    syncingOwner=id;
+    try{const prepared=await prepare(c);if(c.state.user?.id!==id)return false;await subscribePrepared(c,prepared);if(c.state.user?.id===id)syncedOwner=id;return true;}catch{return false;}finally{if(syncingOwner===id)syncingOwner=null;}
   }
 
   async function settings(c,host){
     const token=revision,id=c.state.user.id;
     const current=()=>host.isConnected&&token===revision&&c.state.user?.id===id;
-    host.innerHTML='<h2>Notificaciones en tu dispositivo</h2><p>Los avisos están activados por defecto cuando tu navegador lo permite. Recibirás un aviso cuando un cliente o vendedor te escriba, aunque no tengas abierta la página.</p><p class="hint">En iPhone o iPad, agrega Guía FIT a la pantalla de inicio y ábrela desde su ícono. El navegador siempre conserva el control final del permiso.</p><p data-push-status role="status">Comprobando disponibilidad…</p><div class="button-row"><button type="button" class="btn" data-push-enable hidden>Permitir notificaciones</button><button type="button" class="btn secondary" data-push-disable hidden>Desactivar notificaciones</button><button type="button" class="btn secondary" data-push-test hidden>Enviar prueba</button></div>';
+    host.innerHTML='<h2>Notificaciones en tu dispositivo</h2><p>Permite las notificaciones para recibir mensajes, cambios de pedidos, eventos, asistencias, autorizaciones y recompensas aunque no tengas abierta la página. Debes conservar la sesión iniciada.</p><p class="hint">En iPhone o iPad, agrega Guía FIT a la pantalla de inicio y ábrela desde su ícono. El navegador siempre conserva el control final del permiso.</p><p data-push-status role="status">Comprobando disponibilidad…</p><div class="button-row"><button type="button" class="btn" data-push-enable disabled>Permitir notificaciones</button><button type="button" class="btn secondary" data-push-disable hidden>Desactivar notificaciones</button><button type="button" class="btn secondary" data-push-test hidden>Enviar prueba</button></div>';
     const status=host.querySelector('[data-push-status]'),enable=host.querySelector('[data-push-enable]'),disable=host.querySelector('[data-push-disable]'),test=host.querySelector('[data-push-test]');
-    if(!supported()){status.textContent='Este navegador no permite estos avisos aquí. Prueba un navegador compatible o, en iPhone, abre Guía FIT desde la pantalla de inicio.';return;}
+    if(!supported()){status.textContent='En iPhone o iPad (iOS 16.4 o posterior): Compartir → Agregar a pantalla de inicio; abre el ícono y vuelve a Mi cuenta. En otros equipos usa HTTPS y un navegador con notificaciones push.';enable.disabled=false;enable.textContent='Cómo activar notificaciones';enable.onclick=()=>c.toast(status.textContent);return;}
     let prepared=null,sub=null,enabled=false;
     function paint(){
       const userOff=disabledByUser(id);
-      enable.hidden=enabled||Notification.permission==='denied';
+      enable.hidden=enabled;
       disable.hidden=!enabled;
       test.hidden=!enabled;
       enable.disabled=false;
-      enable.textContent=userOff?'Volver a activar':'Permitir notificaciones';
+      enable.textContent=Notification.permission==='denied'?'Cómo habilitar los avisos':userOff?'Volver a activar':'Permitir notificaciones';
       status.textContent=enabled
         ?'Activadas para esta cuenta y dispositivo.'
         :userOff
           ?'Desactivadas por ti en este dispositivo.'
           :Notification.permission==='denied'
             ?'El navegador bloqueó los avisos. Habilítalos en los permisos del sitio para volver a activarlos.'
-            :'Se activarán por defecto al permitir el aviso del navegador.';
+            :'Pulsa Permitir notificaciones para activarlas en este dispositivo.';
     }
     try{
       prepared=await prepare(c);if(!current())return;
@@ -104,9 +85,10 @@
         sub=await subscribePrepared(c,prepared);enabled=true;
       }
       if(current())paint();
-    }catch(e){if(current()){paint();status.textContent=friendlyError(e);}return;}
+    }catch(e){if(current()){paint();status.textContent=friendlyError(e);}}
 
     enable.onclick=async()=>{
+      if(Notification.permission==='denied'){status.textContent='Abre los permisos del sitio en tu navegador, permite Notificaciones y recarga. En iPhone revisa Ajustes → Notificaciones para la app instalada.';return;}
       enable.disabled=true;setDisabled(id,false);
       try{
         const permission=Notification.permission==='granted'?'granted':await Notification.requestPermission();
@@ -130,29 +112,37 @@
       catch(e){if(current())status.textContent=friendlyError(e);}finally{if(current())test.disabled=false;}
     };
   }
-  function route(chatId,recipientId){
+  function route(chatId,recipientId,view){
     const c=context;if(!eligible(c))return;
     if(recipientId&&recipientId!==c.state.user.id){if(wrongAccount!==recipientId){wrongAccount=recipientId;c.toast('Este aviso pertenece a otra cuenta. Inicia sesión con la cuenta que recibió el mensaje.');}return;}
     if(chatId&&!/^[a-f0-9-]{36}$/i.test(chatId))return;
-    const u=new URL(location.href);u.searchParams.delete('fitChat');u.searchParams.delete('fitUser');u.searchParams.delete('fitPush');history.replaceState(null,'',u);
-    c.state.view=chatId?'food':'profile';if(chatId){c.state.foodTab='chats';c.state.foodFocusChat=chatId;}c.render();
+    const u=new URL(location.href);u.searchParams.delete('fitChat');u.searchParams.delete('fitUser');u.searchParams.delete('fitPush');u.searchParams.delete('fitView');history.replaceState(null,'',u);
+    c.state.view=chatId?'food':(['food','events','profile'].includes(view)?view:'profile');if(chatId){c.state.foodTab='chats';c.state.foodFocusChat=chatId;}c.render();
+  }
+  async function activity(c,view){
+    const panel=document.createElement('section');panel.className='panel';panel.style.marginTop='24px';view.append(panel);
+    const user=c.state.user.id;
+    try{const rows=await api(c,'/activity');if(!panel.isConnected||c.state.user?.id!==user)return;
+      panel.innerHTML='<h2>Mis avisos</h2><button class="btn secondary" data-read>Marcar como leídos</button>'+ (rows.map(n=>`<article><p><strong>${c.esc(n.title)}${n.read_at?'':' · Nuevo'}</strong><br>${c.esc(n.body)}<br><small>${c.esc(new Date(n.created_at).toLocaleString())}</small></p></article>`).join('')||'<p>No tienes avisos recientes.</p>');
+      panel.querySelector('[data-read]').onclick=async()=>{try{await api(c,'/activity/read','PATCH',{});panel.remove();activity(c,view);}catch(e){c.toast(e.message);}};
+    }catch(e){panel.textContent=e.message;}
   }
   function mount(c){
     context=c;
-    if(owner!==c.state.user?.id){owner=c.state.user?.id;revision++;wrongAccount=null;}
+    if(owner!==c.state.user?.id){owner=c.state.user?.id;revision++;wrongAccount=null;syncedOwner=null;}
     if(!eligible(c))return;
-    scheduleDefaultPermission(c);
+    autoEnableGranted(c);
     const q=new URLSearchParams(location.search);
-    if(q.has('fitPush')){route(q.get('fitChat'),q.get('fitUser'));return;}
-    if(c.state.view==='profile'){
+    if(q.has('fitPush')){route(q.get('fitChat'),q.get('fitUser'),q.get('fitView'));return;}
+    if(['profile','notifications'].includes(c.state.view)){
       const view=document.querySelector('#view');if(!view||view.querySelector('#push-settings'))return;
-      const panel=document.createElement('section');panel.className='panel';panel.id='push-settings';panel.style.marginTop='24px';view.append(panel);settings(c,panel);
+      const panel=document.createElement('section');panel.className='panel';panel.id='push-settings';panel.style.marginTop='24px';view.prepend(panel);settings(c,panel);activity(c,view);
     }
   }
   navigator.serviceWorker?.addEventListener('message',e=>{
     if(e.data?.type==='fit-push-open'){
-      if(eligible(context))route(e.data.chatId,e.data.recipientId);
-      else{const u=new URL(location.href);u.searchParams.set('fitPush','1');if(e.data.chatId)u.searchParams.set('fitChat',e.data.chatId);if(e.data.recipientId)u.searchParams.set('fitUser',e.data.recipientId);history.replaceState(null,'',u);}
+      if(eligible(context))route(e.data.chatId,e.data.recipientId,e.data.view);
+      else{const u=new URL(location.href);u.searchParams.set('fitPush','1');if(e.data.view)u.searchParams.set('fitView',e.data.view);if(e.data.chatId)u.searchParams.set('fitChat',e.data.chatId);if(e.data.recipientId)u.searchParams.set('fitUser',e.data.recipientId);history.replaceState(null,'',u);}
     }
   });
   root.FIT_PUSH={mount};

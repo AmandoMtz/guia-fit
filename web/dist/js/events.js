@@ -50,7 +50,7 @@
         : `Invitados: ${(e.invitees || []).map((x) => x.full_name).join(", ") || "Por definir"}`;
     const canAttend = (accountType === "student" && e.audience === "students") || (accountType === "teacher" && e.audience === "teachers");
     const status = e.attended ? '<span class="event-pill attended">Asistencia verificada</span>'
-      : e.checkin_open && canAttend ? '<span class="event-pill today">Verificación habilitada hoy</span>'
+      : e.checkin_open && canAttend ? '<span class="event-pill today">Registro disponible</span>'
       : accountType === "teacher" && e.audience === "students" ? '<span class="event-pill">Solo informativo para docentes</span>' : '';
     return `<article class="panel event-card" data-event-id="${c.esc(e.id)}">
       <div class="event-card-top"><div><span class="eyebrow">${e.audience === "students" ? "EVENTO PARA ALUMNOS" : "EVENTO PARA DOCENTES"}</span><h3>${c.esc(e.title)}</h3></div><div class="event-card-badges"><span class="event-pill">${e.visibility === "public" ? "Público" : "Cerrado"}</span>${status}</div></div>
@@ -168,8 +168,10 @@
       ${accountType === "admin" ? `<label class="field">Público<select name="audience"><option value="students" ${audience === "students" ? "selected" : ""}>Alumnos</option><option value="teachers" ${audience === "teachers" ? "selected" : ""}>Docentes</option></select></label>` : `<input type="hidden" name="audience" value="teachers"><div class="notice">Este evento será visible únicamente en el apartado de docentes.</div>`}
       <div class="form-grid"><label class="field">Inicio<input type="datetime-local" name="starts_at" required value="${localInput(starts)}"></label><label class="field">Fin<input type="datetime-local" name="ends_at" required value="${localInput(ends)}"></label></div>
       <label class="field">Visibilidad<select name="visibility"><option value="public" ${event?.visibility !== "targeted" ? "selected" : ""}>Público para su audiencia</option><option value="targeted" ${event?.visibility === "targeted" ? "selected" : ""}>Cerrado / exclusivo</option></select></label>
+      <fieldset><legend>Área obligatoria para registrar asistencia</legend><p>Solo se aceptan ubicaciones cuyo margen de precisión quede dentro del radio. El registro estará abierto entre el inicio y el fin del evento.</p><div class="form-grid"><label class="field">Latitud<input name="latitude" type="number" step="any" min="-90" max="90" required value="${c.esc(event?.latitude ?? '')}"></label><label class="field">Longitud<input name="longitude" type="number" step="any" min="-180" max="180" required value="${c.esc(event?.longitude ?? '')}"></label><label class="field">Radio permitido (metros)<input name="radius_m" type="number" min="10" max="1000" required value="${event?.radius_m || 100}"></label><label class="field">Precisión máxima (metros)<input name="max_accuracy_m" type="number" min="1" max="200" required value="${event?.max_accuracy_m || 50}"></label></div><button type="button" class="btn secondary" id="event-use-location">Usar mi ubicación como centro</button><p class="hint">Usa este botón únicamente si estás en el recinto. Revisa las coordenadas antes de guardar.</p></fieldset>
       <div id="event-targets"></div><p class="field-error" role="alert" id="event-form-error"></p><button class="btn full" type="submit">${editing ? "Guardar cambios" : "Crear evento"}</button></form></div>`);
     const f = d.querySelector("#event-form"), target = d.querySelector("#event-targets");
+    d.querySelector("#event-use-location").onclick=async()=>{try{const loc=await window.FIT_ATTENDANCE.locationNow();f.elements.latitude.value=loc.latitude;f.elements.longitude.value=loc.longitude;c.toast(`Ubicación obtenida. Precisión aproximada: ${Math.round(loc.accuracy)} m.`);}catch(e){c.toast(e.message);}};
     const drawTargets = () => {
       if (f.elements.visibility.value !== "targeted") { target.innerHTML = '<p class="hint">Aparecerá a todas las cuentas de ese público.</p>'; return; }
       if (f.elements.audience.value === "students") {
@@ -187,6 +189,7 @@
       try {
         const audienceValue = f.elements.audience.value, visibility = f.elements.visibility.value;
         const body = {
+          latitude:Number(f.elements.latitude.value),longitude:Number(f.elements.longitude.value),radius_m:Number(f.elements.radius_m.value),max_accuracy_m:Number(f.elements.max_accuracy_m.value),
           title: f.elements.title.value.trim(), description: f.elements.description.value.trim(), location: f.elements.location.value.trim(), audience: audienceValue, visibility,
           starts_at: new Date(`${f.elements.starts_at.value}:00-06:00`).toISOString(), ends_at: new Date(`${f.elements.ends_at.value}:00-06:00`).toISOString(), careers: [], invitees: [],
         };
@@ -251,7 +254,8 @@
       };
       const checkin = async (raw) => {
         const token = tokenFrom(raw); if (!token) throw Error("El código no es válido.");
-        const data = await api(c, "/api/events/checkin", "POST", { token });
+        const proof = await window.FIT_ATTENDANCE.checkin(c,token);
+        const data = await api(c, "/api/events/checkin", "POST", proof);
         root.FIT_REWARDS?.refresh?.();
         c.toast(data.already_registered ? `Tu asistencia a “${data.title}” ya estaba registrada.` : `Asistencia registrada: ${data.title}.`);
         c.state.pendingEventToken = null;
@@ -270,7 +274,7 @@
           accountType === "student" ? e.audience === "students" :
           accountType === "teacher" ? e.audience === "teachers" : false
         ));
-        content.innerHTML = `<section class="events-intro panel"><div><span class="eyebrow">${typeLabel(accountType).toUpperCase()}</span><h2>${accountType === "student" ? "Eventos para ti" : accountType === "teacher" ? "Eventos de alumnos y docentes" : "Eventos de la facultad"}</h2><p>${accountType === "student" ? "Los eventos cerrados aparecen según la carrera guardada en Mi cuenta." : accountType === "teacher" ? "Puedes consultar los eventos para alumnos y también los eventos docentes públicos, propios o a los que fuiste invitado. El QR de asistencia docente solo se habilita en eventos para docentes." : "Administración puede consultar y gestionar los eventos para alumnos; también puede apoyar con eventos docentes."}</p></div>${accountType !== "admin" ? `<button class="btn" id="scan-event-qr" ${checkinToday ? "" : "disabled"}>${checkinToday ? "Escanear QR de asistencia" : "Verificación disponible el día del evento"}</button>` : ""}</section>${accountType === "student" && !c.state.profile?.career ? '<div class="notice">Completa tu carrera en <b>Mi cuenta</b> para recibir eventos cerrados dirigidos a tu programa académico.</div>' : ""}<div class="event-grid">${visible.length ? visible.map((e) => eventCard(c, e, accountType)).join("") : '<div class="empty">No hay eventos disponibles para tu cuenta.</div>'}</div>`;
+        content.innerHTML = `<section class="events-intro panel"><div><span class="eyebrow">${typeLabel(accountType).toUpperCase()}</span><h2>${accountType === "student" ? "Eventos para ti" : accountType === "teacher" ? "Eventos de alumnos y docentes" : "Eventos de la facultad"}</h2><p>${accountType === "student" ? "Los eventos cerrados aparecen según la carrera guardada en Mi cuenta." : accountType === "teacher" ? "Puedes consultar los eventos para alumnos y también los eventos docentes públicos, propios o a los que fuiste invitado. El QR de asistencia docente solo se habilita en eventos para docentes." : "Administración puede consultar y gestionar los eventos para alumnos; también puede apoyar con eventos docentes."}</p></div>${accountType !== "admin" ? `<button class="btn" id="scan-event-qr" ${checkinToday ? "" : "disabled"}>${checkinToday ? "Escanear QR de asistencia" : "Registro disponible durante el evento"}</button>` : ""}</section>${accountType === "student" && !c.state.profile?.career ? '<div class="notice">Completa tu carrera en <b>Mi cuenta</b> para recibir eventos cerrados dirigidos a tu programa académico.</div>' : ""}<div class="event-grid">${visible.length ? visible.map((e) => eventCard(c, e, accountType)).join("") : '<div class="empty">No hay eventos disponibles para tu cuenta.</div>'}</div>`;
         if (content.querySelector("#scan-event-qr")) content.querySelector("#scan-event-qr").onclick = () => scanner(c, checkin);
         bind();
       } else if (current === "manage") {

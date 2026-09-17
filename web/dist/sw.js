@@ -1,8 +1,8 @@
 /* App shell sin conexión. Las respuestas /api nunca se guardan aquí. */
 importScripts('/push-worker.js?v=1');
-const CACHE = "guia-fit-shell-web-push-v2";
+const CACHE = "guia-fit-shell-web-push-v3";
 const SHELL = [
-  "/js/push-notifications.js?v=1",
+  "/js/push-notifications.js?v=2",
   "/manifest.webmanifest",
   "/assets/push-icon-192.png",
   "/assets/push-icon-512.png",
@@ -37,8 +37,8 @@ const SHELL = [
   "/assets/fonts/VisbyCF-RegularOblique.otf",
   "/assets/fonts/VisbyCF-Thin.otf",
   "/assets/fonts/VisbyCF-ThinOblique.otf",
-  "/styles.css?v=20260916b",
-  "/js/app.js?v=20260916b",
+  "/styles.css?v=20260916c",
+  "/js/app.js?v=20260916c",
   "/assets/guia-fit-mascota.png",
   "/assets/croquis.png",
   "/js/api.js",
@@ -53,6 +53,7 @@ const SHELL = [
   "/js/timetable.js",
   "/js/schedule.js",
   "/js/events.js",
+  "/js/chatbot.js?v=20260916c",
   "/js/chatbot.js",
   "/js/gamification.js",
   "/js/purchase-rating.js",

@@ -11,6 +11,8 @@
   let nudgeTimer = null;
   let audience = null;
   let generation = 0;
+  let suppressLauncherClickUntil = 0;
+  const positionKey = "fit_chatbot_position_v1";
 
   function isGuest() { return !ctx?.state?.user; }
   function greeting() {
@@ -47,6 +49,83 @@
       '"': "&quot;",
       "'": "&#39;",
     })[c]);
+  }
+
+
+  function clamp(value, min, max) { return Math.max(min, Math.min(max, value)); }
+
+  function updatePanelPlacement() {
+    if (!host) return;
+    const launcher = host.querySelector("[data-chat-floating]");
+    if (!launcher) return;
+    const rect = launcher.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    host.classList.toggle("panel-open-right", cx < innerWidth / 2);
+    host.classList.toggle("panel-open-down", cy < innerHeight / 2);
+  }
+
+  function setStoredPosition(left, top) {
+    if (!host) return;
+    const launcher = host.querySelector("[data-chat-floating]");
+    if (!launcher) return;
+    host.classList.add("drag-positioned", "nudge-soft");
+    const width = launcher.offsetWidth || 72;
+    const height = launcher.offsetHeight || 72;
+    const x = clamp(Number(left) || 8, 8, Math.max(8, innerWidth - width - 8));
+    const y = clamp(Number(top) || 8, 8, Math.max(8, innerHeight - height - 8));
+    host.style.left = `${x}px`;
+    host.style.top = `${y}px`;
+    host.style.right = "auto";
+    host.style.bottom = "auto";
+    updatePanelPlacement();
+    try { localStorage.setItem(positionKey, JSON.stringify({ left: x, top: y })); } catch {}
+  }
+
+  function restorePosition() {
+    if (!host) return;
+    try {
+      const saved = JSON.parse(localStorage.getItem(positionKey) || "null");
+      if (saved && Number.isFinite(saved.left) && Number.isFinite(saved.top)) {
+        setStoredPosition(saved.left, saved.top);
+      }
+    } catch {}
+  }
+
+  function enableDragging(launcher) {
+    let drag = null;
+    launcher.addEventListener("pointerdown", (event) => {
+      if (event.pointerType === "mouse" && event.button !== 0) return;
+      const rect = launcher.getBoundingClientRect();
+      drag = {
+        pointerId: event.pointerId,
+        startX: event.clientX,
+        startY: event.clientY,
+        offsetX: event.clientX - rect.left,
+        offsetY: event.clientY - rect.top,
+        moved: false,
+      };
+      launcher.setPointerCapture?.(event.pointerId);
+      host?.classList.add("dragging", "nudge-soft");
+    });
+    launcher.addEventListener("pointermove", (event) => {
+      if (!drag || event.pointerId !== drag.pointerId) return;
+      const distance = Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY);
+      if (!drag.moved && distance < 6) return;
+      drag.moved = true;
+      event.preventDefault();
+      setStoredPosition(event.clientX - drag.offsetX, event.clientY - drag.offsetY);
+    });
+    const finish = (event) => {
+      if (!drag || event.pointerId !== drag.pointerId) return;
+      if (drag.moved) suppressLauncherClickUntil = performance.now() + 350;
+      launcher.releasePointerCapture?.(event.pointerId);
+      host?.classList.remove("dragging");
+      updatePanelPlacement();
+      drag = null;
+    };
+    launcher.addEventListener("pointerup", finish);
+    launcher.addEventListener("pointercancel", finish);
   }
 
   function createHost() {
@@ -94,7 +173,16 @@
       </section>`;
     document.body.appendChild(host);
     panel = host.querySelector(".fit-chat-panel");
-    host.querySelector("[data-chat-floating]").onclick = toggle;
+    const launcher = host.querySelector("[data-chat-floating]");
+    launcher.onclick = (event) => {
+      if (performance.now() < suppressLauncherClickUntil) {
+        event.preventDefault();
+        return;
+      }
+      toggle();
+    };
+    enableDragging(launcher);
+    restorePosition();
     host.querySelector("[data-chat-close]").onclick = close;
     const nudge = host.querySelector("[data-chat-nudge]");
     nudge.onclick = open;
@@ -145,6 +233,7 @@
     );
     if (opened) {
       host.classList.add("nudge-soft");
+      updatePanelPlacement();
       loadHistory();
       setTimeout(() => host?.querySelector("[data-chat-input]")?.focus(), 120);
     }
@@ -287,6 +376,7 @@
     }
     createHost();
     bindTopLaunchers();
+    updatePanelPlacement();
   }
 
   function unmount() {
@@ -300,11 +390,22 @@
     host?.remove();
     host = null;
     panel = null;
+    suppressLauncherClickUntil = 0;
     document.querySelectorAll("[data-chat-launch]").forEach((button) => {
       button.onclick = null;
       button.setAttribute("aria-expanded", "false");
     });
   }
+
+  root.addEventListener("resize", () => {
+    if (!host) return;
+    if (host.classList.contains("drag-positioned")) {
+      const rect = host.querySelector("[data-chat-floating]")?.getBoundingClientRect();
+      if (rect) setStoredPosition(rect.left, rect.top);
+    } else {
+      updatePanelPlacement();
+    }
+  });
 
   root.FIT_CHATBOT = { mount, unmount, open };
 })(window);

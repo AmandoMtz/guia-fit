@@ -317,9 +317,9 @@ function createFoodRouter({ db, siteUrl, administrator, limit, push = null }) {
     fields(req.body || {}, []);
     res.json({ data: chat.read(req.user.id, id(req.params.id)) });
   });
-  router.post("/chats/:id/messages", (req, res) => {
+  router.post("/chats/:id/messages", async (req, res) => {
     fields(req.body, ["text"]);
-    const data = chat.addText(
+    const data = await chat.addText(
       req.user.id,
       id(req.params.id),
       req.body.text,

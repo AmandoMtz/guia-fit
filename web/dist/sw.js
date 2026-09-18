@@ -1,7 +1,8 @@
 /* App shell sin conexión. Las respuestas /api nunca se guardan aquí. */
 importScripts('/push-worker.js?v=3');
-const CACHE = "guia-fit-shell-academic-chat-v2";
+const CACHE = "guia-fit-shell-audit-v1";
 const SHELL = [
+  "/js/audit.js?v=1",
   "/js/attendance-security.js",
   "/js/push-notifications.js?v=4",
   "/js/academic-chat.js?v=1",

@@ -36,9 +36,9 @@ test('Chat: texto e imagen notifican a la otra persona; acceso ajeno no envia pu
  const buyer=randomUUID(),seller=randomUUID(),product=randomUUID(),received=[];
  const chat=createTemporaryFoodChat({db:{async query(){return {rows:[{id:product,product_name:'Producto',seller_user_id:seller,buyer_name:'Cliente',business_name:'Puesto',pickup_location:'Local'}]};}},onMessage:info=>received.push(info)});
  const c=await chat.create(buyer,product);
- chat.addText(buyer,c.id,'Hola');await new Promise(resolve=>setImmediate(resolve));assert.equal(received[0].userId,seller);
- chat.addText(seller,c.id,'Hola cliente');await new Promise(resolve=>setImmediate(resolve));assert.equal(received[1].userId,buyer);
- assert.throws(()=>chat.addText(randomUUID(),c.id,'intruso'));assert.equal(received.length,2);
+ await chat.addText(buyer,c.id,'Hola');await new Promise(resolve=>setImmediate(resolve));assert.equal(received[0].userId,seller);
+ await chat.addText(seller,c.id,'Hola cliente');await new Promise(resolve=>setImmediate(resolve));assert.equal(received[1].userId,buyer);
+ await assert.rejects(()=>chat.addText(randomUUID(),c.id,'intruso'));assert.equal(received.length,2);
  const sharp=require('sharp');const buffer=await sharp({create:{width:2,height:2,channels:3,background:'#ffffff'}}).png().toBuffer();
  await chat.addImage(buyer,c.id,{buffer,mimetype:'image/png'});await new Promise(resolve=>setImmediate(resolve));assert.equal(received[2].userId,seller);
  assert.equal(received[0].chatId,c.id);assert.equal(received[0].text,undefined);chat.purgeExpired(Date.now()+13*60*60*1000);

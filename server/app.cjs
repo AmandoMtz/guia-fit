@@ -733,6 +733,7 @@ function createApp({
         .json({ data: { url: origin + "/api/photos/" + rows[0].id } });
     },
   );
+  app.use("/api/admin/audit", authenticate, administrator, require("./audit-console.cjs").createAuditRouter({db}));
   app.use("/api/events", createPublicEventsRouter({ db, limit }));
   app.use("/api/chatbot/public", createPublicChatbotRouter({ db, limit, chatbot }));
   app.use("/api/attendance-security",authenticate,securityRouter({db,limit}));

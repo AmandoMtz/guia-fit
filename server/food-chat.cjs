@@ -19,6 +19,13 @@ function createTemporaryFoodChat({ db, onMessage = null }) {
   const streams = new Map();
   let storedImageBytes = 0;
 
+  async function record(chat, userId, action, message = null) {
+    await db.query("insert into audit_log(actor_id,request_id,action,entity,record_id,after_data) values($1,nullif(current_setting('fit.request_id',true),''),$2,$3,$4,$5)",
+      [userId, action, message ? 'food_chat_messages' : 'food_chats', message?.id || chat.id,
+       JSON.stringify({chat_id:chat.id,buyer_id:chat.buyer_id,seller_user_id:chat.seller_user_id,buyer_name:chat.buyer_name,business_name:chat.business_name,product_name:chat.product_name,order_id:chat.order_id,
+        ...(message ? {sender_id:userId,kind:message.kind,text:message.text || null,image_bytes:message.image?.bytes?.length || null} : {})})]);
+  }
+
   function removeChat(chat) {
     if (!chats.has(chat.id)) return;
     if (chat.expiry_timer) {
@@ -217,6 +224,7 @@ function createTemporaryFoodChat({ db, onMessage = null }) {
       updated_ms: now,
       expiry_timer: null,
     };
+    await record(chat, userId, "INSERT");
     chats.set(chat.id, chat);
     chat.expiry_timer = setTimeout(() => removeChat(chat), CHAT_TTL_MS);
     chat.expiry_timer.unref?.();
@@ -246,7 +254,7 @@ function createTemporaryFoodChat({ db, onMessage = null }) {
     return summaryFor(chat, userId);
   }
 
-  function addText(userId, chatId, value) {
+  async function addText(userId, chatId, value) {
     const chat = getChat(chatId, userId);
     if (typeof value !== "string")
       throw chatError(400, "Escribe un mensaje antes de enviarlo.");
@@ -266,6 +274,7 @@ function createTemporaryFoodChat({ db, onMessage = null }) {
       sender_id: userId,
       created_at: new Date().toISOString(),
     };
+    await record(chat, userId, "MESSAGE", message);
     chat.messages.push(message);
     chat.updated_ms = Date.now();
     chat.read_at.set(userId, chat.updated_ms);
@@ -300,6 +309,7 @@ function createTemporaryFoodChat({ db, onMessage = null }) {
       created_at: new Date().toISOString(),
       image: { mime: "image/webp", bytes: optimized },
     };
+    await record(chat, userId, "MESSAGE", message);
     chat.messages.push(message);
     storedImageBytes += optimized.length;
     chat.updated_ms = Date.now();

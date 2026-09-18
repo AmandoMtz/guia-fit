@@ -494,6 +494,7 @@
       ],
       route: ["Cómo llegar", "Elige tu punto de partida y tu destino."],
       profile: ["Mi cuenta", "Consulta tus datos y el estado de verificación."],
+      audit: ["Auditorio de registros", "Consulta la actividad registrada del sistema."],
       admin: [
         "Administrar campus y cuentas",
         "Gestiona espacios, usuarios registrados y beneficios.",
@@ -520,6 +521,7 @@
       menu.push(
         ["admin", "edit", "Administrar"],
         ["accounts", "user", "Cuentas y beneficios"],
+        ["audit", "calendar", "Auditorio de registros"],
         ["food-admin", "store", "Revisar vendedores"],
       );
     const current = names[state.view],
@@ -558,6 +560,7 @@
       route: routeView,
       profile: profileView,
       admin: adminView,
+      audit: () => window.FIT_AUDIT.render(moduleContext()),
       accounts: () => { if(!state.admin)return; $("#view").innerHTML='<section class="panel"><h2>Usuarios registrados</h2><p id="admin-users-count"></p><label class="field">Buscar cuenta<input id="admin-user-search" type="search" placeholder="Nombre o correo"></label><div id="admin-users-list"></div></section>';renderAdminUsers(); },
       food: () => window.FIT_FOOD.render(moduleContext()),
       messages: () => window.FIT_ACADEMIC_CHAT.render(moduleContext()),

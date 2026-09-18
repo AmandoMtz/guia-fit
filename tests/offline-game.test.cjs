@@ -42,7 +42,12 @@ test("Castor Runner aparece sin internet y abre con toque o teclado", () => {
   });
   const w = dom.window;
   Object.defineProperty(w.navigator, "onLine", { configurable: true, value: false });
-  w.HTMLCanvasElement.prototype.getContext = () => fakeCanvas();
+  const transforms = [];
+  const drawing = fakeCanvas();
+  drawing.setTransform = (...args) => transforms.push(args);
+  w.HTMLCanvasElement.prototype.getContext = () => drawing;
+  let viewport = { width: 390, height: 650 };
+  w.HTMLElement.prototype.getBoundingClientRect = () => viewport;
   w.requestAnimationFrame = () => 1;
   w.cancelAnimationFrame = () => {};
   w.eval(source);
@@ -63,6 +68,17 @@ test("Castor Runner aparece sin internet y abre con toque o teclado", () => {
   assert.match(overlay.textContent, /Doble salto disponible/);
   overlay.querySelector("[data-play]").click();
   assert.equal(overlay.querySelector("[data-panel]").hidden, true);
+  for (const size of [{width:390,height:650},{width:844,height:290},{width:1920,height:960}]) {
+    viewport = size;
+    w.dispatchEvent(new w.Event("resize"));
+    const canvas = overlay.querySelector("canvas");
+    assert.equal(canvas.width, size.width);
+    assert.equal(canvas.height, size.height);
+    const transform = transforms.at(-1);
+    assert.equal(transform[0], transform[3], "escala uniforme, sin deformar el personaje");
+    assert.ok(Number.isFinite(transform[0]) && transform[0] > 0);
+  }
+  assert.ok(overlay.querySelector("[data-fullscreen]"));
   w.dispatchEvent(new w.KeyboardEvent("keydown", { code: "Space" }));
   overlay.querySelector("[data-close]").click();
   assert.equal(w.document.body.classList.contains("offline-game-open"), false);

@@ -11,6 +11,8 @@
   let ctx = null;
   let raf = 0;
   let lastTime = 0;
+  let worldWidth = 960, worldHeight = 430;
+  let resizeObserver;
   let audio = null;
   let muted = false;
   let listenersReady = false;
@@ -76,6 +78,7 @@
           <div class="offline-game-head-actions">
             <span class="offline-network-chip" data-network><i></i><span>Sin internet</span></span>
             <button class="offline-icon-button" type="button" data-sound aria-label="Desactivar sonido" title="Sonido">${icon("M5 9v6h4l5 4V5L9 9H5zm12 1a3 3 0 010 4m2-7a7 7 0 010 10")}</button>
+            <button class="offline-icon-button" type="button" data-fullscreen aria-label="Pantalla completa" title="Pantalla completa">⛶</button>
             <button class="offline-icon-button" type="button" data-close aria-label="Cerrar juego" title="Cerrar">${icon("M6 6l12 12M18 6 6 18")}</button>
           </div>
         </header>
@@ -115,6 +118,17 @@
       if (state.phase === "running") jump();
       else if (state.phase === "over") start();
     });
+    overlay.querySelector('[data-fullscreen]').onclick = async () => {
+      try {
+        if (document.fullscreenElement) await document.exitFullscreen();
+        else await overlay.requestFullscreen?.();
+      } catch {}
+      resize();
+    };
+    if (root.ResizeObserver) {
+      resizeObserver = new root.ResizeObserver(resize);
+      resizeObserver.observe(overlay.querySelector('.offline-game-stage'));
+    }
     updateNetwork();
     draw();
     return overlay;
@@ -125,12 +139,14 @@
     overlay.hidden = false;
     document.body.classList.add("offline-game-open");
     resetReady();
+    updateLauncher();
     requestAnimationFrame(() => overlay.classList.add("visible"));
     overlay.querySelector("[data-play]").focus();
   }
 
   function close() {
     if (!overlay) return;
+    if (document.fullscreenElement === overlay) document.exitFullscreen?.().catch(() => {});
     cancelAnimationFrame(raf);
     raf = 0;
     state.phase = "ready";
@@ -138,6 +154,7 @@
     document.body.classList.remove("offline-game-open");
     setTimeout(() => {
       if (overlay && !overlay.classList.contains("visible")) overlay.hidden = true;
+      updateLauncher();
     }, 220);
   }
 
@@ -149,6 +166,7 @@
     const panel = overlay.querySelector("[data-panel]");
     panel.hidden = false;
     panel.classList.remove("game-over");
+    state.player.y = groundY() - state.player.h;
     overlay.querySelector("[data-panel-title]").textContent = "¡Que no te agarre el aburrimiento!";
     overlay.querySelector("[data-panel-copy]").textContent =
       "Ayuda al Castor FIT a saltar libros, mochilas y conos. Recoge estrellas para aumentar tu puntuación.";
@@ -195,7 +213,7 @@
   }
 
   function groundY() {
-    return 350;
+    return worldHeight - 80;
   }
 
   function jump() {
@@ -216,13 +234,13 @@
       ...(difficulty > 0.35 ? [{ type: "puddle", w: 76, h: 20 }] : []),
     ];
     const item = options[Math.floor(Math.random() * options.length)];
-    state.obstacles.push({ ...item, x: 1000 + Math.random() * 80, y: groundY() - item.h });
+    state.obstacles.push({ ...item, x: worldWidth + 40 + Math.random() * 80, y: groundY() - item.h });
   }
 
   function spawnCollectible() {
     const high = Math.random() > 0.55;
     state.collectibles.push({
-      x: 1000,
+      x: worldWidth + 40,
       y: groundY() - (high ? 145 : 92),
       r: 15,
       spin: Math.random() * Math.PI,
@@ -263,7 +281,7 @@
   function update(dt) {
     const s = state;
     s.elapsed += dt;
-    s.speed = Math.min(675, 305 + s.elapsed * 8.3);
+    s.speed = Math.min(675, 305 + s.elapsed * 8.3) * Math.min(1, worldWidth / 800);
     s.distance += s.speed * dt;
     s.score = Math.floor(s.distance / 12) + s.bonus;
     s.flash = Math.max(0, s.flash - dt * 2.8);
@@ -333,6 +351,11 @@
     const dt = Math.min(0.034, Math.max(0, (now - lastTime) / 1000));
     lastTime = now;
     if (state.phase === "running") update(dt);
+    else {
+      state.shake = Math.max(0, state.shake - dt);
+      for (const p of state.particles) { p.life -= dt; p.x += p.vx * dt; p.y += p.vy * dt; }
+      state.particles = state.particles.filter(p => p.life > 0);
+    }
     draw();
     if (state.phase === "running" || state.shake > 0 || state.particles.length)
       raf = requestAnimationFrame(frame);
@@ -340,10 +363,22 @@
 
   function resize() {
     if (!canvas || !ctx) return;
+    const box = canvas.parentElement.getBoundingClientRect();
+    if (!box.width || !box.height) return;
+    const previousGround = groundY();
+    const aspect = box.width / box.height;
+    worldWidth = Math.max(540, 430 * aspect);
+    worldHeight = worldWidth / aspect;
+    const scale = box.width / worldWidth;
     const dpr = Math.min(2, root.devicePixelRatio || 1);
-    canvas.width = Math.round(960 * dpr);
-    canvas.height = Math.round(430 * dpr);
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    canvas.width = Math.round(box.width * dpr);
+    canvas.height = Math.round(box.height * dpr);
+    ctx.setTransform(dpr * scale, 0, 0, dpr * scale, 0, 0);
+    const shift = groundY() - previousGround;
+    state.player.y += shift;
+    state.obstacles.forEach(o => { o.y += shift; });
+    state.collectibles.forEach(o => { o.y += shift; });
+    draw();
   }
 
   function roundedRect(x, y, w, h, r) {
@@ -366,6 +401,8 @@
   }
 
   function drawBackground() {
+    ctx.save();
+    ctx.scale(worldWidth / 960, worldHeight / 430);
     const sky = ctx.createLinearGradient(0, 0, 0, 360);
     sky.addColorStop(0, "#7157e8");
     sky.addColorStop(0.5, "#6fbcff");
@@ -400,9 +437,9 @@
     ctx.fill();
 
     ctx.fillStyle = "#26314f";
-    ctx.fillRect(0, groundY(), 960, 80);
+    ctx.fillRect(0, 350, 960, 80);
     ctx.fillStyle = "#3b486a";
-    ctx.fillRect(0, groundY(), 960, 8);
+    ctx.fillRect(0, 350, 960, 8);
     ctx.fillStyle = "#ffdf66";
     const road = -(state.distance * 0.82) % 95;
     for (let x = road - 95; x < 1050; x += 95) {
@@ -410,6 +447,7 @@
       ctx.roundRect(x, 392, 54, 6, 3);
       ctx.fill();
     }
+    ctx.restore();
   }
 
   function drawPlayer() {
@@ -534,7 +572,7 @@
     ctx.globalAlpha = 1;
     if (state.flash > 0) {
       ctx.fillStyle = `rgba(255,235,97,${state.flash * 0.28})`;
-      ctx.fillRect(0, 0, 960, 430);
+      ctx.fillRect(0, 0, worldWidth, worldHeight);
     }
     ctx.restore();
   }
@@ -665,6 +703,8 @@
     listenersReady = true;
     root.addEventListener("offline", updateNetwork);
     root.addEventListener("online", updateNetwork);
+    document.addEventListener("fullscreenchange", resize);
+    root.visualViewport?.addEventListener("resize", resize);
     root.addEventListener("resize", () => overlay && !overlay.hidden && resize());
     root.addEventListener("keydown", (event) => {
       if (!overlay || overlay.hidden) return;

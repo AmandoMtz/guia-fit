@@ -1,10 +1,10 @@
 /* App shell sin conexión. Las respuestas /api nunca se guardan aquí. */
 importScripts('/push-worker.js?v=3');
-const CACHE = "guia-fit-shell-persistent-v5";
+const CACHE = "guia-fit-shell-persistent-v6";
 const SHELL = [
   "/styles.css?v=20260917a",
   "/campus-map.css",
-  "/offline-game.css?v=20260918a",
+  "/offline-game.css?v=20260918b",
   "/config.js",
   "/js/api.js",
   "/js/catalog.js",
@@ -24,7 +24,7 @@ const SHELL = [
   "/js/purchase-rating.js",
   "/js/gamification.js",
   "/js/push-notifications.js?v=4",
-  "/js/offline-game.js?v=20260918a",
+  "/js/offline-game.js?v=20260918b",
   "/js/offline-game-page.js?v=20260918a",
   "/js/academic-chat.js?v=20260918d",
   "/js/campus-map.js",

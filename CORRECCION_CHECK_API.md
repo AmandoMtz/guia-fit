@@ -1,8 +1,8 @@
-# Corrección del check API
+# Corrección final del check API
 
-"
-    "- Se corrigió la ambigüedad de tipos PostgreSQL/PGlite (42P08) al asociar el chat con la cola de push.
-"
-    "- Se actualizó la prueba del Service Worker para esperar `push-worker.js?v=3`, que es la versión usada actualmente.
-"
-    "- No se cambió el comportamiento funcional del chat: mensajes persistentes en PostgreSQL por 7 días y notificaciones push.
+Se corrigieron dos problemas detectados por GitHub Actions:
+
+1. La inserción de mensajes ya no calcula `expires_at` desde Node. PostgreSQL usa su propio `DEFAULT now() + interval '7 days'`, evitando diferencias de reloj y garantizando que `expires_at > created_at`.
+2. La prueba de expiración mueve `created_at` y `expires_at` juntos al pasado, respetando la restricción de integridad de la tabla.
+
+Se conserva el comportamiento del chat: mensajes persistentes durante 7 días y notificaciones push al destinatario.

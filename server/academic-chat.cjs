@@ -176,8 +176,8 @@ function createAcademicChatRouter({ db, limit }) {
     const sender = (await db.query('select full_name from profiles where id=$1', [req.user.id])).rows[0];
     const recipientId = chat.student_id === req.user.id ? chat.teacher_id : chat.student_id;
     const row = await transaction(db, async client => {
-      const message = (await client.query(`insert into academic_chat_messages(chat_id,sender_id,body,expires_at)
-        values($1,$2,$3,$4) returning id,sender_id,body,created_at,expires_at`, [chat.id, req.user.id, body, new Date(Date.now() + WEEK_MS)])).rows[0];
+      const message = (await client.query(`insert into academic_chat_messages(chat_id,sender_id,body)
+        values($1,$2,$3) returning id,sender_id,body,created_at,expires_at`, [chat.id, req.user.id, body])).rows[0];
       const readColumn = chat.student_id === req.user.id ? 'student_read_at' : 'teacher_read_at';
       await client.query(`update academic_chats set ${readColumn}=now() where id=$1`, [chat.id]);
       const notice = (await client.query(`insert into fit_activity_notifications(user_id,kind,title,body,view_name)

@@ -75,7 +75,7 @@ test('chat alumno-docente: busca, persiste 7 días, aísla participantes y encol
   const again = await request(appAfterDeploy).get('/api/academic-chat/chats/' + chatId).set(auth(student)).expect(200);
   assert.equal(again.body.data.messages[0].body, 'Hola profesora');
 
-  await query("update academic_chat_messages set expires_at=now()-interval '1 second' where id=$1", [sent.body.data.id]);
+  await query("update academic_chat_messages set created_at=now()-interval '8 days', expires_at=now()-interval '1 day' where id=$1", [sent.body.data.id]);
   const expired = await request(appAfterDeploy).get('/api/academic-chat/chats/' + chatId).set(auth(student)).expect(200);
   assert.equal(expired.body.data.messages.length, 0);
 });

@@ -479,15 +479,15 @@
         "Comidas",
         "Elige qué comer, sigue tus compras o atiende a tus clientes.",
       ],
-      accounts: ["Cuentas y beneficios", "Listado de usuarios registrados y reconocimientos."],
+      accounts: ["Verificar cuentas", "Aprueba alumnos, docentes y demás cuentas registradas."],
       rewards: ["Mi progreso", "Participa, sube de nivel y haz tuya Guía FIT."],
       schedule: ["Mi horario", "Tu semana, tus materias y tu próximo salón."],
       events: ["Eventos", "Actividades, reuniones y asistencias verificadas de la facultad."],
       messages: ["Mensajes", "Comunicación directa entre alumnos y docentes de la facultad."],
       notifications: ["Mis avisos", "Activa las notificaciones del dispositivo y consulta tus novedades."],
       "food-admin": [
-        "Revisar vendedores",
-        "Valida los puestos de la comunidad FIT.",
+        "Verificar comidas",
+        "Aprueba o rechaza los puestos que solicitan publicarse.",
       ],
       faculty: ["Conecta con la FIT", "Los enlaces oficiales de tu comunidad universitaria."],
       directory: [
@@ -526,9 +526,9 @@
     if (state.admin && !state.offline)
       menu.push(
         ["admin", "edit", "Administrar"],
-        ["accounts", "user", "Cuentas y beneficios"],
+        ["accounts", "user", "Verificar cuentas"],
         ["audit", "calendar", "Auditorio de registros"],
-        ["food-admin", "store", "Revisar vendedores"],
+        ["food-admin", "store", "Verificar comidas"],
       );
     const current = names[state.view],
       initial = (state.profile?.full_name || state.user?.email || "D")
@@ -567,7 +567,7 @@
       profile: profileView,
       admin: adminView,
       audit: () => window.FIT_AUDIT.render(moduleContext()),
-      accounts: () => { if(!state.admin)return; $("#view").innerHTML='<section class="panel"><h2>Usuarios registrados</h2><p id="admin-users-count"></p><label class="field">Buscar cuenta<input id="admin-user-search" type="search" placeholder="Nombre o correo"></label><div id="admin-users-list"></div></section>';renderAdminUsers(); },
+      accounts: () => { if(!state.admin)return; $("#view").innerHTML='<section class="panel admin-users-panel"><div class="admin-users-head"><div><span class="eyebrow">VERIFICACIÓN INSTITUCIONAL</span><h2>Cuentas registradas</h2><p class="hint">Revisa los datos y confirma desde aquí las cuentas de alumnos, docentes y administradores.</p></div><strong id="admin-users-count">Cargando…</strong></div><label class="field admin-user-search">Buscar por nombre, correo, matrícula, carrera o tipo de cuenta<input id="admin-user-search" type="search" autocomplete="off" placeholder="Ej. Andrea, @uat.edu.mx, Sistemas…"></label><div id="admin-users-list"></div></section>';renderAdminUsers(); },
       food: () => window.FIT_FOOD.render(moduleContext()),
       messages: () => window.FIT_ACADEMIC_CHAT.render(moduleContext()),
       "food-admin": () => window.FIT_FOOD.render(moduleContext()),
@@ -1189,8 +1189,44 @@
         button.disabled = false;
         return;
       }
+      if (user.id === state.user?.id)
+        state.verification = { ...(state.verification || {}), status: "verified" };
       el.close();
       toast(item && !result.data.item_granted ? `Se agregaron ${coins} moneda(s). Ese premio ya pertenecía a la cuenta.` : "Beneficio entregado correctamente.");
+      await onSaved?.();
+    };
+  }
+  function openAccountVerification(user, onSaved) {
+    const typeName = { student: "Alumno", teacher: "Docente", admin: "Administrador", other: "Cuenta externa" };
+    const el = dialog(
+      `<div class="dialog-head"><div><span class="eyebrow">VERIFICAR CUENTA</span><h2>${esc(user.full_name)}</h2><p class="hint">${esc(user.email)}</p></div><button class="close" data-close aria-label="Cerrar">${icon("close")}</button></div><form id="admin-verify-account-form"><div class="notice"><b>${esc(typeName[user.account_type] || "Cuenta")}</b>${user.student_id ? ` · Matrícula: ${esc(user.student_id)}` : ""}${user.career ? ` · ${esc(user.career)}` : ""}</div><label class="field">Fuente institucional revisada<textarea name="source" minlength="5" maxlength="600" required placeholder="Ej. Padrón escolar revisado el 18/09/2026"></textarea></label><label class="check"><input name="reviewed" type="checkbox" required> Confirmo que comparé el nombre y, cuando corresponde, la matrícula con una fuente autorizada.</label><p class="hint">Al aprobarla, la cuenta dejará de mostrar “Por verificar”. Si la persona cambia su nombre o matrícula, volverá automáticamente a revisión.</p><button class="btn full" type="submit">Verificar cuenta</button></form>`,
+    );
+    $("#admin-verify-account-form", el).onsubmit = async (e) => {
+      e.preventDefault();
+      const form = e.currentTarget,
+        button = $("button[type=submit]", form),
+        source = String(new FormData(form).get("source") || "").trim();
+      if (button.disabled) return;
+      if (!user.email_confirmed_at) {
+        toast("La persona debe confirmar primero su correo electrónico.");
+        return;
+      }
+      if (source.length < 5) {
+        toast("Indica la fuente institucional que revisaste.");
+        return;
+      }
+      button.disabled = true;
+      const result = await client.request("/api/admin/verify", "POST", {
+        p_user_id: user.id,
+        p_source: source,
+      });
+      if (result.error) {
+        toast(result.error.message || "No se pudo verificar la cuenta.");
+        button.disabled = false;
+        return;
+      }
+      el.close();
+      toast("Cuenta verificada correctamente.");
       await onSaved?.();
     };
   }
@@ -1206,11 +1242,18 @@
     }
     const users = result.data?.users || [], rewards = result.data?.rewards || [];
     const typeName = { student: "Alumno", teacher: "Docente", admin: "Administrador", other: "Cuenta externa" };
-    $("#admin-users-count").textContent = `${users.length} cuenta${users.length === 1 ? "" : "s"} registrada${users.length === 1 ? "" : "s"}`;
+    const pendingCount = users.filter((u) => u.verification_status !== "verified").length;
+    $("#admin-users-count").textContent = pendingCount
+      ? `${pendingCount} por verificar · ${users.length} en total`
+      : `${users.length} cuenta${users.length === 1 ? "" : "s"} · Todo verificado`;
     const draw = () => {
       const q = search.value.trim().toLowerCase();
       const filtered = users.filter((u) => !q || [u.full_name, u.email, u.student_id, u.career, typeName[u.account_type]].some((v) => String(v || "").toLowerCase().includes(q)));
-      host.innerHTML = filtered.length ? `<div class="admin-users-table" role="table" aria-label="Cuentas registradas">${filtered.map((u) => `<article class="admin-user-row" role="row"><div class="admin-user-main"><strong>${esc(u.full_name)}</strong><span>${esc(u.email)}</span><small>${esc(typeName[u.account_type] || "Cuenta")} · ${u.email_confirmed_at ? "Correo confirmado" : "Correo pendiente"}${u.career ? ` · ${esc(u.career)}` : ""}</small></div><div class="admin-user-stats"><span><b>${Number(u.coins || 0)}</b> monedas</span><span><b>${Number(u.xp || 0)}</b> EXP</span><span><b>${Number(u.reward_count || 0)}</b> premios</span></div><div class="admin-user-actions">${badge(u.verification_status === "verified")}<button class="btn secondary small" data-admin-benefit="${esc(u.id)}">Dar beneficio</button></div></article>`).join("")}</div>` : '<div class="empty">No hay cuentas que coincidan con la búsqueda.</div>';
+      host.innerHTML = filtered.length ? `<div class="admin-users-table" role="table" aria-label="Cuentas registradas">${filtered.map((u) => `<article class="admin-user-row" role="row"><div class="admin-user-main"><strong>${esc(u.full_name)}</strong><span>${esc(u.email)}</span><small>${esc(typeName[u.account_type] || "Cuenta")} · ${u.email_confirmed_at ? "Correo confirmado" : "Correo pendiente"}${u.student_id ? ` · Matrícula ${esc(u.student_id)}` : ""}${u.career ? ` · ${esc(u.career)}` : ""}</small></div><div class="admin-user-stats"><span><b>${Number(u.coins || 0)}</b> monedas</span><span><b>${Number(u.xp || 0)}</b> EXP</span><span><b>${Number(u.reward_count || 0)}</b> premios</span></div><div class="admin-user-actions">${badge(u.verification_status === "verified")}${u.verification_status !== "verified" ? `<button class="btn small" data-admin-verify="${esc(u.id)}" ${u.email_confirmed_at ? "" : "disabled title=\"Debe confirmar primero su correo\""}>Verificar cuenta</button>` : ""}<button class="btn secondary small" data-admin-benefit="${esc(u.id)}">Dar beneficio</button></div></article>`).join("")}</div>` : '<div class="empty">No hay cuentas que coincidan con la búsqueda.</div>';
+      host.querySelectorAll("[data-admin-verify]").forEach((button) => button.onclick = () => {
+        const user = users.find((u) => u.id === button.dataset.adminVerify);
+        if (user) openAccountVerification(user, renderAdminUsers);
+      });
       host.querySelectorAll("[data-admin-benefit]").forEach((button) => button.onclick = () => {
         const user = users.find((u) => u.id === button.dataset.adminBenefit);
         if (user) openAdminBenefit(user, rewards, renderAdminUsers);
@@ -1288,12 +1331,12 @@
     );
     $("#view").insertAdjacentHTML(
       "beforeend",
-      `<section class="panel admin-users-panel"><div class="admin-users-head"><div><span class="eyebrow">CUENTAS REGISTRADAS</span><h2>Usuarios y beneficios</h2><p class="hint">Consulta alumnos, docentes y administradores. Puedes entregar monedas o premios directos y EXP como reconocimiento. Cada entrega queda registrada.</p></div><strong id="admin-users-count">Cargando…</strong></div><label class="field admin-user-search">Buscar por nombre, correo, matrícula, carrera o tipo de cuenta<input id="admin-user-search" type="search" autocomplete="off" placeholder="Ej. Andrea, @uat.edu.mx, Sistemas…"></label><div id="admin-users-list"></div></section>`,
+      `<section class="panel admin-users-panel"><div class="admin-users-head"><div><span class="eyebrow">CUENTAS REGISTRADAS</span><h2>Verificación y beneficios</h2><p class="hint">Revisa y verifica directamente las cuentas pendientes de alumnos y docentes. También puedes entregar monedas, premios o EXP.</p></div><strong id="admin-users-count">Cargando…</strong></div><label class="field admin-user-search">Buscar por nombre, correo, matrícula, carrera o tipo de cuenta<input id="admin-user-search" type="search" autocomplete="off" placeholder="Ej. Andrea, @uat.edu.mx, Sistemas…"></label><div id="admin-users-list"></div></section>`,
     );
     renderAdminUsers();
     $("#view").insertAdjacentHTML(
       "beforeend",
-      `<section class="panel"><h2>Verificación institucional de una cuenta</h2><p class="hint">Compara primero el nombre y la matrícula del perfil con una fuente institucional autorizada. El usuario puede compartir su identificador desde Mi cuenta.</p><form id="verify-user-form">${field("verify-user-id", "UUID de la cuenta")}<button type="button" class="btn secondary" id="lookup-user">Consultar perfil</button><div id="lookup-result" role="status" style="margin:16px 0"></div>${field("verify-source", "Referencia de la fuente institucional")}<label class="check"><input type="checkbox" id="verify-reviewed" required> He contrastado el perfil con una fuente autorizada de la facultad.</label><button class="btn" style="margin-top:18px">Confirmar vinculación institucional</button></form></section>`,
+      `<section class="panel"><h2>Verificación manual por identificador</h2><p class="hint">Normalmente puedes usar el botón <b>Verificar cuenta</b> del listado anterior. Esta opción sirve cuando la persona te comparte directamente el UUID que aparece en Mi cuenta.</p><form id="verify-user-form">${field("verify-user-id", "UUID de la cuenta")}<button type="button" class="btn secondary" id="lookup-user">Consultar perfil</button><div id="lookup-result" role="status" style="margin:16px 0"></div>${field("verify-source", "Referencia de la fuente institucional")}<label class="check"><input type="checkbox" id="verify-reviewed" required> He contrastado el perfil con una fuente autorizada de la facultad.</label><button class="btn" style="margin-top:18px">Confirmar vinculación institucional</button></form></section>`,
     );
     $("#lookup-user").onclick = async () => {
       const button = $("#lookup-user");
@@ -1332,8 +1375,11 @@
           p_source: source,
         });
         if (error) throw error;
+        if (id === state.user?.id)
+          state.verification = { ...(state.verification || {}), status: "verified" };
         toast("Vinculación institucional confirmada.");
         e.target.reset();
+        await renderAdminUsers();
       } catch {
         toast(
           "No se pudo verificar la cuenta. Revisa el identificador, el correo confirmado y tus permisos.",

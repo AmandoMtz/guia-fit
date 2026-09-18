@@ -1,6 +1,6 @@
 /* App shell sin conexión. Las respuestas /api nunca se guardan aquí. */
 importScripts('/push-worker.js?v=3');
-const CACHE = "guia-fit-shell-persistent-v3";
+const CACHE = "guia-fit-shell-persistent-v4";
 const SHELL = [
   "/styles.css?v=20260917a",
   "/campus-map.css",
@@ -10,7 +10,7 @@ const SHELL = [
   "/js/core.js",
   "/js/offline.js?v=20260918c",
   "/js/food-flow.js",
-  "/js/food.js?v=20260918c",
+  "/js/food.js?v=20260918d",
   "/js/schedule-core.js?v=19",
   "/js/schedule-store.js",
   "/vendor/tesseract/tesseract.min.js",
@@ -23,10 +23,10 @@ const SHELL = [
   "/js/purchase-rating.js",
   "/js/gamification.js",
   "/js/push-notifications.js?v=4",
-  "/js/academic-chat.js?v=20260918c",
+  "/js/academic-chat.js?v=20260918d",
   "/js/campus-map.js",
   "/js/audit.js?v=20260918c",
-  "/js/app.js?v=20260918c",
+  "/js/app.js?v=20260918d",
   "/contrast-fix.css?v=1",
   "/photo-color-fix.css?v=1",
   "/account-updates.css?v=2",

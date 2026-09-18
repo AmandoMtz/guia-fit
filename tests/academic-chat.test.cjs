@@ -42,6 +42,10 @@ test('chat alumno-docente: busca, persiste 7 días, aísla participantes y encol
   assert.equal(contacts.body.data.length, 1);
   assert.equal(contacts.body.data[0].id, teacher);
   assert.equal(contacts.body.data[0].account_type, 'teacher');
+  assert.equal(contacts.body.data[0].identity,'maria.garcia@uat.edu.mx');
+  const studentContact=await api.get('/api/academic-chat/contacts?q=2213332176').set(auth(teacher)).expect(200);
+  assert.equal(studentContact.body.data[0].identity,'2213332176');
+  assert.equal(studentContact.body.data[0].full_name,'José Amando Martínez Hernández');
 
   const created = await api.post('/api/academic-chat/chats').set(auth(student)).send({ counterpart_id: teacher }).expect(201);
   const chatId = created.body.data.id;
@@ -66,6 +70,7 @@ test('chat alumno-docente: busca, persiste 7 días, aísla participantes y encol
   assert.equal(unread.body.data.unread_count, 1);
   const detail = await api.get('/api/academic-chat/chats/' + chatId).set(auth(teacher)).expect(200);
   assert.equal(detail.body.data.messages.length, 1);
+  assert.equal(detail.body.data.counterpart_identity,'2213332176');
   assert.equal(detail.body.data.messages[0].mine, false);
   unread = await api.get('/api/academic-chat/unread').set(auth(teacher)).expect(200);
   assert.equal(unread.body.data.unread_count, 0);

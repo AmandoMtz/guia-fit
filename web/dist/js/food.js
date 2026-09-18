@@ -183,8 +183,9 @@
       }
     };
     source.addEventListener("chat", refreshFromEvent);
-    source.addEventListener("ping", () => {
-      if (!current()) source.close();
+    source.addEventListener("ping", async () => {
+      if (!current()) return source.close();
+      try { await refreshChats(c,session);if(session.openChat)await session.openChat.refresh(); } catch {}
     });
     session.chatGuard = setInterval(() => {
       if (!current()) {
@@ -1024,7 +1025,14 @@
     );
   }
   function admin(c, host, rows) {
-    host.innerHTML = `<div class="notice">Comprueba la identidad y el vínculo del vendedor con la facultad mediante una fuente autorizada. El correo confirmado por sí solo no acredita permiso para vender.</div>${rows.length ? rows.map((v) => `<article class="panel vendor-review"><div class="section-heading"><div><span class="badge ${v.status === "approved" ? "good" : "pending"}">${labels[v.status]}</span><h2>${c.esc(v.business_name)}</h2></div><button class="btn secondary small" data-review="${v.id}">Revisar</button></div><p>${c.esc(v.full_name)} · ${c.esc(v.email)}</p><p>${c.esc(v.pickup_location)} · ${c.esc(v.hours_text)}</p><p>${c.esc(v.description)}</p>${v.review_source ? `<p class="hint">Última revisión: ${c.esc(v.review_source)}</p>` : ""}</article>`).join("") : empty(c, "Sin solicitudes", "Las altas de vendedores aparecerán aquí.")}`;
+    host.innerHTML = `<div class="notice">Comprueba la identidad y el vínculo del vendedor con la facultad mediante una fuente autorizada. El correo confirmado por sí solo no acredita permiso para vender.</div>${rows.length ? rows.map((v) => `<article class="panel vendor-review"><div class="section-heading"><div><span class="badge ${v.status === "approved" ? "good" : "pending"}">${labels[v.status]}</span><h2>${c.esc(v.business_name)}</h2></div><div class="button-row"><button class="btn secondary small" data-review="${v.id}">Revisar</button><button class="text-button danger" data-remove-vendor="${v.id}">Eliminar puesto</button></div></div><p>${c.esc(v.full_name)} · ${c.esc(v.email)}</p><p>${c.esc(v.pickup_location)} · ${c.esc(v.hours_text)}</p><p>${c.esc(v.description)}</p>${v.review_source ? `<p class="hint">Última revisión: ${c.esc(v.review_source)}</p>` : ""}</article>`).join("") : empty(c, "Sin solicitudes", "Las altas de vendedores aparecerán aquí.")}`;
+    host.querySelectorAll('[data-remove-vendor]').forEach(b=>b.onclick=async()=>{
+      const vendor=rows.find(v=>v.id===b.dataset.removeVendor);
+      if(!window.confirm('¿Eliminar el puesto '+vendor.business_name+'? Se retirarán sus productos del catálogo. Los pedidos y registros anteriores se conservarán.'))return;
+      b.disabled=true;
+      try{await call(c,'/admin/vendors/'+vendor.id,'DELETE');c.toast('Puesto eliminado del catálogo.');c.render();}
+      catch(e){c.toast(e.message);b.disabled=false;}
+    });
     host.querySelectorAll("[data-review]").forEach(
       (b) =>
         (b.onclick = () => {

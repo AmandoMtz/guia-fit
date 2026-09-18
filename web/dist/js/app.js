@@ -200,7 +200,7 @@
     };
     const [title, sub] = titles[mode];
     $("#app").innerHTML =
-      `<header class="topbar">${brand()}${guideMark(false, true)}</header><div class="auth-layout"><aside class="auth-aside"><div class="eyebrow">${icon("pin")} FACULTAD DE INGENIERÍA TAMPICO</div><h1>Tu campus.<br>Tu camino.<br><span class="accent">A un paso.</span></h1><p class="intro">Encuentra tu salón, organiza tus clases y descubre qué comer en la facultad.</p><div class="campus-teaser"><img src="assets/croquis.png" alt="Croquis de la Facultad de Ingeniería Tampico proporcionado como referencia"></div><div class="aside-bottom"><span>Universidad Autónoma de Tamaulipas · Tampico</span><span>Facultad de Ingeniería Tampico</span></div></aside><main class="auth-main" id="main"><div class="auth-card"><div class="icon-circle">${icon(mode === "login" ? "lock" : "user")}</div><h2>${title}</h2><p class="muted">${sub}</p>${["login", "register"].includes(mode) ? `<div class="auth-tabs" aria-label="Opciones de acceso"><button class="${mode === "login" ? "active" : ""}" data-mode="login">Iniciar sesión</button><button class="${mode === "register" ? "active" : ""}" data-mode="register">Crear cuenta</button></div>` : ""}${!client ? '<div class="notice">El registro todavía no está habilitado. Puedes explorar la demostración.</div>' : ""}${offlineAccess ? `<div class="offline-login-card"><span class="eyebrow">MODO SIN CONEXIÓN</span><h3>Acceso guardado en este dispositivo</h3><p>Puedes entrar como <b>${esc(savedOffline.profile?.full_name || savedOffline.user.email || "Alumno")}</b> para consultar únicamente tu horario y los eventos guardados.</p><button class="btn secondary full" type="button" id="offline-login">Entrar sin conexión</button><p class="hint">Sin internet, solo podrás usar la información guardada en este dispositivo.</p></div>` : ""}<div id="form-message" role="alert">${state.notice ? `<div class="notice ${state.authError ? "error" : "success"}">${esc(state.notice)}</div>` : ""}</div><form id="auth-form" novalidate>${mode === "register" ? field("full_name", "Nombre completo", "text", "name") : ""}${mode !== "reset" ? field("email", "Correo electrónico", "email", "email") : ""}${mode === "register" ? '<div class="teacher-register-hint"><strong>¿Eres docente?</strong><span>También puedes registrarte con tu cuenta institucional <b>@uat.edu.mx</b> o <b>@docentes.uat.edu.mx</b>.</span></div>' : ""}${["login", "register", "reset"].includes(mode) ? field("password", mode === "reset" ? "Nueva contraseña" : "Contraseña", "password", mode === "login" ? "current-password" : "new-password", mode !== "login" ? "Usa 8 caracteres, con letra, número y carácter especial." : "") : ""}${["register", "reset"].includes(mode) ? field("confirm", "Confirmar contraseña", "password", "new-password") : ""}${mode === "register" ? '<label class="seller-option"><input type="checkbox" name="seller"><span><strong>Quiero vender comida</strong><small>Después podrás solicitar tu puesto en la facultad.</small></span></label>' : ""}${mode === "login" ? '<div class="auth-links"><button class="text-button" type="button" data-mode="recover">Olvidé mi contraseña</button></div>' : ""}<button class="btn full" type="submit">${{ login: "Iniciar sesión", register: "Crear cuenta", recover: "Enviar enlace", reset: "Guardar contraseña", verify: "Reenviar verificación" }[mode]} ${icon("arrow")}</button></form>${mode === "login" ? '<button class="text-button" data-mode="verify">Reenviar correo de verificación</button>' : ""}${!["login", "register"].includes(mode) ? '<button class="text-button" data-mode="login">Volver al inicio de sesión</button>' : ""}<div class="or">Explora el proyecto</div><button class="btn secondary full" id="demo-button">${icon("map")} Explorar demostración</button><p class="auth-foot">La verificación del correo y la validación institucional se realizan por separado.</p></div></main></div>${facultyLinks()}${institutionalFooter()}`;
+      `<header class="topbar">${brand()}${guideMark(false, true)}</header><div class="auth-layout"><aside class="auth-aside"><div class="eyebrow">${icon("pin")} FACULTAD DE INGENIERÍA TAMPICO</div><h1>Tu campus.<br>Tu camino.<br><span class="accent">A un paso.</span></h1><p class="intro">Encuentra tu salón, organiza tus clases y descubre qué comer en la facultad.</p><div class="campus-teaser"><img src="assets/croquis.png" alt="Croquis de la Facultad de Ingeniería Tampico proporcionado como referencia"></div><div class="aside-bottom"><span>Universidad Autónoma de Tamaulipas · Tampico</span><span>Facultad de Ingeniería Tampico</span></div></aside><main class="auth-main" id="main"><div class="auth-card"><div class="icon-circle">${icon(mode === "login" ? "lock" : "user")}</div><h2>${title}</h2><p class="muted">${sub}</p>${["login", "register"].includes(mode) ? `<div class="auth-tabs" aria-label="Opciones de acceso"><button class="${mode === "login" ? "active" : ""}" data-mode="login">Iniciar sesión</button><button class="${mode === "register" ? "active" : ""}" data-mode="register">Crear cuenta</button></div>` : ""}${!client ? '<div class="notice">El registro todavía no está habilitado. Puedes explorar la demostración.</div>' : ""}${offlineAccess ? `<div class="offline-login-card"><span class="eyebrow">MODO SIN CONEXIÓN</span><h3>Acceso guardado en este dispositivo</h3><p>Puedes entrar como <b>${esc(savedOffline.profile?.full_name || savedOffline.user.email || "Alumno")}</b> para consultar únicamente tu horario y los eventos guardados.</p><button class="btn secondary full" type="button" id="offline-login">Entrar sin conexión</button><p class="hint">Sin internet, solo podrás usar la información guardada en este dispositivo.</p></div>` : ""}<div id="form-message" role="alert">${state.notice ? `<div class="notice ${state.authError ? "error" : "success"}">${esc(state.notice)}</div>` : ""}</div><form id="auth-form" novalidate>${mode === "register" ? field("first_name", "Nombres", "text", "given-name") + field("last_name", "Apellidos", "text", "family-name") : ""}${mode !== "reset" ? field("email", "Correo electrónico", "email", "email") : ""}${["login", "register", "reset"].includes(mode) ? field("password", mode === "reset" ? "Nueva contraseña" : "Contraseña", "password", mode === "login" ? "current-password" : "new-password", mode !== "login" ? "Usa 8 caracteres, con letra, número y carácter especial." : "") : ""}${["register", "reset"].includes(mode) ? field("confirm", "Confirmar contraseña", "password", "new-password") : ""}${mode === "login" ? '<div class="auth-links"><button class="text-button" type="button" data-mode="recover">Olvidé mi contraseña</button></div>' : ""}<button class="btn full" type="submit">${{ login: "Iniciar sesión", register: "Crear cuenta", recover: "Enviar enlace", reset: "Guardar contraseña", verify: "Reenviar verificación" }[mode]} ${icon("arrow")}</button></form>${mode === "login" ? '<button class="text-button" data-mode="verify">Reenviar correo de verificación</button>' : ""}${!["login", "register"].includes(mode) ? '<button class="text-button" data-mode="login">Volver al inicio de sesión</button>' : ""}<div class="or">Explora el proyecto</div><button class="btn secondary full" id="demo-button">${icon("map")} Explorar demostración</button><p class="auth-foot">La verificación del correo y la validación institucional se realizan por separado.</p></div></main></div>${facultyLinks()}${institutionalFooter()}`;
     $('[data-mode="' + mode + '"]')?.setAttribute("aria-current", "page");
     document.querySelectorAll("[data-mode]").forEach(
       (b) =>
@@ -275,7 +275,12 @@
     const mode = state.mode;
     const form = event.currentTarget,
       values = Object.fromEntries(new FormData(form)),
-      errors = C.validate(values, mode);
+      errors = C.validate(mode === 'register' ? {...values,full_name:[values.first_name,values.last_name].map(v=>String(v||'').trim()).join(' ')} : values, mode);
+    if(mode==='register'){
+      delete errors.full_name;
+      if(!values.first_name?.trim()||values.first_name.trim().length>50)errors.first_name='Escribe tus nombres (máximo 50 caracteres).';
+      if(!values.last_name?.trim()||values.last_name.trim().length>49)errors.last_name='Escribe tus apellidos (máximo 49 caracteres).';
+    }
     for (const input of form.querySelectorAll("input")) {
       const msg = errors[input.name] || "";
       const errorEl = $("#" + input.name + "-error");
@@ -287,7 +292,8 @@
       return;
     }
     if (mode === "login" && (state.networkUnavailable || !navigator.onLine)) {
-      if (restoreOfflineSession()) return;
+      const saved=window.FIT_OFFLINE?.getSession?.();
+      if(saved?.user.email.toLowerCase()===String(values.email||'').trim().toLowerCase() && restoreOfflineSession()) return;
       showMessage(
         "Sin internet solo puedes entrar si esta cuenta ya se había guardado en este dispositivo.",
         true,
@@ -324,8 +330,8 @@
           password: values.password,
           options: {
             data: {
-              full_name: values.full_name.trim(),
-              account_type: values.seller ? "seller" : "buyer",
+              full_name: values.first_name.trim()+" "+values.last_name.trim(),
+              account_type: "buyer",
             },
             emailRedirectTo: redirect("confirm"),
           },
@@ -651,7 +657,7 @@
         const { error } = await client.auth.signOut();
         if (error) throw error;
       }
-      window.FIT_OFFLINE?.clearUser?.(priorUserId);
+      // Cerrar la sesión del servidor conserva el horario y el acceso local de consulta.
       state.user = null;
       state.demo = false;
       state.admin = false;
@@ -1438,7 +1444,7 @@
         await openSession({ preserveView: true });
         toast("Conexión recuperada. La información volvió a sincronizarse.");
       } else if (!session.error || session.error.status === 401) {
-        window.FIT_OFFLINE?.clearSession?.();
+        // Se conserva el acceso local; una sesión vencida no borra el horario.
         state.user = null;
         state.profile = null;
         state.verification = null;
@@ -1518,7 +1524,7 @@
     }
     client.auth.onAuthStateChange((event) => {
       if (event === "SIGNED_OUT" && state.user) {
-        window.FIT_OFFLINE?.clearUser?.(state.user.id);
+        // La salida del servidor conserva el horario de consulta en este dispositivo.
         state.user = null;
         state.admin = false;
         state.offline = false;

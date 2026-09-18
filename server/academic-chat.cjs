@@ -45,10 +45,12 @@ function createAcademicChatRouter({ db, limit }) {
       case when c.student_id=$1 then c.teacher_id else c.student_id end as counterpart_id,
       case when c.student_id=$1 then tp.full_name else sp.full_name end as counterpart_name,
       case when c.student_id=$1 then 'teacher' else 'student' end as counterpart_type,
+      case when c.student_id=$1 then tu.email else substring(su.email from '^a([0-9]+)@') end as counterpart_identity,
       case when c.student_id=$1 then c.student_read_at else c.teacher_read_at end as my_read_at
       from academic_chats c
       join profiles sp on sp.id=c.student_id
       join profiles tp on tp.id=c.teacher_id
+      join users su on su.id=c.student_id join users tu on tu.id=c.teacher_id
       where c.id=$2 and $1 in (c.student_id,c.teacher_id)`, [userId, chatId])).rows[0];
     if (!row) throw fail(404, "Conversación no encontrada.", "not_found");
     return row;
@@ -65,12 +67,14 @@ function createAcademicChatRouter({ db, limit }) {
       case when c.student_id=$1 then c.teacher_id else c.student_id end as counterpart_id,
       case when c.student_id=$1 then tp.full_name else sp.full_name end as counterpart_name,
       case when c.student_id=$1 then 'teacher' else 'student' end as counterpart_type,
+      case when c.student_id=$1 then tu.email else substring(su.email from '^a([0-9]+)@') end as counterpart_identity,
       c.created_at,c.updated_at,
       lm.body as last_message,lm.created_at as last_message_at,lm.sender_id=$1 as last_message_mine,
       coalesce(unread.count,0)::int as unread_count
       from academic_chats c
       join profiles sp on sp.id=c.student_id
       join profiles tp on tp.id=c.teacher_id
+      join users su on su.id=c.student_id join users tu on tu.id=c.teacher_id
       left join lateral (
         select m.body,m.created_at,m.sender_id from academic_chat_messages m
         where m.chat_id=c.id and m.expires_at>now() order by m.created_at desc limit 1
@@ -100,10 +104,10 @@ function createAcademicChatRouter({ db, limit }) {
     const roleFilter = target === 'teacher'
       ? `u.role='user' and (u.email like '%@docentes.uat.edu.mx' or (u.email like '%@uat.edu.mx' and u.email not like '%@alumnos.uat.edu.mx'))`
       : `u.role='user' and u.email ~ '^a[0-9]+@alumnos\\.uat\\.edu\\.mx$'`;
-    const rows = (await db.query(`select u.id,p.full_name,p.career
+    const rows = (await db.query(`select u.id,p.full_name,p.career,case when u.email ~ '^a[0-9]+@alumnos\\.uat\\.edu\\.mx$' then substring(u.email from '^a([0-9]+)@') else u.email end as identity
       from users u join profiles p on p.id=u.id
       where u.id<>$1 and u.email_confirmed_at is not null and ${roleFilter}
-        and translate(lower(p.full_name),'áéíóúüñ','aeiouun') like $2
+        and (translate(lower(p.full_name),'áéíóúüñ','aeiouun') like $2 or lower(u.email) like $2)
       order by p.full_name asc limit 30`, [req.user.id, pattern])).rows.map(r => ({...r, account_type: target}));
     res.json({ data: rows });
   });
@@ -139,7 +143,7 @@ function createAcademicChatRouter({ db, limit }) {
       return (await client.query('select id from academic_chats where student_id=$1 and teacher_id=$2', [studentId, teacherId])).rows[0].id;
     });
     const chat = await ownChat(req.user.id, chatId);
-    res.status(201).json({ data: { id: chat.id, counterpart_id: chat.counterpart_id, counterpart_name: chat.counterpart_name, counterpart_type: chat.counterpart_type } });
+    res.status(201).json({ data: { id: chat.id, counterpart_id: chat.counterpart_id, counterpart_name: chat.counterpart_name, counterpart_identity: chat.counterpart_identity, counterpart_type: chat.counterpart_type } });
   });
 
   router.get('/chats/:id', async (req, res) => {
@@ -152,7 +156,7 @@ function createAcademicChatRouter({ db, limit }) {
       id: chat.id,
       counterpart_id: chat.counterpart_id,
       counterpart_name: chat.counterpart_name,
-      counterpart_type: chat.counterpart_type,
+      counterpart_identity: chat.counterpart_identity, counterpart_type: chat.counterpart_type,
       retention_days: 7,
       messages,
     }});

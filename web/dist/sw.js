@@ -1,7 +1,37 @@
 /* App shell sin conexión. Las respuestas /api nunca se guardan aquí. */
 importScripts('/push-worker.js?v=3');
-const CACHE = "guia-fit-shell-audit-v1";
+const CACHE = "guia-fit-shell-persistent-v3";
 const SHELL = [
+  "/styles.css?v=20260917a",
+  "/campus-map.css",
+  "/config.js",
+  "/js/api.js",
+  "/js/catalog.js",
+  "/js/core.js",
+  "/js/offline.js?v=20260918c",
+  "/js/food-flow.js",
+  "/js/food.js?v=20260918c",
+  "/js/schedule-core.js?v=19",
+  "/js/schedule-store.js",
+  "/vendor/tesseract/tesseract.min.js",
+  "/js/ocr.js?v=19",
+  "/js/timetable.js",
+  "/js/schedule.js?v=20260918c",
+  "/js/attendance-security.js",
+  "/js/events.js",
+  "/js/chatbot.js?v=20260916d",
+  "/js/purchase-rating.js",
+  "/js/gamification.js",
+  "/js/push-notifications.js?v=4",
+  "/js/academic-chat.js?v=20260918c",
+  "/js/campus-map.js",
+  "/js/audit.js?v=20260918c",
+  "/js/app.js?v=20260918c",
+  "/contrast-fix.css?v=1",
+  "/photo-color-fix.css?v=1",
+  "/account-updates.css?v=2",
+
+  "/account-updates.css?v=2",
   "/js/audit.js?v=1",
   "/js/attendance-security.js",
   "/js/push-notifications.js?v=4",

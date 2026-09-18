@@ -1,6 +1,7 @@
 "use strict";
 const { Router } = require('express');
 const groups = {
+ schedules: ['user_schedules'],
  events: ['events','event_careers','event_teacher_invites','event_attendance','event_documents','event_checkin_tokens'],
  chats: ['academic_chats','academic_chat_messages','academic_chat_content','food_chats','food_chat_messages'],
  food: ['food_vendors','food_products','food_orders','fit_ratings'],
@@ -16,6 +17,7 @@ function createAuditRouter({db}) {
  router.get('/', async(req,res)=>{
   res.set('Cache-Control','no-store');
   const q=req.query; const values=[]; const where=[];
+  if(q.technical!=='1'&&!q.group)where.push("a.entity not in ('http','sessions','auth_tokens','fit_push_subscriptions','fit_activity_notifications','fit_push_delivery_log','notifications','academic_chat_messages','event_checkin_tokens') and not (a.entity in ('academic_chats','food_chats') and a.action='UPDATE')");
   const add=(sql,value)=>{values.push(value);where.push(sql.replace('?', '$'+values.length));};
   if(q.group){if(!groups[q.group])throw invalid();add('a.entity = any(?::text[])',groups[q.group]);}
   if(q.action){if(!['INSERT','UPDATE','DELETE','MESSAGE','REQUEST','RESPONSE'].includes(q.action))throw invalid();add('a.action=?',q.action);}

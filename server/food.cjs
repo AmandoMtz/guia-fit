@@ -41,15 +41,15 @@ function createFoodRouter({ db, siteUrl, administrator, limit, push = null }) {
   const router = Router(),
     origin = new URL(siteUrl).origin,
     chat = createTemporaryFoodChat({ db, onMessage: push?.enqueue });
-  const withChat = (userId, row) =>
-    row ? { ...row, chat_id: chat.chatIdForOrder(userId, row.id) } : row;
+  const withChat = async (userId, row) =>
+    row ? { ...row, chat_id: await chat.chatIdForOrder(userId, row.id) } : row;
   const picture = (r) => ({
     ...r,
     photo_url: r.photo_id ? origin + "/api/photos/" + r.photo_id : null,
   });
   async function ownVendor(userId) {
     return (
-      (await db.query("select * from food_vendors where user_id=$1", [userId]))
+      (await db.query("select * from food_vendors where user_id=$1 and deleted_at is null", [userId]))
         .rows[0] || null
     );
   }
@@ -81,12 +81,12 @@ function createFoodRouter({ db, siteUrl, administrator, limit, push = null }) {
   router.get("/catalog", async (req, res) => {
     const vendors = (
       await db.query(
-        "select v.id,v.business_name,v.description,v.pickup_location,v.hours_text,count(p.id)::int as product_count from food_vendors v left join food_products p on p.vendor_id=v.id and p.deleted_at is null and p.available=true where v.status='approved' and v.is_active=true group by v.id order by v.business_name",
+        "select v.id,v.business_name,v.description,v.pickup_location,v.hours_text,count(p.id)::int as product_count from food_vendors v left join food_products p on p.vendor_id=v.id and p.deleted_at is null and p.available=true where v.status='approved' and v.is_active=true and v.deleted_at is null group by v.id order by v.business_name",
       )
     ).rows;
     const products = (
       await db.query(
-        "select p.id,p.vendor_id,p.name,p.description,p.photo_id,p.price_cents,p.sale_unit,p.units_per_lot,p.available,v.business_name,v.pickup_location from food_products p join food_vendors v on v.id=p.vendor_id where v.status='approved' and v.is_active=true and p.deleted_at is null and p.available=true order by p.created_at desc",
+        "select p.id,p.vendor_id,p.name,p.description,p.photo_id,p.price_cents,p.sale_unit,p.units_per_lot,p.available,v.business_name,v.pickup_location from food_products p join food_vendors v on v.id=p.vendor_id where v.status='approved' and v.is_active=true and v.deleted_at is null and p.deleted_at is null and p.available=true order by p.created_at desc",
       )
     ).rows.map(picture);
     res.json({ data: { vendors, products } });
@@ -302,20 +302,20 @@ function createFoodRouter({ db, siteUrl, administrator, limit, push = null }) {
   router.get("/chats/events", (req, res) => {
     chat.connect(req.user.id, req.sessionHash, res);
   });
-  router.get("/chats", (req, res) => {
-    res.json({ data: chat.list(req.user.id) });
+  router.get("/chats", async (req, res) => {
+    res.json({ data: await chat.list(req.user.id) });
   });
   router.post("/chats", async (req, res) => {
     fields(req.body, ["product_id"]);
     const data = await chat.create(req.user.id, id(req.body.product_id));
     res.status(201).json({ data });
   });
-  router.get("/chats/:id", (req, res) => {
-    res.json({ data: chat.detail(req.user.id, id(req.params.id)) });
+  router.get("/chats/:id", async (req, res) => {
+    res.json({ data: await chat.detail(req.user.id, id(req.params.id)) });
   });
-  router.post("/chats/:id/read", (req, res) => {
+  router.post("/chats/:id/read", async (req, res) => {
     fields(req.body || {}, []);
-    res.json({ data: chat.read(req.user.id, id(req.params.id)) });
+    res.json({ data: await chat.read(req.user.id, id(req.params.id)) });
   });
   router.post("/chats/:id/messages", async (req, res) => {
     fields(req.body, ["text"]);
@@ -339,8 +339,8 @@ function createFoodRouter({ db, siteUrl, administrator, limit, push = null }) {
       res.status(201).json({ data });
     },
   );
-  router.get("/chats/:id/images/:messageId", (req, res) => {
-    const image = chat.image(
+  router.get("/chats/:id/images/:messageId", async (req, res) => {
+    const image = await chat.image(
       req.user.id,
       id(req.params.id),
       id(req.params.messageId),
@@ -363,7 +363,7 @@ function createFoodRouter({ db, siteUrl, administrator, limit, push = null }) {
         [req.user.id],
       )
     ).rows;
-    res.json({ data: rows.map((row) => withChat(req.user.id, row)) });
+    res.json({ data: await Promise.all(rows.map((row) => withChat(req.user.id, row))) });
   });
   router.get("/orders/:id", async (req, res) => {
     const row = (
@@ -373,7 +373,7 @@ function createFoodRouter({ db, siteUrl, administrator, limit, push = null }) {
       )
     ).rows[0];
     if (!row) throw error(404, "Pedido no encontrado.", "not_found");
-    res.json({ data: withChat(req.user.id, row) });
+    res.json({ data: await withChat(req.user.id, row) });
   });
   router.post("/orders", async (req, res) => {
     fields(req.body, [
@@ -396,7 +396,7 @@ function createFoodRouter({ db, siteUrl, administrator, limit, push = null }) {
       !Number.isInteger(req.body.expected_price_cents)
     )
       throw error(400, "Solicita entre 1 y 50 unidades o lotes.");
-    if (chatId) chat.validateOrderLink(req.user.id, chatId, productId);
+    if (chatId) await chat.validateOrderLink(req.user.id, chatId, productId);
     const result = await transaction(db, async (client) => {
       await client.query("select id from users where id=$1 for update", [
         req.user.id,
@@ -475,8 +475,8 @@ function createFoodRouter({ db, siteUrl, administrator, limit, push = null }) {
       );
       return orderDetails(client, row.id);
     });
-    if (chatId) chat.linkOrder(req.user.id, chatId, result.id);
-    res.status(201).json({ data: withChat(req.user.id, result) });
+    if (chatId) await chat.linkOrder(req.user.id, chatId, result.id);
+    res.status(201).json({ data: await withChat(req.user.id, result) });
   });
   router.patch("/orders/:id", async (req, res) => {
     fields(req.body, ["status"]);
@@ -529,7 +529,7 @@ function createFoodRouter({ db, siteUrl, administrator, limit, push = null }) {
       );
       return orderDetails(client, row.id);
     });
-    res.json({ data: withChat(req.user.id, result) });
+    res.json({ data: await withChat(req.user.id, result) });
   });
   router.get("/notifications", async (req, res) => {
     const items = (
@@ -560,7 +560,7 @@ function createFoodRouter({ db, siteUrl, administrator, limit, push = null }) {
       data: {
         items,
         unread_count: count,
-        chat_unread_count: chat.unreadCount(req.user.id),
+        chat_unread_count: await chat.unreadCount(req.user.id),
         order_summary,
       },
     });
@@ -588,10 +588,20 @@ function createFoodRouter({ db, siteUrl, administrator, limit, push = null }) {
     res.json({
       data: (
         await db.query(
-          "select v.*,p.full_name,u.email from food_vendors v join profiles p on p.id=v.user_id join users u on u.id=v.user_id order by case when v.status='pending' then 0 else 1 end,v.updated_at desc",
+          "select v.*,p.full_name,u.email from food_vendors v join profiles p on p.id=v.user_id join users u on u.id=v.user_id where v.deleted_at is null order by case when v.status='pending' then 0 else 1 end,v.updated_at desc",
         )
       ).rows,
     });
+  });
+  router.delete('/admin/vendors/:id', administrator, async (req,res)=>{
+    const vendor=await transaction(db,async client=>{
+      const row=(await client.query("update food_vendors set deleted_at=now(),is_active=false,status='suspended',updated_at=now() where id=$1 and deleted_at is null returning *",[id(req.params.id)])).rows[0];
+      if(!row)throw error(404,'Puesto no encontrado.','not_found');
+      await client.query('update food_products set available=false,deleted_at=coalesce(deleted_at,now()),updated_at=now() where vendor_id=$1',[row.id]);
+      await notify(client,row.user_id,'vendor_review','Puesto retirado','Administración retiró tu puesto del catálogo. Tus pedidos anteriores se conservan.');
+      return row;
+    });
+    res.json({data:{id:vendor.id,deleted:true}});
   });
   router.patch("/admin/vendors/:id", administrator, async (req, res) => {
     fields(req.body, ["status", "source"]);
@@ -606,7 +616,7 @@ function createFoodRouter({ db, siteUrl, administrator, limit, push = null }) {
     const result = await transaction(db, async (client) => {
       const vendor = (
         await client.query(
-          "update food_vendors set status=$1,review_source=$2,reviewed_by=$3,reviewed_at=now(),updated_at=now() where id=$4 returning *",
+          "update food_vendors set status=$1,review_source=$2,reviewed_by=$3,reviewed_at=now(),updated_at=now() where id=$4 and deleted_at is null returning *",
           [req.body.status, source, req.user.id, id(req.params.id)],
         )
       ).rows[0];

@@ -31,17 +31,24 @@ test('Push: solo destinatario, sesiones vigentes, bajas 410 y reintentos',async 
  sends=[];await db.query('delete from sessions where token_hash=$1',[seller]);await db.query("insert into fit_push_outbox(id,user_id,chat_id,expires_at) values($1,$2,$3,now()+interval '1 hour')",[randomUUID(),seller,chat]);await service.run();assert.equal(sends.length,0);
  await db.query("insert into fit_push_outbox(id,user_id,chat_id,expires_at) values($1,$2,$3,now()-interval '1 minute')",[randomUUID(),buyer,chat]);await service.run();assert.equal(sends.length,0);
 });
-test('Chat: texto e imagen notifican a la otra persona; acceso ajeno no envia push',async()=>{
+test('Chat: texto e imagen notifican a la otra persona; acceso ajeno no envia push',async t=>{
  const {createTemporaryFoodChat}=require('../server/food-chat.cjs');
  const buyer=randomUUID(),seller=randomUUID(),product=randomUUID(),received=[];
- const chat=createTemporaryFoodChat({db:{async query(){return {rows:[{id:product,product_name:'Producto',seller_user_id:seller,buyer_name:'Cliente',business_name:'Puesto',pickup_location:'Local'}]};}},onMessage:info=>received.push(info)});
+ const engine=new PGlite();t.after(()=>engine.close());
+ for(const name of fs.readdirSync(path.join(__dirname,'../backend/migrations')).sort().filter(n=>n.endsWith('.sql')))await engine.exec(fs.readFileSync(path.join(__dirname,'../backend/migrations',name),'utf8'));
+ const query=(s,a)=>engine.query(s,a),db={query,connect:async()=>({query,release(){}})};
+ for(const id of [buyer,seller]){await query("insert into users(id,email,password_hash) values($1,$2,'x')",[id,id+'@test.mx']);await query('insert into profiles(id,full_name) values($1,$2)',[id,'Nombre Apellidos']);}
+ const vendor=(await query("insert into food_vendors(user_id,business_name,pickup_location,status,review_source,reviewed_by,reviewed_at) values($1,'Puesto','Local','approved','Fuente verificada',$1,now()) returning id",[seller])).rows[0].id;
+ await query("insert into food_products(id,vendor_id,name,price_cents,sale_unit) values($1,$2,'Producto',100,'unit')",[product,vendor]);
+ const chat=createTemporaryFoodChat({db,onMessage:info=>received.push(info)});
+
  const c=await chat.create(buyer,product);
  await chat.addText(buyer,c.id,'Hola');await new Promise(resolve=>setImmediate(resolve));assert.equal(received[0].userId,seller);
  await chat.addText(seller,c.id,'Hola cliente');await new Promise(resolve=>setImmediate(resolve));assert.equal(received[1].userId,buyer);
  await assert.rejects(()=>chat.addText(randomUUID(),c.id,'intruso'));assert.equal(received.length,2);
  const sharp=require('sharp');const buffer=await sharp({create:{width:2,height:2,channels:3,background:'#ffffff'}}).png().toBuffer();
  await chat.addImage(buyer,c.id,{buffer,mimetype:'image/png'});await new Promise(resolve=>setImmediate(resolve));assert.equal(received[2].userId,seller);
- assert.equal(received[0].chatId,c.id);assert.equal(received[0].text,undefined);chat.purgeExpired(Date.now()+13*60*60*1000);
+ assert.equal(received[0].chatId,c.id);assert.equal(received[0].text,undefined);await chat.purgeExpired();
 });
 test('Service worker: muestra avisos sin ventanas y abre enlace seguro',async()=>{
  const handlers={},shown=[],opened=[];let task;

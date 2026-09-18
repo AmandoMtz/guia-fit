@@ -34,7 +34,7 @@ function createProfileRouter({ db, limit }) {
         req.user.id,
       ]);
       await client.query(
-        "update food_vendors set is_active=$1,updated_at=now() where user_id=$2",
+        "update food_vendors set is_active=$1,updated_at=now() where user_id=$2 and deleted_at is null",
         [seller, req.user.id],
       );
     });

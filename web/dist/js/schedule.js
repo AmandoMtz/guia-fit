@@ -1,7 +1,27 @@
 (function (root) {
   "use strict";
   const S = root.FIT_SCHEDULE_CORE;
-  let pdfLibrary;
+  let pdfLibrary, scheduleContext;
+  const revisions=new Map();
+  async function remote(method,key,value){
+    const c=scheduleContext;if(!c||c.state.user?.id!==key||c.state.offline||!c.client)return null;
+    const result=await c.client.request('/api/schedule',method,method==='GET'?undefined:{data:value,revision:revisions.get(key)||0});
+    if(result.error)throw Error(result.error.message||'No se pudo sincronizar el horario.');
+    if(c.state.user?.id!==key)throw Error('La sesión cambió.');
+    revisions.set(key,result.data.revision);return result.data;
+  }
+  async function syncGet(key,local){
+    try{
+      const server=await remote('GET',key);if(!server)return local;
+      if(server.revision===0&&local){await remote('PUT',key,local);return local;}
+      if(server.revision>0){
+        if(server.data){await root.FIT_SCHEDULE_STORE.operation('put',key,server.data);root.FIT_OFFLINE?.saveSchedule?.(key,server.data);}
+        else {await root.FIT_SCHEDULE_STORE.operation('delete',key);root.FIT_OFFLINE?.clearSchedule?.(key);}
+        return server.data;
+      }
+    }catch(e){scheduleContext?.toast?.('Usando horario del dispositivo. '+e.message);}
+    return local;
+  }
   async function storage(method, key, value) {
     if (method === "get") {
       let localError = null;
@@ -9,23 +29,27 @@
         const saved = await root.FIT_SCHEDULE_STORE.operation("get", key);
         if (saved) {
           root.FIT_OFFLINE?.saveSchedule?.(key, saved);
-          return saved;
+          return syncGet(key,saved);
         }
       } catch (error) {
         localError = error;
       }
       const fallback = root.FIT_OFFLINE?.getSchedule?.(key)?.schedule || null;
-      if (fallback) return fallback;
+      if (fallback) return syncGet(key,fallback);
       if (localError) throw localError;
-      return null;
+      return syncGet(key,null);
     }
     if (method === "put") {
+      // Confirmar respaldo antes de reemplazar la copia local evita sobrescrituras silenciosas.
+      await remote('PUT',key,value);
       const result = await root.FIT_SCHEDULE_STORE.operation("put", key, value);
+      root.navigator?.storage?.persist?.().catch(()=>{});
       root.FIT_OFFLINE?.saveSchedule?.(key, value);
       root.FIT_REWARDS?.scheduleSaved?.(key, value);
       return result;
     }
     if (method === "delete") {
+      await remote('DELETE',key);
       const result = await root.FIT_SCHEDULE_STORE.operation("delete", key);
       root.FIT_OFFLINE?.clearSchedule?.(key);
       return result;
@@ -76,6 +100,7 @@
     };
   }
   async function render(c) {
+    scheduleContext=c;
     const host = c.$("#view");
     if (c.state.demo) {
       host.innerHTML = `<section class="schedule-welcome panel"><div class="calendar-art" aria-hidden="true">${c.icon("calendar")}</div><span class="eyebrow">TU SEMANA EN ORDEN</span><h2>De tu horario<br>a tu próximo salón.</h2><p>Guarda tu horario en este dispositivo, revisa tus clases y consulta tu semana de un vistazo.</p><button class="btn" id="schedule-login">Iniciar sesión ${c.icon("arrow")}</button></section>`;
@@ -123,7 +148,7 @@
       .size;
     const teacher = saved.accountType === "teacher" || c.state.user?.account_type === "teacher",
       offline = !!c.state.offline;
-    host.innerHTML = `${offline ? '<div class="notice offline-readonly"><b>Horario disponible sin conexión.</b> Puedes consultarlo y cambiar de semana, pero para editarlo o vincular salones necesitas internet.</div>' : ""}<section class="schedule-header"><div><span class="eyebrow">${teacher ? "DOCENTE · MI HORARIO" : `${c.esc(saved.studentId)} · MI HORARIO`}</span><h2>${teacher ? c.esc(saved.studentName || c.state.profile?.full_name || "Horario docente") : c.esc(saved.career)}</h2><p class="student-line">${c.esc(c.state.user.email)}</p><p>Revisado por ti el ${new Date(saved.reviewedAt).toLocaleDateString("es-MX")}. No es una validación institucional.</p></div><div class="schedule-numbers"><div><b>${subjectCount}</b><span>materias</span></div><div><b>${Math.round(total / 6) / 10}</b><span>horas / semana</span></div></div></section><div class="schedule-toolbar"><div class="button-row"><button class="btn secondary small" id="week-prev" aria-label="Semana anterior">←</button><strong>${date(0).toLocaleDateString("es-MX", { day: "numeric", month: "short" })} — ${date(6).toLocaleDateString("es-MX", { day: "numeric", month: "short" })}</strong><button class="btn secondary small" id="week-next" aria-label="Semana siguiente">→</button><button class="text-button" id="week-today">Hoy</button></div>${offline ? "" : '<div class="button-row"><button class="btn small" id="edit-schedule">Editar horario</button></div>'}</div>${conflicts.length ? `<div class="notice">Hay clases que se superponen.${offline ? "" : " Revisa las horas en Editar horario."}</div>` : ""}<details class="subject-table-panel" open><summary>${teacher ? "Mis clases · Materia, salón y horario" : "Mis materias · Tabla de 11 columnas"}</summary>${root.FIT_TIMETABLE.renderSubjects(c, saved)}</details>${root.FIT_TIMETABLE.render(c, saved, monday, conflicts)}<p class="hint">Semana recurrente. No incorpora vacaciones ni cambios oficiales. Guardado solo en este dispositivo; borrar los datos del navegador elimina el horario.</p>${offline ? "" : '<div class="button-row"><button class="text-button" id="replace-pdf">Importar otro horario</button><button class="text-button danger" id="delete-schedule">Eliminar horario</button></div>'}`;
+    host.innerHTML = `${offline ? '<div class="notice offline-readonly"><b>Horario disponible sin conexión.</b> Puedes consultarlo y cambiar de semana, pero para editarlo o vincular salones necesitas internet.</div>' : ""}<section class="schedule-header"><div><span class="eyebrow">${teacher ? "DOCENTE · MI HORARIO" : `${c.esc(saved.studentId)} · MI HORARIO`}</span><h2>${teacher ? c.esc(saved.studentName || c.state.profile?.full_name || "Horario docente") : c.esc(saved.career)}</h2><p class="student-line">${c.esc(c.state.user.email)}</p><p>Revisado por ti el ${new Date(saved.reviewedAt).toLocaleDateString("es-MX")}. No es una validación institucional.</p></div><div class="schedule-numbers"><div><b>${subjectCount}</b><span>materias</span></div><div><b>${Math.round(total / 6) / 10}</b><span>horas / semana</span></div></div></section><div class="schedule-toolbar"><div class="button-row"><button class="btn secondary small" id="week-prev" aria-label="Semana anterior">←</button><strong>${date(0).toLocaleDateString("es-MX", { day: "numeric", month: "short" })} — ${date(6).toLocaleDateString("es-MX", { day: "numeric", month: "short" })}</strong><button class="btn secondary small" id="week-next" aria-label="Semana siguiente">→</button><button class="text-button" id="week-today">Hoy</button></div>${offline ? "" : '<div class="button-row"><button class="btn small" id="edit-schedule">Editar horario</button></div>'}</div>${conflicts.length ? `<div class="notice">Hay clases que se superponen.${offline ? "" : " Revisa las horas en Editar horario."}</div>` : ""}<details class="subject-table-panel" open><summary>${teacher ? "Mis clases · Materia, salón y horario" : "Mis materias · Tabla de 11 columnas"}</summary>${root.FIT_TIMETABLE.renderSubjects(c, saved)}</details>${root.FIT_TIMETABLE.render(c, saved, monday, conflicts)}<p class="hint">Semana recurrente. No incorpora vacaciones ni cambios oficiales. Guardado en tu cuenta y en este dispositivo. Para consultarlo sin internet, usa el mismo navegador donde lo abriste con conexión.</p>${offline ? "" : '<div class="button-row"><button class="text-button" id="replace-pdf">Importar otro horario</button><button class="text-button danger" id="delete-schedule">Eliminar horario</button></div>'}`;
     host.querySelector("#week-prev").onclick = () => {
       c.state.scheduleWeek = week - 1;
       draw(c, host, saved);

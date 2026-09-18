@@ -219,7 +219,7 @@ test("Comidas: permisos, dinero, pedidos y notificaciones persistentes", async (
     },
   );
   await t.test(
-    "el chat de comprador y vendedor es temporal, privado y no crea tablas persistentes",
+    "el chat conserva texto e imágenes entre despliegues y vence a las 12 horas",
     async () => {
       chat = (
         await req(buyer, "post", "/chats", { product_id: product.id }).expect(201)
@@ -291,7 +291,7 @@ test("Comidas: permisos, dinero, pedidos y notificaciones persistentes", async (
           "select count(*)::int as n from information_schema.tables where table_schema='public' and table_name like 'food_chat%'",
         )
       ).rows[0].n;
-      assert.equal(dbTables, 0);
+      assert.equal(dbTables, 2);
 
       const fresh = request(
         createApp({
@@ -306,7 +306,19 @@ test("Comidas: permisos, dinero, pedidos y notificaciones persistentes", async (
           .set("Authorization", "Bearer " + buyer.token)
           .expect(200)
       ).body.data;
-      assert.equal(freshChats.items.length, 0);
+      assert.equal(freshChats.items.length, 1);
+      assert.equal(freshChats.items[0].id,chat.id);
+      const restored=(await fresh.get('/api/food/chats/'+chat.id).set('Authorization','Bearer '+buyer.token).expect(200)).body.data;
+      assert.equal(restored.messages.length,3);
+      assert.equal(restored.messages[0].text,'¿Sigues en el salón?');
+      await fresh.get('/api/food/chats/'+chat.id+'/images/'+imageMessage.id).set('Authorization','Bearer '+buyer.token).expect(200);
+      await query("update food_chats set expires_at=now()-interval '1 second' where id=$1",[chat.id]);
+      await fresh.get('/api/food/chats/'+chat.id).set('Authorization','Bearer '+buyer.token).expect(404);
+      await fresh.get('/api/food/chats/'+chat.id+'/images/'+imageMessage.id).set('Authorization','Bearer '+buyer.token).expect(404);
+      const {createTemporaryFoodChat}=require('../server/food-chat.cjs');await createTemporaryFoodChat({db}).purgeExpired();
+      assert.equal((await query('select count(*)::int n from food_chat_messages where chat_id=$1',[chat.id])).rows[0].n,0);
+      assert.equal((await query("select count(*)::int n from audit_log where entity='food_chat_messages' and after_data->>'chat_id'=$1",[chat.id])).rows[0].n,3);
+      chat=(await req(buyer,'post','/chats',{product_id:product.id}).expect(201)).body.data;
     },
   );
   await t.test(
@@ -544,4 +556,13 @@ test("Comidas: permisos, dinero, pedidos y notificaciones persistentes", async (
       await req(seller2, "post", "/vendor", vendorBody).expect(403);
     },
   );
+  await t.test('solo admin retira puestos; conserva pedidos y bloquea reactivación',async()=>{
+    await req(buyer,'delete','/admin/vendors/'+vendor.id).expect(403);
+    await req(admin,'delete','/admin/vendors/'+vendor.id).expect(200);
+    assert.ok(!(await req(admin,'get','/admin/vendors')).body.data.some(v=>v.id===vendor.id));
+    assert.equal((await query('select is_active from food_vendors where id=$1',[vendor.id])).rows[0].is_active,false);
+    assert.ok((await query('select count(*)::int n from food_orders where vendor_id=$1',[vendor.id])).rows[0].n>0);
+    await req(admin,'patch','/admin/vendors/'+vendor.id,{status:'approved',source:'Fuente autorizada'}).expect(404);
+  });
+
 });

@@ -4,7 +4,7 @@
   const SESSION_KEY = "fit-offline-session-v1";
   const EVENTS_PREFIX = "fit-offline-events-v1:";
   const SCHEDULE_PREFIX = "fit-offline-schedule-v1:";
-  const MAX_SESSION_AGE = 7 * 24 * 60 * 60 * 1000;
+  const MAX_SESSION_AGE = Infinity; // Acceso local de consulta; nunca autoriza operaciones en servidor.
 
   const clone = (value) => JSON.parse(JSON.stringify(value));
   const text = (value, max = 240) => String(value ?? "").slice(0, max);

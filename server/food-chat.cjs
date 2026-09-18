@@ -1,66 +1,22 @@
-const { randomUUID } = require("node:crypto");
-const { normalizeImage } = require("./images.cjs");
-
-const CHAT_TTL_MS = 12 * 60 * 60 * 1000;
-const MAX_TEXT = 1200;
-const MAX_CHATS = 250;
-const MAX_STREAMS = 128;
-const MAX_STREAMS_PER_USER = 3;
-const MAX_MESSAGES = 300;
-const MAX_IMAGES_PER_CHAT = 24;
-const MAX_TOTAL_IMAGE_BYTES = 64 * 1024 * 1024;
-
-function chatError(status, message, code = "validation_error") {
-  return Object.assign(new Error(message), { status, code });
-}
-
-function createTemporaryFoodChat({ db, onMessage = null }) {
-  const chats = new Map();
-  const streams = new Map();
-  let storedImageBytes = 0;
-
-  async function record(chat, userId, action, message = null) {
-    await db.query("insert into audit_log(actor_id,request_id,action,entity,record_id,after_data) values($1,nullif(current_setting('fit.request_id',true),''),$2,$3,$4,$5)",
-      [userId, action, message ? 'food_chat_messages' : 'food_chats', message?.id || chat.id,
-       JSON.stringify({chat_id:chat.id,buyer_id:chat.buyer_id,seller_user_id:chat.seller_user_id,buyer_name:chat.buyer_name,business_name:chat.business_name,product_name:chat.product_name,order_id:chat.order_id,
-        ...(message ? {sender_id:userId,kind:message.kind,text:message.text || null,image_bytes:message.image?.bytes?.length || null} : {})})]);
-  }
-
-  function removeChat(chat) {
-    if (!chats.has(chat.id)) return;
-    if (chat.expiry_timer) {
-      clearTimeout(chat.expiry_timer);
-      chat.expiry_timer = null;
-    }
-    for (const message of chat.messages) {
-      if (message.image?.bytes) storedImageBytes -= message.image.bytes.length;
-    }
-    chats.delete(chat.id);
-    notify(chat, "chat_expired");
-  }
-
-  function purgeExpired(now = Date.now()) {
-    for (const chat of chats.values()) {
-      if (chat.expires_ms <= now) removeChat(chat);
-    }
-  }
-
-  function participant(chat, userId) {
-    return chat.buyer_id === userId || chat.seller_user_id === userId;
-  }
-
-  function getChat(chatId, userId) {
-    purgeExpired();
-    const chat = chats.get(chatId);
-    if (!chat || !participant(chat, userId))
-      throw chatError(404, "Conversación no encontrada.", "not_found");
-    if (chat.expires_ms <= Date.now()) {
-      removeChat(chat);
-      throw chatError(410, "Este chat temporal ya terminó.", "chat_expired");
-    }
-    return chat;
-  }
-
+const { randomUUID } = require('node:crypto');
+const { normalizeImage } = require('./images.cjs');
+const { transaction } = require('./db.cjs');
+const CHAT_TTL_MS=12*60*60*1000, MAX_TEXT=1200, MAX_STREAMS=128, MAX_STREAMS_PER_USER=3;
+function chatError(status,message,code='validation_error'){return Object.assign(new Error(message),{status,code});}
+function createTemporaryFoodChat({db,onMessage=null}){
+ const streams=new Map();
+ async function hydrate(row,client=db){
+  if(!row)return null;
+  row.messages=(await client.query('select id,sender_id,kind,text,created_at from food_chat_messages where chat_id=$1 order by created_at,id',[row.id])).rows;
+  row.read_at=new Map([[row.buyer_id,new Date(row.buyer_read_at).getTime()],[row.seller_user_id,new Date(row.seller_read_at).getTime()]]);
+  return row;
+ }
+ async function getChat(chatId,userId,client=db,lock=false){
+  const row=(await client.query("select * from food_chats where id=$1 and $2 in(buyer_id,seller_user_id) and expires_at>now()"+(lock?' for update':''),[chatId,userId])).rows[0];
+  if(!row)throw chatError(404,'Conversación no encontrada o vencida.','not_found');
+  return hydrate(row,client);
+ }
+ async function purgeExpired(){await db.query('delete from food_chats where expires_at<=now()');}
   function messageFor(message, userId, chatId) {
     return {
       id: message.id,
@@ -163,203 +119,76 @@ function createTemporaryFoodChat({ db, onMessage = null }) {
       });
   }
 
-  async function create(userId, productId) {
-    purgeExpired();
-    const product = (
-      await db.query(
-        "select p.id,p.vendor_id,p.name as product_name,v.user_id as seller_user_id,v.business_name,v.pickup_location,pr.full_name as buyer_name from food_products p join food_vendors v on v.id=p.vendor_id join profiles pr on pr.id=$2 where p.id=$1 and p.deleted_at is null and p.available=true and v.status='approved' and v.is_active=true",
-        [productId, userId],
-      )
-    ).rows[0];
-    if (!product)
-      throw chatError(
-        409,
-        "El producto ya no está disponible. Actualiza el catálogo.",
-        "conflict",
-      );
-    if (product.seller_user_id === userId)
-      throw chatError(400, "No puedes abrir un chat con tu propio puesto.");
 
-    const prior = [...chats.values()].find(
-      (chat) =>
-        chat.buyer_id === userId &&
-        chat.product_id === productId &&
-        chat.seller_user_id === product.seller_user_id &&
-        chat.expires_ms > Date.now(),
-    );
-    if (prior) return detailFor(prior, userId);
-
-    const activeForUser = [...chats.values()].filter(
-      (chat) => participant(chat, userId) && chat.expires_ms > Date.now(),
-    ).length;
-    if (activeForUser >= 40)
-      throw chatError(
-        429,
-        "Tienes demasiadas conversaciones temporales activas. Espera a que alguna termine.",
-        "rate_limited",
-      );
-
-    purgeExpired();
-    if (chats.size >= MAX_CHATS) throw chatError(503, "Las conversaciones temporales están ocupadas. Inténtalo más tarde.", "chat_storage_full");
-    const now = Date.now();
-    const chat = {
-      id: randomUUID(),
-      buyer_id: userId,
-      seller_user_id: product.seller_user_id,
-      vendor_id: product.vendor_id,
-      product_id: product.id,
-      product_name: product.product_name,
-      business_name: product.business_name,
-      buyer_name: product.buyer_name,
-      pickup_location: product.pickup_location,
-      created_at: new Date(now).toISOString(),
-      expires_at: new Date(now + CHAT_TTL_MS).toISOString(),
-      expires_ms: now + CHAT_TTL_MS,
-      messages: [],
-      read_at: new Map([
-        [userId, now],
-        [product.seller_user_id, 0],
-      ]),
-      order_id: null,
-      updated_ms: now,
-      expiry_timer: null,
-    };
-    await record(chat, userId, "INSERT");
-    chats.set(chat.id, chat);
-    chat.expiry_timer = setTimeout(() => removeChat(chat), CHAT_TTL_MS);
-    chat.expiry_timer.unref?.();
-    notify(chat, "chat_created", userId);
-    return detailFor(chat, userId);
-  }
-
-  function list(userId) {
-    purgeExpired();
-    const items = [...chats.values()]
-      .filter((chat) => participant(chat, userId))
-      .sort((a, b) => b.updated_ms - a.updated_ms)
-      .map((chat) => summaryFor(chat, userId));
-    return {
-      items,
-      unread_count: items.reduce((sum, chat) => sum + chat.unread_count, 0),
-    };
-  }
-
-  function detail(userId, chatId) {
-    return detailFor(getChat(chatId, userId), userId);
-  }
-
-  function read(userId, chatId) {
-    const chat = getChat(chatId, userId);
-    chat.read_at.set(userId, Date.now());
-    return summaryFor(chat, userId);
-  }
-
-  async function addText(userId, chatId, value) {
-    const chat = getChat(chatId, userId);
-    if (typeof value !== "string")
-      throw chatError(400, "Escribe un mensaje antes de enviarlo.");
-    const messageText = value.trim();
-    if (!messageText || messageText.length > MAX_TEXT || /[\x00-\x08\x0b\x0c\x0e-\x1f]/.test(messageText))
-      throw chatError(400, `El mensaje debe tener entre 1 y ${MAX_TEXT} caracteres.`);
-    if (chat.messages.length >= MAX_MESSAGES)
-      throw chatError(
-        409,
-        "Esta conversación alcanzó su límite de mensajes. Puedes crear el pedido o esperar a que termine.",
-        "conflict",
-      );
-    const message = {
-      id: randomUUID(),
-      kind: "text",
-      text: messageText,
-      sender_id: userId,
-      created_at: new Date().toISOString(),
-    };
-    await record(chat, userId, "MESSAGE", message);
-    chat.messages.push(message);
-    chat.updated_ms = Date.now();
-    chat.read_at.set(userId, chat.updated_ms);
-    notify(chat, "message", userId);
-    return messageFor(message, userId, chat.id);
-  }
-
-  async function addImage(userId, chatId, file) {
-    function checkCapacity() {
-      const chat = getChat(chatId, userId);
-      if (chat.messages.length >= MAX_MESSAGES)
-        throw chatError(409, "Esta conversación alcanzó su límite de mensajes.", "conflict");
-      if (chat.messages.filter(m => m.kind === "image").length >= MAX_IMAGES_PER_CHAT)
-        throw chatError(409, "Puedes compartir hasta 24 imágenes en un chat temporal.", "conflict");
-      return chat;
-    }
-    checkCapacity();
-    const optimized = await normalizeImage(file);
-    // Other uploads or expiration may run during decoding. Re-check before storing.
-    const chat = checkCapacity();
-    if (storedImageBytes + optimized.length > MAX_TOTAL_IMAGE_BYTES)
-      throw chatError(
-        503,
-        "El almacenamiento temporal de imágenes está ocupado. Inténtalo de nuevo en unos minutos.",
-        "chat_storage_full",
-      );
-
-    const message = {
-      id: randomUUID(),
-      kind: "image",
-      sender_id: userId,
-      created_at: new Date().toISOString(),
-      image: { mime: "image/webp", bytes: optimized },
-    };
-    await record(chat, userId, "MESSAGE", message);
-    chat.messages.push(message);
-    storedImageBytes += optimized.length;
-    chat.updated_ms = Date.now();
-    chat.read_at.set(userId, chat.updated_ms);
-    notify(chat, "message", userId);
-    return messageFor(message, userId, chat.id);
-  }
-
-  function image(userId, chatId, messageId) {
-    const chat = getChat(chatId, userId);
-    const message = chat.messages.find(
-      (item) => item.id === messageId && item.kind === "image",
-    );
-    if (!message)
-      throw chatError(404, "Imagen temporal no disponible.", "not_found");
-    return message.image;
-  }
-
-  function validateOrderLink(userId, chatId, productId) {
-    const chat = getChat(chatId, userId);
-    if (chat.buyer_id !== userId || chat.product_id !== productId)
-      throw chatError(403, "Ese chat no corresponde a este pedido.", "forbidden");
-    return chat;
-  }
-
-  function linkOrder(userId, chatId, orderId) {
-    purgeExpired();
-    const chat = chats.get(chatId);
-    if (!chat || chat.buyer_id !== userId || chat.expires_ms <= Date.now())
-      return false;
-    chat.order_id = orderId;
-    chat.updated_ms = Date.now();
-    notify(chat, "order_linked", userId);
-    return true;
-  }
-
-  function chatIdForOrder(userId, orderId) {
-    purgeExpired();
-    const chat = [...chats.values()].find(
-      (item) => item.order_id === orderId && participant(item, userId),
-    );
-    return chat?.id || null;
-  }
-
-  function unreadCount(userId) {
-    return list(userId).unread_count;
-  }
-
+ async function create(userId,productId){
+  const chat=await transaction(db,async client=>{
+   // Serializa aperturas para que dos solicitudes no creen la misma conversación activa.
+   await client.query('select pg_advisory_xact_lock(746203)');
+   await client.query('delete from food_chats where expires_at<=now()');
+   const product=(await client.query("select p.id,p.vendor_id,p.name as product_name,v.user_id as seller_user_id,v.business_name,v.pickup_location,pr.full_name as buyer_name from food_products p join food_vendors v on v.id=p.vendor_id join profiles pr on pr.id=$2 where p.id=$1 and p.deleted_at is null and p.available=true and v.status='approved' and v.is_active=true and v.deleted_at is null",[productId,userId])).rows[0];
+   if(!product)throw chatError(409,'El producto ya no está disponible.','conflict');
+   if(product.seller_user_id===userId)throw chatError(400,'No puedes abrir un chat con tu propio puesto.');
+   const prior=(await client.query('select * from food_chats where buyer_id=$1 and product_id=$2 and seller_user_id=$3 and expires_at>now()',[userId,productId,product.seller_user_id])).rows[0];
+   if(prior)return hydrate(prior,client);
+   const count=(await client.query('select count(*)::int as total,count(*) filter(where $1 in(buyer_id,seller_user_id))::int as mine from food_chats where expires_at>now()',[userId])).rows[0];
+   if(count.mine>=40)throw chatError(429,'Hay demasiadas conversaciones activas. Inténtalo más tarde.','rate_limited');
+   if(count.total>=250)throw chatError(503,'Las conversaciones temporales están ocupadas. Inténtalo más tarde.','chat_storage_full');
+   const row=(await client.query(`insert into food_chats(buyer_id,seller_user_id,vendor_id,product_id,product_name,business_name,buyer_name,pickup_location)
+    values($1,$2,$3,$4,$5,$6,$7,$8) returning *`,[userId,product.seller_user_id,product.vendor_id,product.id,product.product_name,product.business_name,product.buyer_name,product.pickup_location])).rows[0];
+   return hydrate(row,client);
+  });
+  notify(chat,'chat_created',userId);return detailFor(chat,userId);
+ }
+ async function list(userId){
+  const rows=(await db.query('select * from food_chats where $1 in(buyer_id,seller_user_id) and expires_at>now() order by updated_at desc limit 80',[userId])).rows;
+  const items=[];for(const row of rows)items.push(summaryFor(await hydrate(row),userId));
+  return {items,unread_count:items.reduce((n,r)=>n+r.unread_count,0)};
+ }
+ async function detail(userId,chatId){return detailFor(await getChat(chatId,userId),userId);}
+ async function read(userId,chatId){
+  return transaction(db,async client=>{
+   const chat=await getChat(chatId,userId,client,true);
+   const col=chat.buyer_id===userId?'buyer_read_at':'seller_read_at';
+   const row=(await client.query(`update food_chats set ${col}=now() where id=$1 returning ${col}`,[chatId])).rows[0];
+   chat.read_at.set(userId,new Date(row[col]).getTime());return summaryFor(chat,userId);
+  });
+ }
+ async function add(userId,chatId,kind,text,bytes){
+  const result=await transaction(db,async client=>{
+   const chat=await getChat(chatId,userId,client,true);
+   if(chat.messages.length>=300||kind==='image'&&chat.messages.filter(m=>m.kind==='image').length>=24)throw chatError(409,'Esta conversación alcanzó su límite de mensajes.','conflict');
+   if(bytes){
+    await client.query('select pg_advisory_xact_lock(746204)');
+    const total=(await client.query('select coalesce(sum(octet_length(m.bytes)),0) as size from food_chat_messages m join food_chats c on c.id=m.chat_id where c.expires_at>now()')).rows[0];
+    if(Number(total.size)+bytes.length>64*1024*1024)throw chatError(503,'El almacenamiento de imágenes está ocupado.','chat_storage_full');
+   }
+   const message=(await client.query('insert into food_chat_messages(chat_id,sender_id,kind,text,bytes,mime) values($1,$2,$3,$4,$5,$6) returning id,sender_id,kind,text,created_at',[chatId,userId,kind,text,bytes,bytes?'image/webp':null])).rows[0];
+   const col=chat.buyer_id===userId?'buyer_read_at':'seller_read_at';
+   await client.query(`update food_chats set updated_at=now(),${col}=now() where id=$1`,[chatId]);
+   // La cola push se confirma en la misma transacción que el mensaje.
+   await client.query('insert into fit_push_outbox(id,user_id,chat_id,expires_at) values($1,$2,$3,$4) on conflict(id) do nothing',[message.id,userId===chat.buyer_id?chat.seller_user_id:chat.buyer_id,chat.id,chat.expires_at]);
+   chat.messages.push(message);return {chat,message};
+  });
+  notify(result.chat,'message',userId);return messageFor(result.message,userId,chatId);
+ }
+ async function addText(userId,chatId,value){
+  if(typeof value!=='string'||!value.trim()||value.trim().length>MAX_TEXT||/[\x00-\x08\x0b\x0c\x0e-\x1f]/.test(value))throw chatError(400,'El mensaje debe tener entre 1 y 1200 caracteres.');
+  return add(userId,chatId,'text',value.trim(),null);
+ }
+ async function addImage(userId,chatId,file){await getChat(chatId,userId);return add(userId,chatId,'image',null,await normalizeImage(file));}
+ async function image(userId,chatId,messageId){
+  const row=(await db.query("select m.bytes,m.mime from food_chat_messages m join food_chats c on c.id=m.chat_id where m.id=$1 and c.id=$2 and $3 in(c.buyer_id,c.seller_user_id) and c.expires_at>now() and m.kind='image'",[messageId,chatId,userId])).rows[0];
+  if(!row)throw chatError(404,'Imagen temporal no disponible.','not_found');return row;
+ }
+ async function validateOrderLink(userId,chatId,productId){const chat=await getChat(chatId,userId);if(chat.buyer_id!==userId||chat.product_id!==productId)throw chatError(403,'Ese chat no corresponde a este pedido.','forbidden');return chat;}
+ async function linkOrder(userId,chatId,orderId){
+  const row=(await db.query('update food_chats set order_id=$3,updated_at=now() where id=$1 and buyer_id=$2 and expires_at>now() returning *',[chatId,userId,orderId])).rows[0];
+  if(row)notify(row,'order_linked',userId);return !!row;
+ }
+ async function chatIdForOrder(userId,orderId){return (await db.query('select id from food_chats where order_id=$1 and $2 in(buyer_id,seller_user_id) and expires_at>now() limit 1',[orderId,userId])).rows[0]?.id||null;}
+ async function unreadCount(userId){return (await list(userId)).unread_count;}
   function connect(userId, sessionHash, res) {
-    purgeExpired();
+
     const count = [...streams.values()].reduce((sum, set) => sum + set.size, 0);
     if ((streams.get(userId)?.size || 0) >= MAX_STREAMS_PER_USER || count >= MAX_STREAMS)
       throw chatError(429, "Hay demasiadas conexiones de chat abiertas. Cierra otras pestañas e inténtalo de nuevo.", "rate_limited");
@@ -407,7 +236,7 @@ function createTemporaryFoodChat({ db, onMessage = null }) {
           )).rows.length;
           if (!alive) return res.end();
         }
-        purgeExpired();
+    
         write(`event: ping\ndata: ${JSON.stringify({ type: "ping", now: new Date().toISOString() })}\n\n`);
       } catch { res.end(); }
       finally { checking = false; }
@@ -415,25 +244,6 @@ function createTemporaryFoodChat({ db, onMessage = null }) {
     heartbeat.unref?.();
   }
 
-  return {
-    create,
-    list,
-    detail,
-    read,
-    addText,
-    addImage,
-    image,
-    validateOrderLink,
-    linkOrder,
-    chatIdForOrder,
-    unreadCount,
-    connect,
-    purgeExpired,
-  };
+ return {create,list,detail,read,addText,addImage,image,validateOrderLink,linkOrder,chatIdForOrder,unreadCount,connect,purgeExpired};
 }
-
-module.exports = {
-  CHAT_TTL_MS,
-  MAX_TEXT,
-  createTemporaryFoodChat,
-};
+module.exports={CHAT_TTL_MS,MAX_TEXT,createTemporaryFoodChat};

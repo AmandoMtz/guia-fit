@@ -13,6 +13,11 @@ const { migrate } = require("./migrate.cjs");
   if (production && !siteUrl.startsWith("https://"))
     throw new Error("SITE_URL debe usar HTTPS.");
   if (db && process.env.AUTO_MIGRATE !== "false") await migrate(db);
+  if(db){
+    await db.query("delete from food_chats where expires_at<=now()");
+    const foodCleanup=setInterval(()=>db.query("delete from food_chats where expires_at<=now()").catch(()=>console.error("No se pudo limpiar chats vencidos")),60000);
+    foodCleanup.unref();
+  }
   const app = createApp({
     db,
     sendMail: createMailer(),

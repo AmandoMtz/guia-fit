@@ -125,22 +125,26 @@ test("historial: capacidad global, expiración y aislamiento de claves", async (
 });
 
 test("chat temporal: límites concurrentes, expiración y lectores lentos", async t => {
-  const db = { query: async (sql, [product, buyer]) => ({ rows: [{ id: product, vendor_id: "v", seller_user_id: "seller", buyer_name: buyer }] }) };
-  const chat = createTemporaryFoodChat({ db });
-  t.after(() => chat.purgeExpired(Date.now() + CHAT_TTL_MS + 1000));
-  const c = await chat.create("buyer", "p");
-  const file = { buffer: await sampleImage(), mimetype: "image/png" };
-  for (let i = 0; i < 23; i++) await chat.addImage("buyer", c.id, file);
-  const race = await Promise.allSettled([chat.addImage("buyer", c.id, file), chat.addImage("seller", c.id, file)]);
-  assert.equal(race.filter(x => x.status === "fulfilled").length, 1);
-  assert.equal(race.find(x => x.status === "rejected").reason.status, 409);
-  assert.equal(chat.detail("buyer", c.id).messages.length, 24);
-  const expiring = await chat.create("buyer", "next");
-  const pending = chat.addImage("buyer", expiring.id, file);
-  chat.purgeExpired(Date.now() + CHAT_TTL_MS + 1);
-  await assert.rejects(pending, { status: 404 });
-  for (let i = 0; i < 250; i++) await chat.create("buyer-" + i, "product-" + i);
-  await assert.rejects(chat.create("overflow", "overflow"), { code: "chat_storage_full" });
+  const engine=new PGlite();t.after(()=>engine.close());
+  for(const n of fs.readdirSync(path.join(__dirname,'../backend/migrations')).filter(n=>n.endsWith('.sql')).sort())await engine.exec(fs.readFileSync(path.join(__dirname,'../backend/migrations',n),'utf8'));
+  const query=(sql,args)=>engine.query(sql,args);let queue=Promise.resolve();
+  const db={query,connect:async()=>{let unlock;const previous=queue;queue=new Promise(r=>unlock=r);await previous;return {query,release:unlock};}};
+  const buyer=randomUUID(),seller=randomUUID(),overflow=randomUUID();
+  for(const id of [buyer,seller,overflow]){await query("insert into users(id,email,password_hash) values($1,$2,'x')",[id,id+'@test.mx']);await query('insert into profiles(id,full_name) values($1,$2)',[id,'Nombre Apellidos']);}
+  const vendor=(await query("insert into food_vendors(user_id,business_name,pickup_location,status,review_source,reviewed_by,reviewed_at) values($1,'Puesto','Local','approved','Fuente verificada',$1,now()) returning id",[seller])).rows[0].id;
+  const product=(await query("insert into food_products(vendor_id,name,price_cents,sale_unit) values($1,'Producto',100,'unit') returning id",[vendor])).rows[0].id;
+  const chat=createTemporaryFoodChat({db}),c=await chat.create(buyer,product);
+  const file={buffer:await sampleImage(),mimetype:'image/png'};
+  for(let i=0;i<23;i++)await chat.addImage(buyer,c.id,file);
+  const race=await Promise.allSettled([chat.addImage(buyer,c.id,file),chat.addImage(seller,c.id,file)]);
+  assert.equal(race.filter(x=>x.status==='fulfilled').length,1);
+  assert.equal(race.find(x=>x.status==='rejected').reason.status,409);
+  assert.equal((await chat.detail(buyer,c.id)).messages.length,24);
+  await query("update food_chats set expires_at=now()-interval '1 second' where id=$1",[c.id]);
+  await assert.rejects(chat.addImage(buyer,c.id,file),{status:404});
+  await chat.purgeExpired();
+  await query("insert into food_chats(buyer_id,seller_user_id,vendor_id,product_id,product_name,business_name,buyer_name,pickup_location) select $1,$2,$3,$4,'Producto','Puesto','Nombre','Local' from generate_series(1,250)",[buyer,seller,vendor,product]);
+  await assert.rejects(chat.create(overflow,product),{code:'chat_storage_full'});
   class Response extends EventEmitter {
     set() {} flushHeaders() {} write() { return !this.slow; }
     destroy() { this.destroyed = true; this.emit("close"); }

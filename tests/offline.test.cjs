@@ -35,13 +35,13 @@ test("offline: solo conserva una sesión de alumno y nunca permisos administrati
   );
 });
 
-test("offline: la sesión local caduca después del límite de seguridad", () => {
+test("offline: el acceso local al horario permanece después de varias semanas", () => {
   const storage = memoryStorage();
   let now = Date.parse("2026-09-11T12:00:00Z");
   const store = createStore(storage, () => now);
   store.saveSession({ user: { id: "u1", email: "a123@alumnos.uat.edu.mx", account_type: "student" } });
-  now += MAX_SESSION_AGE + 1;
-  assert.equal(store.getSession(), null);
+  now += 60 * 24 * 60 * 60 * 1000;
+  assert.equal(store.getSession().user.id, "u1");
 });
 
 test("offline: los eventos se aíslan por alumno y el QR nunca se considera activo", () => {

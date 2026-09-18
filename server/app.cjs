@@ -739,6 +739,7 @@ function createApp({
   app.use("/api/attendance-security",authenticate,securityRouter({db,limit}));
   if (push) app.use("/api/push", authenticate, push.router(limit));
   app.use("/api/gamification", authenticate, createGamificationRouter({ db, limit }));
+  app.use("/api/schedule", authenticate, require("./schedules.cjs").createScheduleRouter({db}));
   app.use("/api/profile", authenticate, createProfileRouter({ db, limit }));
   app.use("/api/events", authenticate, createEventsRouter({ db, limit, siteUrl }));
   app.use("/api/chatbot", authenticate, createChatbotRouter({ db, limit, chatbot }));

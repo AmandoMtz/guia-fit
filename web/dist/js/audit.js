@@ -1,36 +1,47 @@
-/* Solo consulta: los permisos se verifican nuevamente en el servidor. */
 (() => {
-  const groups={events:'Eventos y asistencias',chats:'Chats',food:'Comidas y pedidos',rewards:'Monedas y recompensas',accounts:'Cuentas y accesos',notifications:'Notificaciones',campus:'Campus',http:'Solicitudes y resultados'};
-  const actions={INSERT:'Creación / registro',UPDATE:'Actualización',DELETE:'Eliminación',MESSAGE:'Mensaje enviado',REQUEST:'Solicitud',RESPONSE:'Resultado de solicitud'};
-  const entities={events:'Evento',event_attendance:'Asistencia confirmada',event_teacher_invites:'Invitación / respuesta docente',event_careers:'Carreras del evento',event_documents:'Documento del evento',event_checkin_tokens:'QR del evento',academic_chats:'Conversación alumno-docente',academic_chat_messages:'Movimiento de mensaje académico',academic_chat_content:'Mensaje alumno-docente',food_chats:'Conversación de comidas',food_chat_messages:'Mensaje de comidas',food_orders:'Pedido',food_products:'Producto',food_vendors:'Vendedor',fit_progress:'Saldo y experiencia',fit_rewards:'Recompensa obtenida',fit_inventory:'Inventario / canje',admin_benefit_grants:'Beneficio administrativo',users:'Cuenta',profiles:'Perfil',sessions:'Sesión',http:'Solicitud al servidor'};
-  window.FIT_AUDIT={render(ctx){
-    const {state,client,esc}=ctx,host=document.querySelector('#view');
-    if(!state.admin||state.offline||state.demo){host.innerHTML='<div class="notice">Acceso exclusivo para administración con conexión.</div>';return;}
-    host.innerHTML=`<section class="panel"><p>Historial permanente de acciones. Incluye los textos de mensajes nuevos; las imágenes de comidas se registran como envío de imagen.</p><form id="audit-filters" class="profile-grid"><label class="field">Buscar usuario, evento, conversación o contenido<input name="search" type="search" maxlength="150" placeholder="Nombre, correo, identificador o texto"></label><label class="field">Módulo<select name="group"><option value="">Todos los módulos</option>${Object.entries(groups).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select></label><label class="field">Acción<select name="action"><option value="">Todas las acciones</option>${Object.entries(actions).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select></label><label class="field">Desde (UTC)<input name="from" type="date"></label><label class="field">Hasta (UTC)<input name="to" type="date"></label><div><button class="btn" type="submit">Buscar / actualizar</button> <button class="btn secondary" type="reset">Limpiar filtros</button></div></form><p class="hint">Fechas del registro en tu hora local. Los datos anteriores aparecen cuando ya existía un registro; no se reconstruyen mensajes eliminados.</p><p id="audit-status" role="status" aria-live="polite"></p><div id="audit-results"></div><div class="row"><button class="btn secondary" id="audit-prev">Anterior</button><button class="btn secondary" id="audit-next">Siguiente</button></div></section>`;
-    const form=host.querySelector('form'),results=host.querySelector('#audit-results'),status=host.querySelector('#audit-status'),prev=host.querySelector('#audit-prev'),next=host.querySelector('#audit-next');
-    let filters=new URLSearchParams(),pages=[null],page=0,cursor=null,busy=false;
-    const json=data=>esc(JSON.stringify(data,null,2)||'Sin datos');
-    async function load(){
-      if(busy)return;busy=true;prev.disabled=next.disabled=true;status.textContent='Cargando registros…';results.replaceChildren();
-      const params=new URLSearchParams(filters);if(pages[page])params.set('before',pages[page]);
-      try{
-        const response=await client.request('/api/admin/audit?'+params);
-        if(!host.isConnected||state.view!=='audit')return;
-        if(response.error)throw new Error(response.error.message||'No se pudieron consultar los registros.');
-        const data=response.data;if(!data?.items)throw new Error('Respuesta no disponible. Vuelve a intentarlo.');
-        cursor=data.next;
-        status.textContent=`Página ${page+1} · ${data.items.length} registros · Más recientes primero`;
-        results.innerHTML=data.items.length?data.items.map(r=>{
-          const after=r.after_data||{},text=after.body||after.text;
-          return `<article class="panel" style="overflow-wrap:anywhere"><div class="row"><strong>${esc(entities[r.entity]||r.entity)}</strong><span>${esc(actions[r.action]||r.action)}</span></div><p><b>${esc(r.actor_name||r.actor_email||(r.actor_id?'Cuenta '+r.actor_id:'Sistema / sin sesión identificada'))}</b>${r.actor_email?' · '+esc(r.actor_email):''}</p><p class="hint">${esc(new Date(r.created_at).toLocaleString('es-MX'))} · Registro #${esc(r.id)}</p>${text?`<blockquote style="white-space:pre-wrap">${esc(text)}</blockquote>`:''}<details><summary>Ver detalles del movimiento</summary><p>Identificador: ${esc(r.record_id||'—')}<br>Solicitud: ${esc(r.request_id||'—')}</p><h3>Antes</h3><pre style="white-space:pre-wrap">${json(r.before_data)}</pre><h3>Después</h3><pre style="white-space:pre-wrap">${json(r.after_data)}</pre></details></article>`;
-        }).join(''):'<div class="empty">No hay registros con estos filtros.</div>';
-      }catch(e){cursor=null;status.textContent=e.message||'Error de conexión. Intenta actualizar.';}
-      finally{busy=false;prev.disabled=page===0;next.disabled=!cursor;}
-    }
-    form.onsubmit=e=>{e.preventDefault();if(busy)return;filters=new URLSearchParams(new FormData(form));pages=[null];page=0;load();};
-    form.onreset=()=>{if(busy)return;filters=new URLSearchParams();pages=[null];page=0;load();};
-    prev.onclick=()=>{if(!busy&&page>0){page--;load();}};
-    next.onclick=()=>{if(!busy&&cursor){pages[++page]=cursor;load();}};
-    load();
-  }};
+ const groups={events:'Eventos',chats:'Conversaciones',food:'Comidas y pedidos',rewards:'Premios y monedas',accounts:'Cuentas',schedules:'Horarios',notifications:'Avisos',campus:'Campus',http:'Actividad técnica'};
+ const entities={events:'Evento',event_attendance:'Asistencia',event_teacher_invites:'Invitación al evento',event_careers:'Público del evento',event_documents:'Constancia',event_checkin_tokens:'Código QR',academic_chats:'Chat académico',academic_chat_messages:'Mensaje académico',academic_chat_content:'Chat académico',food_chats:'Chat de comidas',food_chat_messages:'Chat de comidas',food_orders:'Pedido',food_products:'Producto',food_vendors:'Puesto de comida',fit_progress:'Monedas y experiencia',fit_rewards:'Recompensa',fit_inventory:'Premio del inventario',admin_benefit_grants:'Beneficio entregado',users:'Cuenta',profiles:'Perfil',sessions:'Inicio / cierre de sesión',http:'Actividad del servidor',user_schedules:'Horario',institutional_verifications:'Verificación de cuenta',attendance_devices:'Dispositivo de asistencia'};
+ const fields={full_name:'Nombre completo',title:'Título',name:'Nombre',status:'Estado',coins:'Monedas',xp:'Experiencia',item:'Premio',quantity:'Cantidad',price_cents:'Precio (centavos)',total_cents:'Total (centavos)',note:'Nota',starts_at:'Inicio',ends_at:'Fin',location:'Lugar',business_name:'Puesto',product_name:'Producto',read_at:'Leído el',student_read_at:'Leído por alumno',teacher_read_at:'Leído por docente',buyer_read_at:'Leído por comprador',seller_read_at:'Leído por vendedor',is_active:'Activo',available:'Disponible',deleted_at:'Eliminado el',email:'Correo',role:'Rol',career:'Carrera',student_id:'Alumno / matrícula',body:'Mensaje',text:'Mensaje',kind:'Tipo',data:'Horario',revision:'Versión',amount:'Importe',reason:'Motivo',source:'Origen',review_source:'Motivo de revisión',state:'Estado'};
+ const statuses={pending:'Pendiente',approved:'Aprobado',rejected:'Rechazado',suspended:'Suspendido',requested:'Solicitado',accepted:'Aceptado',ready:'Listo',completed:'Completado',cancelled:'Cancelado',confirmed:'Confirmado',declined:'Rechazado',verified:'Verificado',student:'Alumno',teacher:'Docente',admin:'Administrador',text:'Texto',image:'Imagen'};
+ function action(r){
+  if(r.entity==='event_attendance'&&r.action==='INSERT')return 'Registró su asistencia';
+  if(r.entity==='fit_inventory'&&r.action==='INSERT')return 'Obtuvo un premio';
+  if(r.entity==='food_vendors'&&r.after_data?.deleted_at&&!r.before_data?.deleted_at)return 'Eliminó un puesto';
+  return {INSERT:'Creó un registro',UPDATE:'Actualizó información',DELETE:'Eliminó un registro',MESSAGE:'Envió un mensaje',REQUEST:'Inició una solicitud',RESPONSE:'Terminó una solicitud'}[r.action]||r.action;
+ }
+ window.FIT_AUDIT={render(ctx){
+  const {state,client,esc}=ctx,host=document.querySelector('#view');
+  if(!state.admin||state.offline||state.demo){host.innerHTML='<div class="notice">Acceso exclusivo para administración con conexión.</div>';return;}
+  host.innerHTML=`<div class="audit-console"><section class="audit-intro"><div><span class="eyebrow">ACTIVIDAD DEL SISTEMA</span><h2>Qué pasó, quién lo hizo y cuándo</h2><p>Revisa eventos, conversaciones, pedidos y recompensas desde un solo lugar.</p></div><span class="audit-private">Solo administración</span></section><div class="audit-tabs" role="group" aria-label="Filtrar actividad"><button data-group="" class="active">Todo</button>${['events','chats','food','rewards','accounts','schedules'].map(k=>`<button data-group="${k}">${groups[k]}</button>`).join('')}</div><section class="panel audit-search"><form id="audit-filters"><label class="field audit-query">Buscar<input name="search" type="search" maxlength="150" placeholder="Nombre, correo, evento o texto de un mensaje"></label><label class="field">Categoría<select name="group"><option value="">Todas</option>${Object.entries(groups).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select></label><label class="field">Desde<input name="from" type="date"></label><label class="field">Hasta<input name="to" type="date"></label><label class="field">Movimiento<select name="action"><option value="">Todos</option><option value="INSERT">Creación / registro</option><option value="UPDATE">Actualización</option><option value="DELETE">Eliminación</option><option value="MESSAGE">Mensaje</option></select></label><div class="audit-search-actions"><button class="btn" type="submit">Buscar</button><button class="btn secondary" type="reset">Limpiar</button></div><label class="audit-technical"><input name="technical" type="checkbox" value="1"> Incluir actividad técnica y automática</label></form></section><div class="audit-stats" id="audit-stats"></div><div class="audit-list-heading"><h2>Movimientos recientes</h2><button class="text-button" id="audit-refresh">Actualizar</button></div><p id="audit-status" role="status" aria-live="polite"></p><div id="audit-results"></div><div class="audit-pagination"><button class="btn secondary" id="audit-prev">← Anterior</button><span id="audit-page"></span><button class="btn secondary" id="audit-next">Siguiente →</button></div><p class="hint">Filtros de fecha por día UTC; horas mostradas en tu zona local. Los textos conservados comienzan desde la activación del registro de chats.</p></div>`;
+  const form=host.querySelector('form'),results=host.querySelector('#audit-results'),status=host.querySelector('#audit-status'),prev=host.querySelector('#audit-prev'),next=host.querySelector('#audit-next');
+  let filters=new URLSearchParams(),pages=[null],page=0,cursor=null,busy=false;
+  const val=v=>v==null?'—':typeof v==='boolean'?(v?'Sí':'No'):typeof v==='object'?(v.classes?`${v.classes.length} clases` : JSON.stringify(v)):statuses[v]||String(v);
+  function details(r){
+   const before=r.before_data||{},after=r.after_data||{};
+   const keys=[...new Set([...Object.keys(before),...Object.keys(after)])].filter(k=>fields[k]&&(r.action!=='UPDATE'||JSON.stringify(before[k])!==JSON.stringify(after[k])));
+   return `<details class="audit-detail"><summary>Ver cambios y datos</summary>${keys.length?`<div class="audit-table-wrap"><table><thead><tr><th>Dato</th><th>Antes</th><th>Después</th></tr></thead><tbody>${keys.map(k=>`<tr><th>${esc(fields[k])}</th><td>${esc(val(before[k]))}</td><td>${esc(val(after[k]))}</td></tr>`).join('')}</tbody></table></div>`:'<p>Este movimiento no contiene cambios adicionales para mostrar.</p>'}<details class="audit-raw"><summary>Identificadores y datos técnicos</summary><p>Registro #${esc(r.id)} · ${esc(r.record_id||'')}<br>Solicitud: ${esc(r.request_id||'—')}</p><pre>${esc(JSON.stringify({antes:r.before_data,despues:r.after_data},null,2))}</pre></details></details>`;
+  }
+  async function load(){
+   if(busy)return;busy=true;prev.disabled=next.disabled=true;status.textContent='Consultando actividad…';results.replaceChildren();
+   const params=new URLSearchParams(filters);if(pages[page])params.set('before',pages[page]);
+   try{
+    const response=await client.request('/api/admin/audit?'+params);if(!host.isConnected||state.view!=='audit')return;
+    if(response.error)throw new Error(response.error.message||'No se pudieron consultar los registros.');
+    const data=response.data;if(!data?.items)throw new Error('No recibimos los registros. Intenta actualizar.');cursor=data.next;
+    host.querySelector('#audit-stats').innerHTML=`<div><strong>${data.items.length}</strong><span>Movimientos en esta página</span></div><div><strong>${new Set(data.items.map(r=>r.actor_id).filter(Boolean)).size}</strong><span>Usuarios participantes</span></div><div><strong>${data.items.filter(r=>r.action==='MESSAGE').length}</strong><span>Mensajes enviados</span></div>`;
+    status.textContent=data.items.length?'Del más reciente al más antiguo.':'';host.querySelector('#audit-page').textContent=`Página ${page+1}`;
+    results.innerHTML=data.items.length?data.items.map(r=>{
+     const a=r.after_data||r.before_data||{},message=a.body||a.text,name=r.actor_name||r.actor_email||(r.actor_id?'Cuenta sin nombre':'Sistema'),label=entities[r.entity]||r.entity;
+     const subject=a.title||a.product_name||a.business_name||a.name||'';
+     return `<article class="audit-entry"><div class="audit-avatar" aria-hidden="true">${esc(name.charAt(0).toUpperCase())}</div><div class="audit-entry-body"><div class="audit-entry-head"><span class="audit-category">${esc(label)}</span><time>${esc(new Date(r.created_at).toLocaleString('es-MX',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}))}</time></div><h3>${esc(name)} <span>${esc(action(r).toLowerCase())}</span></h3>${r.actor_email?`<p class="audit-email">${esc(r.actor_email)}</p>`:''}${subject?`<p class="audit-subject">${esc(subject)}</p>`:''}${message?`<blockquote>${esc(message)}</blockquote>`:a.kind==='image'?'<p class="audit-subject">Envió una imagen</p>':''}${details(r)}</div></article>`;
+    }).join(''):'<div class="panel audit-empty"><h3>No encontramos movimientos</h3><p>Prueba otro nombre o amplía las fechas. También puedes incluir la actividad técnica.</p></div>';
+   }catch(e){cursor=null;status.textContent=e.message||'Error de conexión.';}
+   finally{busy=false;prev.disabled=page===0;next.disabled=!cursor;}
+  }
+  function search(){if(busy)return;filters=new URLSearchParams(new FormData(form));pages=[null];page=0;host.querySelectorAll('[data-group]').forEach(b=>b.classList.toggle('active',b.dataset.group===form.elements.group.value));load();}
+  form.onsubmit=e=>{e.preventDefault();search();};form.onreset=e=>{e.preventDefault();if(busy)return;form.querySelectorAll('input').forEach(i=>{if(i.type==='checkbox')i.checked=false;else i.value='';});form.querySelectorAll('select').forEach(s=>s.value='');search();};
+  host.querySelectorAll('[data-group]').forEach(b=>b.onclick=()=>{if(busy)return;form.elements.group.value=b.dataset.group;search();});
+  host.querySelector('#audit-refresh').onclick=search;
+  prev.onclick=()=>{if(!busy&&page>0){page--;load();}};next.onclick=()=>{if(!busy&&cursor){pages[++page]=cursor;load();}};load();
+ }};
 })();

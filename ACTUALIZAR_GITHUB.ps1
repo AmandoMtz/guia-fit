@@ -53,7 +53,7 @@ try {
         throw "No se pudieron revisar los cambios preparados."
     }
 
-    Invoke-Git -Argumentos @("commit", "-m", "Mejora verificaciones administrativas")
+    Invoke-Git -Argumentos @("commit", "-m", "Agrega Castor Runner al modo sin conexion")
 
     Write-Host "4/4 Subiendo a GitHub..." -ForegroundColor Cyan
     Invoke-Git -Argumentos @("push", "origin", $Rama)

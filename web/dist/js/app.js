@@ -171,6 +171,7 @@
     else authView();
     window.FIT_PUSH?.mount(moduleContext());
     window.FIT_ATTENDANCE?.mount(moduleContext());
+    window.FIT_OFFLINE_GAME?.mount(moduleContext());
   }
   function authView() {
     const mode = state.mode;
@@ -485,6 +486,7 @@
       events: ["Eventos", "Actividades, reuniones y asistencias verificadas de la facultad."],
       messages: ["Mensajes", "Comunicación directa entre alumnos y docentes de la facultad."],
       notifications: ["Mis avisos", "Activa las notificaciones del dispositivo y consulta tus novedades."],
+      game: ["Castor Runner", "Salta obstáculos y supera tu récord mientras regresa el internet."],
       "food-admin": [
         "Verificar comidas",
         "Aprueba o rechaza los puestos que solicitan publicarse.",
@@ -510,6 +512,7 @@
       ? [
           ["schedule", "calendar", "Mi horario"],
           ["events", "calendar", "Eventos guardados"],
+          ["game", "star", "Castor Runner"],
         ]
       : [
           ["directory", "grid", "Directorio"],
@@ -535,7 +538,7 @@
         .charAt(0)
         .toUpperCase();
     $("#app").innerHTML =
-      `<div class="shell"><header class="topbar app-top">${brand()}<div class="top-actions">${guideMark(true, !!state.user && !state.demo && !state.offline)}${state.user && !state.offline ? `<button class="notification-bell" data-view="notifications" aria-label="Mis avisos">${icon("bell")}<span id="notification-count" hidden></span></button>` : ""}${profileAvatar(initial)}<button class="btn ghost small" id="logout">${icon("exit")}${state.demo ? "Salir de demo" : state.offline ? "Salir del modo offline" : "Cerrar sesión"}</button></div></header><div class="workspace"><nav class="sidebar" aria-label="Navegación principal"><div class="eyebrow">EXPLORA LA FIT</div>${menu.map(([id, i, label]) => `<button class="nav-item ${state.view === id ? "active" : ""}" data-view="${id}" ${state.view === id ? 'aria-current="page"' : ""}>${icon(i)}<span class="nav-label">${label}</span>${id === "messages" ? '<span class="nav-count" id="academic-chat-count" hidden></span>' : ""}</button>`).join("")}<p class="sidebar-note">Facultad de Ingeniería Tampico<br>Universidad Autónoma de Tamaulipas</p></nav><main class="content" id="main"><div class="page-head"><div><span class="eyebrow muted">GUÍA DEL CAMPUS</span><h1>${current[0]}</h1><p>${current[1]}</p></div>${state.demo ? '<span class="badge pending">Modo demostración</span>' : badge(state.verification?.status === "verified")}</div>${state.demo ? '<div class="notice">Demostración: no has iniciado sesión. Los lugares proceden del croquis; sus recorridos todavía deben verificarse.</div>' : ""}${state.offline ? `<div class="offline-banner" role="status"><b>Modo sin conexión</b><span>Solo puedes consultar el horario guardado en este dispositivo y los eventos sincronizados antes de perder la red.${state.offlineSyncedAt ? ` Última sincronización: ${esc(new Date(state.offlineSyncedAt).toLocaleString("es-MX"))}.` : ""}</span></div>` : ""}${state.dataError ? `<div class="notice error" role="alert">${esc(state.dataError)} <button id="retry-data" class="text-button">Reintentar</button></div>` : ""}<div id="view"></div></main></div>${institutionalFooter()}</div>`;
+      `<div class="shell"><header class="topbar app-top">${brand()}<div class="top-actions">${guideMark(true, !!state.user && !state.demo && !state.offline)}${state.user && !state.offline ? `<button class="notification-bell" data-view="notifications" aria-label="Mis avisos">${icon("bell")}<span id="notification-count" hidden></span></button>` : ""}${profileAvatar(initial)}<button class="btn ghost small" id="logout">${icon("exit")}${state.demo ? "Salir de demo" : state.offline ? "Salir del modo offline" : "Cerrar sesión"}</button></div></header><div class="workspace"><nav class="sidebar" aria-label="Navegación principal"><div class="eyebrow">EXPLORA LA FIT</div>${menu.map(([id, i, label]) => `<button class="nav-item ${state.view === id ? "active" : ""}" data-view="${id}" ${state.view === id ? 'aria-current="page"' : ""}>${icon(i)}<span class="nav-label">${label}</span>${id === "messages" ? '<span class="nav-count" id="academic-chat-count" hidden></span>' : ""}</button>`).join("")}<p class="sidebar-note">Facultad de Ingeniería Tampico<br>Universidad Autónoma de Tamaulipas</p></nav><main class="content" id="main"><div class="page-head"><div><span class="eyebrow muted">GUÍA DEL CAMPUS</span><h1>${current[0]}</h1><p>${current[1]}</p></div>${state.demo ? '<span class="badge pending">Modo demostración</span>' : badge(state.verification?.status === "verified")}</div>${state.demo ? '<div class="notice">Demostración: no has iniciado sesión. Los lugares proceden del croquis; sus recorridos todavía deben verificarse.</div>' : ""}${state.offline ? `<div class="offline-banner" role="status"><div><b>Modo sin conexión</b><span>Solo puedes consultar el horario guardado en este dispositivo y los eventos sincronizados antes de perder la red.${state.offlineSyncedAt ? ` Última sincronización: ${esc(new Date(state.offlineSyncedAt).toLocaleString("es-MX"))}.` : ""}</span></div><button class="btn small" type="button" data-offline-game>Jugar Castor Runner</button></div>` : ""}${state.dataError ? `<div class="notice error" role="alert">${esc(state.dataError)} <button id="retry-data" class="text-button">Reintentar</button></div>` : ""}<div id="view"></div></main></div>${institutionalFooter()}</div>`;
     document.querySelectorAll("[data-view]").forEach(
       (b) =>
         (b.onclick = () => {
@@ -574,6 +577,7 @@
       notifications: async () => { await window.FIT_FOOD.render(moduleContext()); if(state.view === "notifications") window.FIT_PUSH?.mount(moduleContext()); },
       schedule: () => window.FIT_SCHEDULE.render(moduleContext()),
       events: () => window.FIT_EVENTS.render(moduleContext()),
+      game: () => window.FIT_OFFLINE_GAME.render(moduleContext()),
     })[state.view]();
     document.querySelectorAll(".place-image img").forEach(
       (img) =>
@@ -1530,6 +1534,7 @@
   }
   async function init() {
     authView();
+    window.FIT_OFFLINE_GAME?.mount(moduleContext());
     if (location.protocol === "file:") return;
     if ("serviceWorker" in navigator)
       navigator.serviceWorker.register("/sw.js").catch(() => {});

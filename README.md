@@ -37,6 +37,7 @@ Web responsiva y aplicación Flutter/Dart para encontrar espacios, comprar comid
 - Recorridos con **Anterior**, **Siguiente**, **Llegué** y reinicio. Filtrado por accesibilidad verificada. No incluye GPS interior ni detecta automáticamente la llegada.
 - Panel web para agregar/editar salones, fotografías, tramos y revisar perfiles. Web y Flutter incluyen revisión de vendedores para administradores.
 - Fotos de entrada en JPG/PNG/WebP, máximo 5 MB, almacenadas en Aiven para conservarlas cuando Render reinicie.
+- **Castor Runner sin conexión**: minijuego ligero para alumnos y docentes con doble salto, dificultad progresiva, obstáculos, estrellas y récord local. También puede probarse en `/juego-castor.html` sin afectar monedas ni EXP.
 
 ## Docentes y eventos de la facultad
 

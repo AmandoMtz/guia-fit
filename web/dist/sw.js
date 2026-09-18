@@ -1,9 +1,10 @@
 /* App shell sin conexión. Las respuestas /api nunca se guardan aquí. */
 importScripts('/push-worker.js?v=3');
-const CACHE = "guia-fit-shell-persistent-v4";
+const CACHE = "guia-fit-shell-persistent-v5";
 const SHELL = [
   "/styles.css?v=20260917a",
   "/campus-map.css",
+  "/offline-game.css?v=20260918a",
   "/config.js",
   "/js/api.js",
   "/js/catalog.js",
@@ -23,10 +24,12 @@ const SHELL = [
   "/js/purchase-rating.js",
   "/js/gamification.js",
   "/js/push-notifications.js?v=4",
+  "/js/offline-game.js?v=20260918a",
+  "/js/offline-game-page.js?v=20260918a",
   "/js/academic-chat.js?v=20260918d",
   "/js/campus-map.js",
   "/js/audit.js?v=20260918c",
-  "/js/app.js?v=20260918d",
+  "/js/app.js?v=20260918e",
   "/contrast-fix.css?v=1",
   "/photo-color-fix.css?v=1",
   "/account-updates.css?v=2",
@@ -45,8 +48,10 @@ const SHELL = [
   "/index.html",
   "/styles.css",
   "/campus-map.css",
+  "/offline-game.css",
   "/js/campus-map.js",
   "/mapa-campus-demo.html",
+  "/juego-castor.html",
   "/js/campus-map-demo.js",
   "/config.js",
   "/assets/brand/correcaminos.png",
@@ -90,6 +95,8 @@ const SHELL = [
   "/js/chatbot.js",
   "/js/gamification.js",
   "/js/purchase-rating.js",
+  "/js/offline-game.js",
+  "/js/offline-game-page.js",
   "/js/app.js",
 ];
 

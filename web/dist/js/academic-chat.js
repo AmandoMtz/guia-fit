@@ -3,7 +3,16 @@
   let ctx=null, activeChat=null, pollTimer=null, listTimer=null, generation=0, searchTimer=null, detailSignature='';
   const maxText=1500;
 
-  const eligible=c=>['student','teacher'].includes(c?.state?.user?.account_type)&&!c.state.demo&&!c.state.offline&&c.client;
+  const academicRole=user=>{
+    const explicit=String(user?.account_type||'').toLowerCase();
+    if(['student','teacher'].includes(explicit))return explicit;
+    const email=String(user?.email||'').trim().toLowerCase();
+    if(/^a\d+@alumnos\.uat\.edu\.mx$/.test(email))return 'student';
+    if(/@docentes\.uat\.edu\.mx$/.test(email))return 'teacher';
+    if(/@uat\.edu\.mx$/.test(email)&&!/@alumnos\.uat\.edu\.mx$/.test(email))return 'teacher';
+    return null;
+  };
+  const eligible=c=>!!academicRole(c?.state?.user)&&!c.state.demo&&!c.state.offline&&c.client;
   const api=async(c,path,method='GET',body)=>{
     const owner=c.state.user?.id;
     const r=await c.client.request('/api/academic-chat'+path,method,body);
@@ -32,7 +41,7 @@
     const n=Number(count||0);el.textContent=n>99?'99+':String(n);el.hidden=n===0;
   }
   function skeleton(c){
-    const target=c.state.user.account_type==='student'?'docente':'alumno';
+    const target=academicRole(c.state.user)==='student'?'docente':'alumno';
     return `<div class="academic-chat-grid">
       <aside class="panel academic-chat-side">
         <div class="academic-chat-side-head"><div><span class="eyebrow">CONTACTOS FIT</span><h2>Mensajes</h2></div><span class="academic-retention-chip">7 días</span></div>

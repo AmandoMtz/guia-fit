@@ -65,6 +65,16 @@
       : `<div class="guide-mark ${compact ? "compact" : ""}" aria-label="Guía FIT">${inner}</div>`;
   };
   let client = null;
+  function academicChatRole(user) {
+    const explicit = String(user?.account_type || "").toLowerCase();
+    if (["student", "teacher"].includes(explicit)) return explicit;
+    const email = String(user?.email || "").trim().toLowerCase();
+    if (/^a\d+@alumnos\.uat\.edu\.mx$/.test(email)) return "student";
+    if (/@docentes\.uat\.edu\.mx$/.test(email)) return "teacher";
+    if (/@uat\.edu\.mx$/.test(email) && !/@alumnos\.uat\.edu\.mx$/.test(email)) return "teacher";
+    return null;
+  }
+  const canUseAcademicChat = (user) => !!academicChatRole(user);
   const state = {
     mode: "login",
     user: null,
@@ -444,6 +454,10 @@
     state.profile = responses[0].data;
     if (state.user && state.profile)
       state.user.food_seller_intent = state.profile.food_seller_intent;
+    if (state.user) {
+      const detectedAcademicRole = academicChatRole(state.user);
+      if (detectedAcademicRole) state.user.account_type = detectedAcademicRole;
+    }
     state.verification = responses[1].data;
     state.admin = responses[2].data?.role === "admin";
     state.dataError = responses.some((r) => r.error)
@@ -493,7 +507,7 @@
       : [
           ["directory", "grid", "Directorio"],
           ["faculty", "star", "Conecta con la FIT"],
-          ...(["student", "teacher"].includes(state.user?.account_type) ? [["messages", "chat", "Mensajes"]] : []),
+          ...(canUseAcademicChat(state.user) ? [["messages", "chat", academicChatRole(state.user) === "teacher" ? "Mensajes de alumnos" : "Mensajes con docentes"]] : []),
           ["map", "map", "Mapa del campus"],
           ["route", "route", "Cómo llegar"],
           ["food", "food", "Comidas"],
@@ -590,7 +604,7 @@
     polling = true;
     const userId = state.user.id;
     try {
-      const canMessage = ["student", "teacher"].includes(state.user?.account_type);
+      const canMessage = canUseAcademicChat(state.user);
       const [foodResult, academicResult] = await Promise.all([
         client.request("/api/food/notifications"),
         canMessage ? client.request("/api/academic-chat/unread") : Promise.resolve({ data: { unread_count: 0 } }),
@@ -1001,7 +1015,7 @@
       `<section class="profile-hero"><div>${profileAvatar(null, true)}<div><span class="eyebrow">TU ESPACIO EN LA FIT</span><h2>${esc(p.full_name || "Mi cuenta")}</h2><p>${state.user.account_type === "teacher" ? "Docente" : state.user.account_type === "admin" ? "Administrador" : state.user.account_type === "student" ? (p.food_seller_intent ? "Alumno vendedor" : "Alumno") : "Cuenta externa"}</p></div></div><form id="profile-photo-form" class="photo-upload-card"><span class="photo-upload-title">Tu foto, tu estilo</span><label class="photo-file-picker"><span class="photo-picker-icon">${icon("photo")}</span><span><strong>Elegir una foto</strong><small>JPG, PNG o WebP · Hasta 5 MB</small></span>${icon("plus")}<input type="file" id="profile-photo" aria-label="Elegir foto de perfil" accept="image/jpeg,image/png,image/webp" required></label><p id="photo-file-name" class="photo-file-name" aria-live="polite">Elige una imagen para ajustar el encuadre.</p><div class="photo-upload-actions"><button class="btn photo-save" type="submit" disabled>${icon("check")}<span>Ajustar y guardar</span></button>${p.photo_updated_at ? '<button class="photo-remove" type="button" id="delete-avatar">Quitar foto</button>' : ""}</div></form></section><div class="profile-grid"><section class="panel"><h2>Mis datos</h2><form id="profile-form">${field("full_name", "Nombre completo", "text", "name")}<div class="field"><label>Correo electrónico</label><p>${esc(state.user.email)}</p><span class="account-detected ${esc(state.user.account_type || "other")}">${state.user.account_type === "teacher" ? "Cuenta docente detectada por dominio institucional" : state.user.account_type === "student" ? "Cuenta de alumno detectada por matrícula institucional" : state.user.account_type === "admin" ? "Cuenta administradora" : "Dominio institucional no clasificado"}</span></div>${state.user.account_type === "student" ? field("student_id", "Matrícula (opcional)", "text", "off", "Se validará únicamente con una fuente institucional autorizada.") + field("career", "Carrera / programa académico", "text", "off", "Se usa para mostrarte eventos cerrados dirigidos a tu carrera.") : ""}<button class="btn">Guardar cambios</button><p class="hint" style="margin-top:16px">Los docentes se identifican por correos <b>@uat.edu.mx</b> o <b>@docentes.uat.edu.mx</b>. Los alumnos usan el formato <b>a…@alumnos.uat.edu.mx</b>.</p></form></section><section class="panel"><h2>Estado de tu cuenta</h2><p class="hint">Identificador para revisión institucional:<br><span style="overflow-wrap:anywhere">${esc(state.user.id)}</span></p><div class="status-item">${badge(!!state.user.email_confirmed_at)}<p>Correo electrónico</p></div><div class="status-item">${badge(state.verification?.status === "verified")}<p>Vinculación con la facultad</p><p class="hint">${state.verification?.status === "verified" ? "Confirmada por un administrador con una fuente autorizada." : "Pendiente de contrastar tus datos con una fuente institucional autorizada."}</p></div><p class="hint" style="margin-top:20px">La clasificación alumno/docente proviene del formato del correo institucional; la verificación institucional sigue siendo un proceso separado.</p></section></div>`;
     $("#view").insertAdjacentHTML(
       "beforeend",
-      `${state.user.account_type === "student" ? `<section class="panel account-mode-panel"><div><span class="eyebrow">UNA CUENTA, MÁS POSIBILIDADES</span><h2>Mi tipo de cuenta</h2><p>Activa tu espacio de ventas cuando lo necesites. Conservas tu acceso de alumno y tus pedidos.</p></div><form id="account-mode-form"><label class="field">Usar mi cuenta como<select name="mode"><option value="student" ${!p.food_seller_intent ? "selected" : ""}>Alumno</option><option value="student_seller" ${p.food_seller_intent ? "selected" : ""}>Alumno vendedor</option></select></label><button class="btn" type="submit">Guardar tipo de cuenta</button><button class="text-button" id="go-my-shop" type="button">${p.food_seller_intent ? "Configurar mi puesto" : "Ver Comidas"} →</button><p class="hint">El puesto necesita aprobación antes de publicar. Si vuelves a Alumno, se oculta tu puesto y se pausan nuevos pedidos; puedes terminar los que ya recibiste.</p></form></section>` : `<section class="panel account-role-panel"><span class="eyebrow">ROL INSTITUCIONAL</span><h2>${state.user.account_type === "teacher" ? "Cuenta docente" : state.user.account_type === "admin" ? "Cuenta administradora" : "Cuenta sin clasificación institucional"}</h2><p>${state.user.account_type === "teacher" ? "Tu correo te habilita el horario simplificado para docentes y la creación de eventos exclusivos para docentes." : state.user.account_type === "admin" ? "Puedes administrar eventos para alumnos, consultar las cuentas registradas y entregar monedas o premios, además de generar QR y reportes de asistencia." : "Las funciones de eventos se habilitan al reconocer un correo institucional de alumno o docente."}</p></section>`}`,
+      `${state.user.account_type === "student" ? `<section class="panel account-mode-panel"><div><span class="eyebrow">UNA CUENTA, MÁS POSIBILIDADES</span><h2>Mi tipo de cuenta</h2><p>Activa tu espacio de ventas cuando lo necesites. Conservas tu acceso de alumno y tus pedidos.</p></div><form id="account-mode-form"><label class="field">Usar mi cuenta como<select name="mode"><option value="student" ${!p.food_seller_intent ? "selected" : ""}>Alumno</option><option value="student_seller" ${p.food_seller_intent ? "selected" : ""}>Alumno vendedor</option></select></label><button class="btn" type="submit">Guardar tipo de cuenta</button><button class="text-button" id="go-my-shop" type="button">${p.food_seller_intent ? "Configurar mi puesto" : "Ver Comidas"} →</button><p class="hint">El puesto necesita aprobación antes de publicar. Si vuelves a Alumno, se oculta tu puesto y se pausan nuevos pedidos; puedes terminar los que ya recibiste.</p></form></section>` : `<section class="panel account-role-panel"><span class="eyebrow">ROL INSTITUCIONAL</span><h2>${state.user.account_type === "teacher" ? "Cuenta docente" : state.user.account_type === "admin" ? "Cuenta administradora" : "Cuenta sin clasificación institucional"}</h2><p>${state.user.account_type === "teacher" ? "Tu correo te habilita el horario simplificado, los eventos para docentes y el apartado Mensajes de alumnos para leer y responder conversaciones." : state.user.account_type === "admin" ? "Puedes administrar eventos para alumnos, consultar las cuentas registradas y entregar monedas o premios, además de generar QR y reportes de asistencia." : "Las funciones de eventos se habilitan al reconocer un correo institucional de alumno o docente."}</p></section>`}`,
     );
     if (state.user && !state.offline) {
       $("#view").insertAdjacentHTML(

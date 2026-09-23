@@ -142,3 +142,15 @@
 .cm-cancha { fill:#ba7964; stroke:#81574b; stroke-width:2; }
 .cm-court-surface { fill:#739b91; }
 .cm-dot-building { background:#b96570; }.cm-dot-sport { background:#84a961; }
+
+/* La selección sigue la planta; conserva el gris del techo en ambos niveles. */
+.cm-campus .cm-building.is-selected .cm-roof { stroke:#626970; stroke-width:2; }
+.cm-building.is-selected .cm-roof-rim { stroke:#e1e3e5; }
+.cm-floor-outline { fill:none; stroke:#ff0000; stroke-width:3.5; stroke-linejoin:round; pointer-events:none; }
+.cm-special-body { fill:#d7ac4a; stroke:#644b24; stroke-width:.65; }
+.cm-special-silver .cm-special-body { fill:#e0e4e8; stroke:#727b83; }
+.cm-special-black .cm-special-body { fill:#272b34; stroke:#11141c; }
+.cm-special-beetle .cm-special-body { fill:#ed303b; stroke:#9b1625; }
+.cm-tire { fill:#20242a; }.cm-special-glass { fill:#6b9dac; stroke:#283c49; stroke-width:.5; }
+.cm-headlight { fill:#fff8d0; }.cm-taillight { fill:#b10d23; }
+.cm-spoiler { fill:#353943; }.cm-racing-stripe { fill:#272b34; }

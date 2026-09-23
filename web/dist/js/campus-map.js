@@ -73,7 +73,7 @@
   }
   const points = (poly,h,c) => poly.map((p)=>project(p,h,c).map((v)=>v.toFixed(2)).join(",")).join(" ");
   const polygon = (poly,h,c,cls) => '<polygon class="'+cls+'" points="'+points(poly,h,c)+'"/>';
-  function volume(b,c,selected) {
+  function volume(b,c,selected,floor) {
     const cls = b.id ? "cm-building"+(selected===b.id?" is-selected":"") : "cm-unknown";
     let sides = "";
     const screenPoly=(ps,cls)=>'<polygon class="'+cls+'" points="'+ps.map(p=>p.join(',')).join(' ')+'"/>';
@@ -99,10 +99,20 @@
       });
       sides=faces.sort((a,b)=>a.depth-b.depth).map(f=>f.svg).join('');
     }
+    let outline='';
+    if(selected===b.id && b.height) {
+      const ground=FLOORS[b.id] && floor!=="upper";
+      if(ground && c.mode==='3d') {
+        outline=b.footprint.map((p,i)=>{
+          const q=b.footprint[(i+1)%b.footprint.length];
+          return project(q,0,c)[0]<project(p,0,c)[0] ? '<polyline class="cm-floor-outline" points="'+points([p,q],0,c)+'"/>' : '';
+        }).join('');
+      } else outline=polygon(b.footprint,ground?0:b.height,c,'cm-floor-outline');
+    }
     const rim=b.height?polygon(b.footprint,b.height,c,'cm-roof-rim'):'';
     return '<g class="'+cls+'"'+(b.id ? ' data-building="'+b.id+'" role="button" tabindex="0" aria-label="'+esc(b.name)+'" aria-pressed="'+(selected===b.id)+'"' : ' aria-hidden="true"')+'>'+
       (b.id ? '<title>'+esc(b.name)+'</title>' : '')+sides+
-      polygon(b.footprint,b.height,c,b.height?"cm-roof":"cm-ground cm-"+b.id)+rim+'</g>';
+      polygon(b.footprint,b.height,c,b.height?"cm-roof":"cm-ground cm-"+b.id)+rim+outline+'</g>';
   }
   function line(poly,c,cls="cm-court-line") {
     return '<polyline class="'+cls+'" points="'+points(poly,0,c)+'"/>';
@@ -110,7 +120,23 @@
   function circlePath(cx,cy,r,c) {
     return line(Array.from({length:37},(_,i)=>[cx+Math.cos(i*Math.PI/18)*r,cy+Math.sin(i*Math.PI/18)*r]),c);
   }
-  function scene(value = {}, selected = "", origin = "") {
+  // Cuatro coches especiales, dibujados en coordenadas del estacionamiento.
+  function specialCar(x,y,kind,c) {
+    const part=(poly,z,cls)=>polygon(poly.map(p=>[x+p[0],y+p[1]]),z,c,cls);
+    const box=(a,b,w,h,z,cls)=>part(rect(a,b,w,h),z,cls);
+    const beetle=kind==='beetle';
+    let html='<g class="cm-special-car cm-special-'+kind+'"><title>'+({gold:'Superdeportivo dorado',silver:'Gran turismo plateado',black:'Superdeportivo negro',beetle:'Bochito rojo'}[kind])+'</title>';
+    html+=box(4,0,7,3,1,'cm-tire')+box(23,0,7,3,1,'cm-tire')+box(4,12,7,3,1,'cm-tire')+box(23,12,7,3,1,'cm-tire');
+    html+=part(beetle?[[1,5],[4,2],[10,1],[25,1],[31,4],[33,7],[31,11],[25,14],[10,14],[4,12],[1,9]]:[[0,4],[5,1],[28,1],[35,4],[35,11],[28,14],[5,14],[0,11]],3,'cm-special-body');
+    html+=part(beetle?[[9,4],[13,2],[22,2],[26,5],[26,10],[22,13],[13,13],[9,10]]:[[12,3],[23,3],[27,5],[27,10],[23,12],[12,12],[9,10],[9,5]],5,'cm-special-glass');
+    html+=box(14,3,7,9,6,'cm-special-body');
+    html+=box(31,3,2,3,4,'cm-headlight')+box(31,10,2,3,4,'cm-headlight');
+    html+=box(2,3,2,3,4,'cm-taillight')+box(2,10,2,3,4,'cm-taillight');
+    if(!beetle) html+=box(4,0,2,15,5,'cm-spoiler');
+    if(kind==='gold') html+=box(27,6,6,3,4,'cm-racing-stripe');
+    return html+'</g>';
+  }
+  function scene(value = {}, selected = "", origin = "", floor = "ground") {
     const c=camera(value);
     const surfaces=polygon([[66,70],[112,40],[417,40],[417,197],[610,197],[730,410],[730,880],[150,880],[150,780],[66,780]],0,c,"cm-site")+
       polygon(rect(70,469,255,222),0,c,"cm-curb")+polygon(rect(76,475,243,210),0,c,"cm-parking");
@@ -119,7 +145,9 @@
       const y=485+row*19;
       for(const x of [83,174,267]) {
         parking+=line([[x,y],[x+43,y],[x+43,y+19]],c,'cm-parking-line');
-        if((row+x)%3!==0) {
+        if(x===174 && row<4) {
+          parking+=specialCar(x+4,y+2,['gold','silver','black','beetle'][row],c);
+        } else if((row+x)%3!==0) {
           parking+=polygon(rect(x+6,y+4,29,11),2,c,'cm-car cm-car-'+row%3);
           parking+=polygon(rect(x+14,y+5,12,9),3,c,'cm-car-glass');
         }
@@ -130,7 +158,7 @@
     const objects=[...BUILDINGS,...UNKNOWN].sort((a,b)=>{
       const depth=(o)=>Math.max(...o.footprint.map((p)=>project(p,0,c)[1]));
       return depth(a)-depth(b);
-    }).map((b)=>volume(b,c,selected)).join("");
+    }).map((b)=>volume(b,c,selected,floor)).join("");
     const grass=Array.from({length:8},(_,i)=>polygon(rect(126,72+i*42,266,42),0,c,i%2?'cm-grass-dark':'cm-grass-light')).join('');
     const courts = grass+line([...rect(134,82,250,319),[134,82]],c)+line([[134,242],[384,242]],c)+circlePath(259,242,34,c)+
       line([[190,82],[190,132],[328,132],[328,82]],c)+line([[224,82],[224,102],[294,102],[294,82]],c)+
@@ -198,7 +226,7 @@
     const q=(s)=>host.querySelector(s), viewport=q("[data-scene]");
     function announce(message) { q("[data-status]").textContent=message; }
     function drawScene() {
-      viewport.innerHTML=scene(c,selected,origin);
+      viewport.innerHTML=scene(c,selected,origin,floor);
       q("[data-zoom]").textContent=Math.round(c.zoom*100)+"%";
       host.querySelectorAll("[data-mode]").forEach((el)=>el.setAttribute("aria-pressed",String(el.dataset.mode===c.mode)));
       q('[data-action="left"]').disabled=c.mode==="2d";
@@ -246,7 +274,7 @@
         if(item) options.onDetails(item.id);
         return;
       }
-      if(target.dataset.floor){floor=target.dataset.floor==='upper'?'upper':'ground';drawDetail();q('[data-floor="'+floor+'"]').focus({preventScroll:true});return;}
+      if(target.dataset.floor){floor=target.dataset.floor==='upper'?'upper':'ground';drawDetail();drawScene();q('[data-floor="'+floor+'"]').focus({preventScroll:true});return;}
       if(target.dataset.mode) { c={...c,mode:target.dataset.mode,panX:0,panY:0}; drawScene(); return; }
       switch(target.dataset.action) {
         case "left": c.angle=c.angle<=-180?165:c.angle-15; break;

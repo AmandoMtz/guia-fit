@@ -1,6 +1,6 @@
 /* App shell sin conexión. Las respuestas /api nunca se guardan aquí. */
 importScripts('/push-worker.js?v=3');
-const CACHE = "guia-fit-shell-mapa-1790178323";
+const CACHE = "guia-fit-shell-mapa-1790178827";
 const SHELL = [
   "/styles.css?v=20260917a",
   "/campus-map.css",

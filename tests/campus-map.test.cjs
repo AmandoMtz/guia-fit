@@ -4,7 +4,7 @@ const assert = require("node:assert/strict");
 const map = require("../web/dist/js/campus-map.js");
 
 test("campus model keeps legible buildings and does not claim room numbers", () => {
-  assert.equal(new Set(map.BUILDINGS.map((b) => b.id)).size, 8);
+  assert.equal(new Set(map.BUILDINGS.map((b) => b.id)).size, 9);
   assert.equal(map.BUILDINGS.find((b) => b.id === "edificio-b").footprint[0][1], 705);
   assert.ok(map.BUILDINGS.find((b) => b.id === "edificio-c").footprint[0][1] > 705);
   assert.ok(map.BUILDINGS.every((b) => Object.isFrozen(b.footprint)));
@@ -54,7 +54,7 @@ test("search finds registered spaces only through explicit building association"
   assert.deepEqual(map.searchBuildings("salon prueba",places).map((b)=>b.id),["edificio-b"]);
   assert.equal(map.searchBuildings("salon sin edificio",places).length,0);
   assert.deepEqual(map.searchBuildings("CAFETERIA",places).map((b)=>b.id),["cafeteria"]);
-  assert.equal(map.searchBuildings("",places).length,8);
+  assert.equal(map.searchBuildings("",places).length,9);
 });
 
 test("place names and IDs cannot inject markup into the detail panel", () => {
@@ -75,14 +75,30 @@ test("manual location is explicitly labelled and invalid locations are ignored",
   assert.ok(!map.scene({},"<script>","<script>").includes("<script>"));
 });
 
-test("both views keep eight keyboard-selectable locations and exclude unknown blocks", () => {
+test("both views keep nine keyboard-selectable locations and exclude unknown blocks", () => {
   for (const mode of ["2d","3d"]) {
     const html=map.scene({mode},"edificio-b");
-    assert.equal((html.match(/role="button"/g)||[]).length,8);
-    assert.equal((html.match(/tabindex="0"/g)||[]).length,8);
+    assert.equal((html.match(/role="button"/g)||[]).length,9);
+    assert.equal((html.match(/tabindex="0"/g)||[]).length,9);
     assert.equal((html.match(/aria-pressed="true"/g)||[]).length,1);
     assert.equal(html.includes('class="cm-wall"'),mode==="3d");
     assert.ok(html.includes("No indica rutas ni posición GPS."));
     assert.ok(!html.includes("NaN"));
   }
+});
+
+
+test("Posgrado: edificio contiguo y espacios por planta",()=>{
+ assert.equal(map.BUILDINGS[2].id,'posgrado');
+ assert.equal(map.BUILDINGS[8].id,'administracion-posgrado');
+ const lower=map.floorMarkup('posgrado','ground'),upper=map.floorMarkup('posgrado','upper');
+ assert.ok(lower.indexOf('<strong>Auditorio de Posgrado')<lower.indexOf('<strong>Salón 2'));
+ assert.ok(lower.indexOf('<strong>Salón 2')<lower.indexOf('<strong>Salón 1'));
+ assert.match(upper,/from-right/);
+ for(const room of [5,6,7,8])assert.match(upper,new RegExp('Salón '+room));
+ assert.doesNotMatch(lower,/Salón 5/);
+ assert.match(map.floorMarkup('administracion-posgrado','ground'),/Sala A/);
+ assert.match(map.floorMarkup('administracion-posgrado','ground'),/Sala B/);
+ assert.match(map.floorMarkup('administracion-posgrado','upper'),/Área Administrativa/);
+ assert.equal(map.searchBuildings('salon 7',[])[0].id,'posgrado');
 });

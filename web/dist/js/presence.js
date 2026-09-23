@@ -51,11 +51,23 @@
   const target=document.querySelector('.top-actions');
   if(target&&!document.querySelector('#fit-presence-mode')){
    const label=document.createElement('div');label.className='fit-presence-control';
-   label.innerHTML=`<span class="presence-caption">Mi estado</span>${badge(id)}<details class="presence-picker"><summary id="fit-presence-mode" aria-label="Cambiar mi estado" aria-haspopup="menu" aria-expanded="false"></summary><div class="presence-options" role="menu" aria-label="Estado de conexión">${Object.entries(labels).map(([value,text])=>`<button type="button" role="menuitemradio" data-mode-value="${value}" aria-checked="false"><span class="presence-dot" data-status="${value}"></span><span><strong>${text}</strong><small>${{online:'Ausente tras 10 min sin actividad',away:'Estoy disponible más tarde',dnd:'Silenciar notificaciones externas',offline:'Aparecer sin conexión'}[value]}</small></span><span class="presence-check" aria-hidden="true">✓</span></button>`).join('')}</div></details>`;
+   label.innerHTML=`<span class="presence-caption">Mi estado</span>${badge(id)}<details class="presence-picker"><summary id="fit-presence-mode" aria-label="Cambiar mi estado" aria-haspopup="menu" aria-expanded="false"></summary><div class="presence-options" popover="manual" role="menu" aria-label="Estado de conexión">${Object.entries(labels).map(([value,text])=>`<button type="button" role="menuitemradio" data-mode-value="${value}" aria-checked="false"><span class="presence-dot" data-status="${value}"></span><span><strong>${text}</strong><small>${{online:'Ausente tras 10 min sin actividad',away:'Estoy disponible más tarde',dnd:'Silenciar notificaciones externas',offline:'Aparecer sin conexión'}[value]}</small></span><span class="presence-check" aria-hidden="true">✓</span></button>`).join('')}</div></details>`;
    target.prepend(label);syncMenu();
    const picker=label.querySelector('details'),summary=label.querySelector('summary');
    const options=[...label.querySelectorAll('[data-mode-value]')];
-   picker.addEventListener('toggle',()=>summary.setAttribute('aria-expanded',String(picker.open)));
+   const menu=label.querySelector('.presence-options');
+   function positionMenu(){
+    const box=summary.getBoundingClientRect(),width=Math.min(300,innerWidth-24);
+    menu.style.width=width+'px';menu.style.left=Math.max(12,Math.min(box.right-width,innerWidth-width-12))+'px';
+    menu.style.top=Math.min(box.bottom+8,Math.max(12,innerHeight-320))+'px';
+    menu.style.maxHeight=Math.max(140,innerHeight-parseFloat(menu.style.top)-12)+'px';
+   }
+   picker.addEventListener('toggle',()=>{
+    summary.setAttribute('aria-expanded',String(picker.open));
+    if(picker.open){if(menu.showPopover&&!menu.matches(':popover-open'))menu.showPopover();positionMenu();}
+    else if(menu.hidePopover&&menu.matches(':popover-open'))menu.hidePopover();
+   });
+   menu.addEventListener('keydown',event=>{if(event.key==='Escape'){picker.open=false;summary.focus();}});
    options.forEach(option=>option.onclick=async()=>{
     const chosen=option.dataset.modeValue;
     options.forEach(b=>b.disabled=true);summary.setAttribute('aria-busy','true');

@@ -16,15 +16,15 @@
   const BUILDINGS = [
     { id:"campo", name:"Campo de futbol", short:"Futbol", type:"Deportivo", anchor:[259,230], footprint:rect(118,64,282,356), height:0, placeIds:["campo-futbol"], aliases:[], note:"Campo de futbol al norte del conjunto." },
     { id:"laboratorios", name:"Laboratorios", short:"Lab", type:"Académico", anchor:[214,442], footprint:rect(134,420,159,44), height:30, placeIds:[], aliases:["laboratorios",'edificio laboratorios'], note:"Bloque identificado como Laboratorios en el plano, al sur del campo de futbol." },
-    { id:"posgrado", name:"Salones de Posgrado", short:"Posgrado", type:"Académico", anchor:[514,315], footprint:[[482,213],[522,213],[522,334],[548,334],[548,401],[482,401]], height:30, placeIds:[], aliases:["posgrado","salones de posgrado","edificio posgrado"], note:"Sector de salones de Posgrado. Las fichas del directorio asociadas a Posgrado no indican todavía la puerta exacta de cada sala." },
+    { id:"posgrado", name:"Salones de Posgrado", short:"Posgrado", type:"Académico", anchor:[514,315], footprint:[[482,213],[522,213],[522,334],[548,334],[548,401],[482,401]], height:30, placeIds:[], aliases:["posgrado","salones de posgrado","edificio posgrado"], note:"Edificio 3 · Auditorio de Posgrado y salones distribuidos en dos plantas. Selecciona una planta para ver sus espacios." },
     { id:"administrativo", name:"Edificio Administrativo", short:"Adm", type:"Servicios", anchor:[365,482], footprint:[[322,420],[399,420],[399,485],[590,485],[590,555],[322,555]], height:30, placeIds:[], aliases:["administrativo","edificio administrativo"], note:"Conjunto central identificado como Administrativo. Las oficinas y entradas interiores requieren confirmación." },
     { id:"cancha", name:"Cancha de basquetbol", short:"Cancha", type:"Deportivo", anchor:[653,490], footprint:rect(600,421,102,138), height:0, placeIds:[], aliases:[], note:"Cancha reconocible por sus líneas de juego, al oriente del conjunto central." },
     { id:"cafeteria", name:"Cafetería", short:"Café", type:"Servicios", anchor:[685,623], footprint:rect(667,583,35,79), height:30, placeIds:["cafeteria"], aliases:["cafeteria","edificio cafeteria"], note:"Edificio identificado como Cafetería, al norte del extremo oriente del edificio B." },
     { id:"edificio-b", name:"Edificio B", short:"B", type:"Académico", anchor:[430,734], footprint:rect(177,705,507,58), height:30, placeIds:[], aliases:["b","edificio b"], note:"Bloque largo identificado como B. La numeración de los salones no se alcanza a leer en la imagen compartida." },
     { id:"edificio-c", name:"Edificio C", short:"C", type:"Académico", anchor:[430,837], footprint:rect(171,813,515,47), height:30, placeIds:[], aliases:["c","edificio c"], note:"Bloque largo identificado como C, al sur del edificio B. Falta confirmar salones, escaleras y accesos." },
+    { id:"administracion-posgrado", name:"Área Administrativa de Posgrado", short:"Adm. Posgrado", type:"Posgrado", anchor:[576,280], footprint:rect(558,230,37,105), height:30, placeIds:[], aliases:["administracion de posgrado","area administrativa de posgrado"], note:"Junto al edificio 3. Sala A y Sala B en planta baja; área administrativa en planta alta." },
   ];
   const UNKNOWN = [
-    { footprint:rect(558,230,37,105), height:30 },
     { footprint:rect(465,587,79,76), height:30 },
     { footprint:rect(679,892,38,47), height:20 },
   ];
@@ -45,7 +45,7 @@
   }
   function searchBuildings(query, places) {
     const q = norm(query);
-    return BUILDINGS.filter((b) => !q || norm(b.name + " " + b.type).includes(q) ||
+    return BUILDINGS.filter((b) => !q || norm(b.name + " " + b.type + " " + (FLOORS[b.id]?Object.values(FLOORS[b.id]).flat().join(" "):"")).includes(q) ||
       placesFor(b.id, places).some((p) => norm(p.name).includes(q)));
   }
   function camera(value = {}) {
@@ -124,11 +124,22 @@
       '<g aria-hidden="true">'+surfaces+parking+'</g>'+objects+'<g class="cm-courts" aria-hidden="true">'+courts+'</g>'+labels+marker+'</svg>'+
       '<div class="cm-compass" aria-label="Norte del plano"><svg viewBox="0 0 60 60" aria-hidden="true"><circle cx="30" cy="30" r="26"/><g transform="rotate('+angle+' 30 30)"><path d="M30 9l9 27-9-5-9 5z"/><text x="30" y="49">N</text></g></svg></div>';
   }
-  function detailMarkup(id, places, origin, canOpen) {
+  const FLOORS={
+    posgrado:{ground:['Auditorio de Posgrado','Salón 2','Salón 1'],upper:['Salón 5','Salón 6','Salón 7','Salón 8']},
+    'administracion-posgrado':{ground:['Sala A','Sala B'],upper:['Área Administrativa de Posgrado']}
+  };
+  function floorMarkup(id,floor='ground'){
+    const rooms=FLOORS[id];if(!rooms)return '';
+    floor=floor==='upper'?'upper':'ground';
+    const reverse=id==='posgrado'&&floor==='upper';
+    return '<section class="cm-floors" aria-label="Espacios por planta"><h4>Dentro del edificio</h4><div class="cm-floor-tabs" role="group" aria-label="Seleccionar planta">'+
+      ['ground','upper'].map(key=>'<button type="button" data-floor="'+key+'" aria-pressed="'+(floor===key)+'">'+(key==='ground'?'Planta baja':'Planta alta')+'</button>').join('')+'</div><p class="cm-floor-direction">'+(reverse?'Desde el lado derecho: 5 → 6 → 7 → 8':id==='posgrado'?'Orden indicado: Auditorio → Salón 2 → Salón 1':'Espacios de esta planta')+'</p><div class="cm-room-plan'+(reverse?' from-right':'')+'">'+rooms[floor].map((name,i)=>'<div class="cm-room"><span>'+(i+1)+'</span><strong>'+esc(name)+'</strong></div>').join('')+'</div><p class="cm-small">Distribución esquemática, sin escala. No representa puertas ni dimensiones.</p></section>';
+  }
+  function detailMarkup(id, places, origin, canOpen, floor='ground') {
     const b=byId(id);
     if(!b) return '<h3>Explora tu facultad</h3><p>Toca un edificio en el mapa o búscalo por su nombre.</p>';
     const related=placesFor(b.id,places);
-    return '<p class="cm-kicker">'+esc(b.type)+'</p><h3>'+esc(b.name)+'</h3><p>'+esc(b.note)+'</p>'+
+    return '<p class="cm-kicker">'+esc(b.type)+'</p><h3>'+esc(b.name)+'</h3><p>'+esc(b.note)+'</p>'+floorMarkup(id,floor)+
       '<button type="button" class="cm-primary" data-action="origin" aria-pressed="'+(origin===b.id)+'">'+(origin===b.id?'Quitar mi referencia':'Estoy en este lugar')+'</button>'+
       '<p class="cm-small">La referencia la eliges tú; no se detecta tu ubicación.</p>'+
       (related.length ? '<h4>Fichas del directorio</h4><p class="cm-small">Asociación por edificio; ubicación interior por confirmar.</p><ul class="cm-places">'+related.map((p)=>
@@ -138,7 +149,7 @@
   function mount(host, options = {}) {
     if(!host || typeof host.querySelector !== "function") throw new TypeError("Se necesita un contenedor HTML.");
     const places=Array.isArray(options.places)?options.places:[];
-    let c=camera(), selected="edificio-b", origin="", query="", gesture=null, suppressClick=false;
+    let c=camera(), selected="posgrado", floor="ground", origin="", query="", gesture=null, suppressClick=false;
     host.innerHTML='<section class="cm-campus" aria-label="Explorador del campus">'+
       '<div class="cm-heading"><div><p class="cm-kicker">Conoce tu facultad</p><h2>Explora el campus</h2><p>Encuentra un edificio y reconoce los espacios que lo rodean.</p></div><span class="cm-version">Basado en tu plano</span></div>'+
       '<div class="cm-toolbar"><div class="cm-modes" role="group" aria-label="Vista del mapa"><button type="button" data-mode="3d" aria-pressed="true">Vista 3D</button><button type="button" data-mode="2d" aria-pressed="false">Plano 2D</button></div>'+
@@ -171,12 +182,12 @@
         '<p class="cm-empty">No encontramos ese nombre en el plano. Prueba con el nombre del edificio.</p>';
     }
     function drawDetail() {
-      q("[data-detail]").innerHTML=detailMarkup(selected,places,origin,typeof options.onDetails==="function");
+      q("[data-detail]").innerHTML=detailMarkup(selected,places,origin,typeof options.onDetails==="function",floor);
       q("[data-location]").textContent=origin?"Referencia indicada por ti: "+byId(origin).name+". No es una posición GPS.":"Puedes indicar en qué edificio estás desde su ficha.";
     }
     function choose(id,keyboard) {
       if(!byId(id)) return;
-      selected=id; drawScene(); drawList(); drawDetail(); announce("Seleccionaste "+byId(id).name+".");
+      selected=id; floor="ground"; drawScene(); drawList(); drawDetail(); announce("Seleccionaste "+byId(id).name+".");
       if(keyboard) {
         const target=viewport.querySelector('[data-building="'+id+'"]');
         if(target) target.focus({preventScroll:true});
@@ -190,7 +201,7 @@
         suppressClick=false;
         if(viewport.contains(event.target)) return;
       }
-      const target=event.target.closest("[data-building],[data-select],[data-action],[data-mode],[data-place]");
+      const target=event.target.closest("[data-building],[data-select],[data-action],[data-mode],[data-place],[data-floor]");
       if(!target || !host.contains(target)) return;
       if(target.dataset.building || target.dataset.select) {
         const isKeyboard=event.detail===0;
@@ -203,6 +214,7 @@
         if(item) options.onDetails(item.id);
         return;
       }
+      if(target.dataset.floor){floor=target.dataset.floor==='upper'?'upper':'ground';drawDetail();q('[data-floor="'+floor+'"]').focus({preventScroll:true});return;}
       if(target.dataset.mode) { c={...c,mode:target.dataset.mode,panX:0,panY:0}; drawScene(); return; }
       switch(target.dataset.action) {
         case "left": c.angle=c.angle<=-180?165:c.angle-15; break;
@@ -257,5 +269,5 @@
     drawScene(); drawList(); drawDetail();
     return { destroy() { host.replaceChildren(); } };
   }
-  return Object.freeze({ BUILDINGS, project, viewBox, camera, placesFor, searchBuildings, scene, detailMarkup, mount });
+  return Object.freeze({ BUILDINGS, project, viewBox, camera, placesFor, searchBuildings, scene, floorMarkup, detailMarkup, mount });
 });

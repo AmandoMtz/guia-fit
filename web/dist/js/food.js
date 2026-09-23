@@ -33,6 +33,7 @@
     return `<label class="field">${label}<input name="${name}" value="${c.esc(value)}" ${attrs}></label>`;
   }
   function go(c, tab, orderId = null) {
+    if(tab==='chats') {c.state.view='messages';if(c.state.foodFocusChat){c.state.messagesFocusChat='food:'+c.state.foodFocusChat;delete c.state.foodFocusChat;}c.render();return;}
     c.state.view = "food";
     c.state.foodTab = tab;
     c.state.foodFocusOrder = orderId;
@@ -138,6 +139,8 @@
     });
   }
   function disconnect() {
+    if(active?.openChat?.dialog?.open)active.openChat.dialog.close();
+    if(active?.detailTimer)clearInterval(active.detailTimer);
     if (active?.chatSource) active.chatSource.close();
     if (active?.chatGuard) clearInterval(active.chatGuard);
     active = null;
@@ -174,8 +177,8 @@
         if (session.openChat?.id === payload.chat_id)
           await session.openChat.refresh();
         else if (!payload.from_self && data.unread_count > previous)
-          c.toast("Tienes un nuevo mensaje temporal en Comidas.");
-        if (c.state.foodTab === "chats" && !document.querySelector("dialog[open]"))
+          c.toast("Tienes un nuevo mensaje en Mensajes.");
+        if (c.state.view === "food" && c.state.foodTab === "chats" && !document.querySelector("dialog[open]"))
           chatsView(c, c.$("#food-body"), data, session);
         c.poll();
       } catch {
@@ -196,6 +199,7 @@
   }
 
   async function render(c) {
+    if(c.state.view==='food'&&c.state.foodTab==='chats'){go(c,'chats');return;}
     disconnect();
     const host = c.$("#view"),
       view = c.state.view;
@@ -250,7 +254,7 @@
       const nav = [
         ["products", "food", "Explorar", "Encuentra qué comer"],
         ["orders", "bag", "Mis compras", "Lo que tú pediste"],
-        ["chats", "chat", "Chats", "Mensajes temporales de 12 h"],
+        ["chats", "chat", "Mensajes", "Docentes, vendedores y compras"],
         ...(mine.vendor
           ? [
               [
@@ -438,10 +442,11 @@
     const session = active;
     if (!session) return;
     const chat = await call(c, "/chats", "POST", { product_id: p.id });
-    await refreshChats(c, session);
-    chatDialog(c, chat, session);
+    c.state.messagesFocusChat="food:"+chat.id;
+    c.state.view="messages";c.render();
   }
   async function openChat(c, chatId, session = active) {
+    if(c.state.view!=="messages"){c.state.messagesFocusChat="food:"+chatId;c.state.view="messages";c.render();return;}
     if (!session || active !== session) return;
     try {
       const chat = await call(c, "/chats/" + encodeURIComponent(chatId));
@@ -453,13 +458,25 @@
         chatsView(c, c.$("#food-body"), session.chats, session);
     }
   }
-  function chatDialog(c, initialChat, session) {
+  async function openShared(c,id,host,isCurrent=()=>true) {
+    disconnect();
+    const session={host,owner:c.state.user.id,chats:{items:[],unread_count:0}};
+    active=session;host.innerHTML='<p role="status">Cargando conversación…</p>';
+    const current=()=>active===session&&host.isConnected&&c.state.view==='messages'&&c.state.user?.id===session.owner&&isCurrent();
+    const chat=await call(c,'/chats/'+encodeURIComponent(id));
+    if(!current())return;
+    chatDialog(c,chat,session,host);
+    connectChatEvents(c,session,current);
+    session.detailTimer=setInterval(()=>{if(current()&&!document.hidden)session.openChat?.refresh();else if(!current())clearInterval(session.detailTimer);},5000);
+  }
+  function chatDialog(c, initialChat, session, inlineHost=null) {
     if (session.openChat?.dialog?.open) session.openChat.dialog.close();
     let chat = initialChat,
       refreshing = false,
       sending = false,
       countdown;
-    const d = c.dialog(
+    const createChat=inlineHost?html=>{const el=document.createElement('div');el.className='shared-food-chat';el.innerHTML=html;el.open=true;el.close=()=>{if(!el.open)return;el.open=false;el.dispatchEvent(new Event('close'));el.remove();};inlineHost.replaceChildren(el);return el;}:c.dialog;
+    const d = createChat(
       `<div class="dialog-content chat-dialog"><header class="chat-dialog-head"><div><span class="eyebrow">CHAT TEMPORAL · ${c.esc(chat.business_name)}</span><h2>${c.esc(chat.product_name)}</h2>${window.FIT_PRESENCE?.badge(chat.counterpart_id)||''}<p>${c.icon("pin")}${c.esc(chat.pickup_location)}</p></div><span class="chat-live-badge">12 h</span></header><div class="chat-expiry-banner">${c.icon("chat")}<div><strong>Esta conversación dura 12 horas</strong><span>Al terminar se retira el chat.</span></div><time id="chat-countdown"></time></div><div id="chat-order-state"></div><div class="chat-messages" id="chat-messages" role="log" aria-live="polite" aria-label="Mensajes del chat"></div><div id="chat-error" class="field-error" role="alert"></div><form class="chat-composer" id="chat-composer"><label class="chat-image-button" title="Enviar imagen">${c.icon("photo")}<span class="screen-reader">Enviar imagen</span><input id="chat-image" type="file" accept="image/jpeg,image/png,image/webp" hidden></label><textarea id="chat-text" maxlength="1200" rows="1" placeholder="Escribe un mensaje…" aria-label="Mensaje"></textarea><button class="chat-send-button" type="submit" aria-label="Enviar mensaje">${c.icon("send")}</button></form><div class="chat-bottom"><small>Solo imágenes JPG, PNG o WebP de hasta 5 MB. No se permiten otros archivos.</small><div class="button-row" id="chat-actions"></div></div><div id="chat-order-panel" hidden></div></div>`,
     );
     const messages = d.querySelector("#chat-messages"),
@@ -502,29 +519,31 @@
       if (wasNearBottom || chat.messages.length <= 1)
         messages.scrollTop = messages.scrollHeight;
     };
-    const renderOrderState = () => {
-      orderState.innerHTML = chat.order_id
-        ? `<div class="chat-order-linked">${c.icon("check")}<span><strong>Solicitud de pedido enviada</strong><small>El pedido queda guardado aunque este chat desaparezca.</small></span><button class="btn secondary small" id="chat-track-order">Ver seguimiento</button></div>`
-        : "";
-      const track = d.querySelector("#chat-track-order");
-      if (track)
-        track.onclick = () => {
-          d.close();
-          go(c, chat.role === "seller" ? "sales" : "orders", chat.order_id);
-        };
-      actions.innerHTML = chat.order_id
-        ? `<button class="btn secondary small" id="chat-order-action">Ver pedido</button>`
-        : chat.role === "buyer"
-          ? `<button class="btn small" id="chat-order-action">Ordenar este producto</button>`
-          : "";
-      const action = d.querySelector("#chat-order-action");
-      if (action)
-        action.onclick = () => {
-          if (chat.order_id) {
-            d.close();
-            go(c, chat.role === "seller" ? "sales" : "orders", chat.order_id);
-          } else openOrderComposer();
-        };
+    let orderSignature='',orderLoading=false;
+    const renderOrderState = async () => {
+      if(!chat.order_id){
+        actions.innerHTML=chat.role==='buyer'?'<button class="btn small" id="chat-order-action">Ordenar este producto</button>':'';
+        actions.querySelector('button')?.addEventListener('click',openOrderComposer);return;
+      }
+      actions.innerHTML='';
+      if(orderLoading)return;orderLoading=true;
+      try {
+        const o=await call(c,'/orders/'+encodeURIComponent(chat.order_id));
+        if(!d.isConnected||!d.open)return;
+        const signature=JSON.stringify([o.id,o.status,o.total_cents]);
+        if(signature===orderSignature)return;orderSignature=signature;
+        const seller=chat.role==='seller';
+        orderState.innerHTML=`<section class="shared-order-card" aria-label="Pedido y seguimiento"><div class="section-heading"><strong>${c.esc(o.product_name)} · ${money(o.total_cents)}</strong><span class="order-status ${c.esc(o.status)}">${c.esc(F.names[o.status]||o.status)}</span></div>${progress(c,o)}<p class="order-next">${c.esc(F.hints[seller?'seller':'buyer'][o.status]||'')}</p><small>${c.esc(F.quantity(o))} · ${c.esc(o.pickup_location)}</small>${o.note?`<p class="hint">Nota: ${c.esc(o.note)}</p>`:''}<div class="button-row">${F.actions(o.status,seller).map(([status,title])=>`<button type="button" class="btn ${['rejected','cancelled'].includes(status)?'secondary':''} small" data-inline-status="${status}">${c.esc(title)}</button>`).join('')}${!seller&&o.status==='completed'?'<button class="btn small" type="button" data-inline-rate>Calificar compra</button>':''}</div></section>`;
+        orderState.querySelectorAll('[data-inline-status]').forEach(b=>b.onclick=async()=>{
+          const status=b.dataset.inlineStatus;
+          if(['completed','rejected','cancelled'].includes(status)&&!confirm(status==='completed'?'¿El cliente ya recibió su pedido?':'¿Confirmas cancelar este pedido?'))return;
+          b.disabled=true;
+          try{await call(c,'/orders/'+o.id,'PATCH',{status});orderSignature='';await renderOrderState();c.poll();}
+          catch(e){errorBox.textContent=e.message;b.disabled=false;}
+        });
+        orderState.querySelector('[data-inline-rate]')?.addEventListener('click',()=>root.FIT_PURCHASE_RATING.open(c,o.id));
+      }catch(e){if(!orderSignature)orderState.innerHTML=`<p role="status">No se pudo actualizar el pedido. Reintentando…</p>`;}
+      finally{orderLoading=false;}
     };
     const setExpired = () => {
       textBox.disabled = true;
@@ -545,6 +564,7 @@
       if (!chat.unread_count) return;
       await call(c, "/chats/" + chat.id + "/read", "POST", {});
       chat.unread_count = 0;
+      c.poll();
       await refreshChats(c, session).catch(() => {});
     };
     const refresh = async () => {
@@ -558,7 +578,7 @@
         await markRead();
       } catch (e) {
         errorBox.textContent = e.message;
-        setExpired();
+        if(new Date(chat.expires_at).getTime()<=Date.now()||/no encontrada|vencida/i.test(e.message))setExpired();
       } finally {
         refreshing = false;
       }
@@ -635,7 +655,7 @@
           closeOrderComposer();
           orderPanel.innerHTML = "";
           renderOrderState();
-          c.toast("Solicitud enviada al vendedor. Consulta su respuesta en Ver seguimiento.");
+          c.toast("Solicitud enviada al vendedor. Consulta su estado aquí mismo.");
           c.poll();
           await refreshChats(c, session).catch(() => {});
         });
@@ -716,7 +736,7 @@
           .then((latest) => {
             if (
               latest &&
-              c.state.foodTab === "chats" &&
+              c.state.view === "food" && c.state.foodTab === "chats" &&
               session.host.isConnected
             )
               chatsView(c, c.$("#food-body"), latest, session);
@@ -741,13 +761,13 @@
           ["accepted", "En preparación"],
           ["ready", "Por entregar"],
           ["history", "Historial"],
-          ["all", "Todos"],
+          
         ]
       : [
           ["active", "En curso"],
           ["ready", "Para recoger"],
           ["history", "Historial"],
-          ["all", "Todos"],
+          
         ];
     const rows = F.sortOrders(
       orders.filter((o) => F.matches(o.status, filter)),
@@ -759,7 +779,7 @@
         ? rows
             .map(
               (o) =>
-                `<article class="panel order-card flow-order status-${o.status} ${focus === o.id ? "focused-order" : ""}" data-order-card="${o.id}" tabindex="-1"><div class="section-heading"><div><span class="eyebrow">${seller ? "CLIENTE" : "PUESTO"}</span><strong class="order-person">${c.esc(seller ? o.buyer_name : o.business_name)}</strong></div><span class="order-status ${o.status}">${F.names[o.status] || c.esc(o.status)}</span></div><div class="order-line"><div><h3>${c.esc(o.product_name)}</h3><p>${c.esc(F.quantity(o))}</p></div><strong class="order-amount">${money(o.total_cents)}<small>MXN</small></strong></div>${progress(c, o)}<p class="order-next">${c.esc(F.hints[seller ? "seller" : "buyer"][o.status] || "Consulta el estado de tu pedido.")}</p><p class="pickup">${c.icon("pin")}<span><b>Punto de entrega:</b> ${c.esc(o.pickup_location)}</span></p>${o.note ? `<p class="order-note"><b>Nota del cliente:</b> ${c.esc(o.note)}</p>` : ""}<div class="order-footer"><small>Pedido #${o.id.slice(0, 8)} · ${new Date(o.created_at).toLocaleString("es-MX")}</small><div class="button-row">${!seller && o.status==='completed' ? `<button class="btn secondary small" data-rate-order="${o.id}">Valorar compra ★</button>` : ""}${o.chat_id ? `<button class="btn secondary small" data-order-chat="${o.chat_id}">${c.icon("chat")} Abrir chat</button>` : ""}${F.actions(
+                `<article class="panel order-card flow-order status-${o.status} ${focus === o.id ? "focused-order" : ""}" data-order-card="${o.id}" tabindex="-1"><div class="section-heading"><div><span class="eyebrow">${seller ? "CLIENTE" : "PUESTO"}</span><strong class="order-person">${c.esc(seller ? o.buyer_name : o.business_name)}</strong></div><span class="order-status ${o.status}">${F.names[o.status] || c.esc(o.status)}</span></div><div class="order-line"><div><h3>${c.esc(o.product_name)}</h3><p>${c.esc(F.quantity(o))}</p></div><strong class="order-amount">${money(o.total_cents)}<small>MXN</small></strong></div>${progress(c, o)}<p class="order-next">${c.esc(F.hints[seller ? "seller" : "buyer"][o.status] || "Consulta el estado de tu pedido.")}</p><details class="order-extra"><summary>Entrega y detalles</summary><p class="pickup">${c.icon("pin")}<span><b>Punto de entrega:</b> ${c.esc(o.pickup_location)}</span></p>${o.note ? `<p class="order-note"><b>Nota del cliente:</b> ${c.esc(o.note)}</p>` : ""}</details><div class="order-footer"><small>Pedido #${o.id.slice(0, 8)} · ${new Date(o.created_at).toLocaleString("es-MX")}</small><div class="button-row">${!seller && o.status==='completed' ? `<button class="btn secondary small" data-rate-order="${o.id}">Valorar compra ★</button>` : ""}${o.chat_id ? `<button class="btn secondary small" data-order-chat="${o.chat_id}">${c.icon("chat")} Abrir chat</button>` : ""}${F.actions(
                   o.status,
                   seller,
                 )
@@ -771,7 +791,7 @@
             )
             .join("")
         : `${empty(c, filter === "history" ? "Todavía no hay pedidos finalizados" : "Todo al día por aquí", seller ? "Los pedidos de tus clientes aparecerán en Nuevos. También recibirás un aviso en la campana." : "Aquí aparecerá el seguimiento cuando solicites un producto.")}<button class="btn secondary" id="orders-empty-action">${seller ? "Ver mi puesto" : "Explorar productos"}</button>`
-    }</div><p class="hint food-sync-note">Se muestran los últimos 300 pedidos, más el que abras desde un aviso. Se actualizan cada 30 segundos mientras esta vista está activa.</p>`;
+    }</div><p class="hint food-sync-note">Tus pedidos se actualizan automáticamente. También puedes seguirlos desde Mensajes.</p>`;
     body.querySelectorAll("[data-filter]").forEach(
       (b) =>
         (b.onclick = () => {
@@ -1076,5 +1096,5 @@
       session.noteRevision = JSON.stringify(data);
     }
   }
-  root.FIT_FOOD = { render, updateNotifications, disconnect };
+  root.FIT_FOOD = { render, updateNotifications, disconnect, openShared, refreshShared:()=>active?.openChat?.refresh() };
 })(window);

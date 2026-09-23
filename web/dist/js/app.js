@@ -167,6 +167,7 @@
       )
       .join("");
   function render() {
+    if(state.view!=="messages")window.FIT_ACADEMIC_CHAT?.disconnect?.();
     if (state.user || state.demo) shell();
     else authView();
     window.FIT_PRESENCE?.mount(moduleContext());
@@ -486,7 +487,7 @@
       rewards: ["Mi progreso", "Participa, sube de nivel y haz tuya Guía FIT."],
       schedule: ["Mi horario", "Tu semana, tus materias y tu próximo salón."],
       events: ["Eventos", "Actividades, reuniones y asistencias verificadas de la facultad."],
-      messages: ["Mensajes", "Comunicación directa entre alumnos y docentes de la facultad."],
+      messages: ["Mensajes", "Conversa con docentes y vendedores. Sigue tus pedidos desde el chat."],
       notifications: ["Mis avisos", "Activa las notificaciones del dispositivo y consulta tus novedades."],
       game: ["Castor Runner", "Salta obstáculos y supera tu récord mientras regresa el internet."],
       "food-admin": [
@@ -519,7 +520,7 @@
       : [
           ["directory", "grid", "Directorio"],
           ["faculty", "star", "Conecta con la FIT"],
-          ...(canUseAcademicChat(state.user) ? [["messages", "chat", academicChatRole(state.user) === "teacher" ? "Mensajes de alumnos" : "Mensajes con docentes"]] : []),
+          ...(state.user ? [["messages", "chat", "Mensajes"]] : []),
           ["map", "map", "Mapa del campus"],
           ["route", "route", "Cómo llegar"],
           ["food", "food", "Comidas"],
@@ -634,7 +635,7 @@
         el.textContent = count > 99 ? "99+" : String(count);
         el.hidden = count === 0;
       }
-      window.FIT_ACADEMIC_CHAT?.updateUnreadBadge?.(academic);
+      window.FIT_ACADEMIC_CHAT?.updateUnreadBadge?.(academic + temporary);
       if (foodResult.data)
         await window.FIT_FOOD?.updateNotifications(
           moduleContext(),

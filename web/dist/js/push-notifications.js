@@ -117,7 +117,7 @@
     if(recipientId&&recipientId!==c.state.user.id){if(wrongAccount!==recipientId){wrongAccount=recipientId;c.toast('Este aviso pertenece a otra cuenta. Inicia sesión con la cuenta que recibió el mensaje.');}return;}
     if(chatId&&!/^[a-f0-9-]{36}$/i.test(chatId))return;
     const u=new URL(location.href);u.searchParams.delete('fitChat');u.searchParams.delete('fitUser');u.searchParams.delete('fitPush');u.searchParams.delete('fitView');history.replaceState(null,'',u);
-    const target=['food','events','profile','messages'].includes(view)?view:'profile';c.state.view=chatId?(target==='messages'?'messages':'food'):target;if(chatId){if(c.state.view==='messages')c.state.messagesFocusChat=chatId;else{c.state.foodTab='chats';c.state.foodFocusChat=chatId;}}c.render();
+    const target=['food','events','profile','messages'].includes(view)?view:'profile';c.state.view=chatId?'messages':target;if(chatId)c.state.messagesFocusChat=target==='messages'?chatId:'food:'+chatId;c.render();
   }
   async function activity(c,view){
     const panel=document.createElement('section');panel.className='panel';panel.style.marginTop='24px';view.append(panel);

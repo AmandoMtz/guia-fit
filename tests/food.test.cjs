@@ -240,6 +240,8 @@ test("Comidas: permisos, dinero, pedidos y notificaciones persistentes", async (
       await req(buyer, "post", "/chats/" + chat.id + "/messages", {
         text: "¿Sigues en el salón?",
       }).expect(201);
+      const queued=(await query('select user_id from fit_push_outbox where chat_id=$1 union select user_id from fit_push_delivery_log where job_id in(select id from food_chat_messages where chat_id=$1)',[chat.id])).rows;
+      assert.ok(queued.some(x=>x.user_id===seller.id),'El vendedor recibe la notificación del mensaje');
       let sellerChats = (await req(seller, "get", "/chats").expect(200)).body.data;
       assert.equal(sellerChats.items[0].id, chat.id);
       assert.equal(sellerChats.items[0].unread_count, 1);

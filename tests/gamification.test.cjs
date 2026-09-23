@@ -42,6 +42,18 @@ test('recompensas, canjes, categorías y valoraciones se validan en servidor',as
   await api.post('/g/animations').send({enabled:false}).expect(200);
   assert.equal((await api.get('/g/me')).body.data.animations,false);
  });
+ await t.test('marcos de temporada: canje, saldo y equipamiento persistente',async()=>{
+  await query('update fit_progress set coins=2000 where user_id=$1',[buyer]);
+  const ids=['frame-halloween','frame-mexico','frame-christmas','frame-muertos','frame-newyear','frame-valentine'];
+  const before=(await api.get('/g/me')).body.data;let spent=0;
+  for(const id of ids){
+   const item=before.catalog.find(x=>x.id===id);assert.ok(item);spent+=item.price;
+   await api.post('/g/buy').send({item:id}).expect(200);
+   await api.post('/g/equip').send({slot:'frame',item:id}).expect(200);
+   assert.equal((await api.get('/g/me')).body.data.equipped.frame,id);
+  }
+  assert.equal((await api.get('/g/me')).body.data.coins,2000-spent);
+ });
  const vendor=(await query("insert into food_vendors(user_id,business_name,pickup_location,status,review_source,reviewed_by,reviewed_at) values($1,'Postres FIT','Entrada','approved','prueba',$1,now()) returning id",[seller])).rows[0];
  const product=(await query("insert into food_products(vendor_id,name,price_cents,sale_unit,units_per_lot) values($1,'Pastel',5000,'unit',1) returning id",[vendor.id])).rows[0];
  async function order(status='completed',uid=buyer){return (await query("insert into food_orders(buyer_id,vendor_id,product_id,request_id,product_name,price_cents,sale_unit,units_per_lot,quantity,total_cents,pickup_location,status) values($1,$2,$3,$4,'Pastel',5000,'unit',1,1,5000,'Entrada',$5) returning id",[uid,vendor.id,product.id,randomUUID(),status])).rows[0].id;}

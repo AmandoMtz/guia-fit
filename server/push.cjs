@@ -48,7 +48,7 @@ function createPushService({db,siteUrl,transport,logger=console}) {
           deviceCount=devices.length;
           const ttl=Math.max(0,Math.min(3600,Math.floor((new Date(job.expires_at)-Date.now())/1000)));
           if (ttl) for (const device of devices) {
-            try { await send(device,job.payload||{title:'Nuevo mensaje · Guía FIT',body:'Tienes un mensaje en un chat de Comidas. Toca para abrirlo.',chatId:job.chat_id,recipientId:job.user_id,tag:'fit-chat-'+job.chat_id},ttl); delivered++; }
+            try { await send(device,job.payload||{title:'Nuevo mensaje · Guía FIT',body:'Tienes un nuevo mensaje de compra. Toca para abrir Mensajes.',chatId:job.chat_id,recipientId:job.user_id,tag:'fit-chat-'+job.chat_id},ttl); delivered++; }
             catch(e) {
               if ([404,410].includes(e.statusCode)) await db.query('delete from fit_push_subscriptions where endpoint=$1 and user_id=$2',[device.endpoint,job.user_id]);
               else if (!e.statusCode || e.statusCode===429 || e.statusCode>=500) retry=true;

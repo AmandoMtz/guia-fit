@@ -30,7 +30,7 @@ const server = http.createServer((req,res) => {
       page.on("pageerror",(err)=>errors.push(err.message));
       await page.goto(url);
       await page.locator(".cm-svg").waitFor();
-      assert.equal(await page.locator("[data-select]").count(),8);
+      assert.equal(await page.locator("[data-select]").count(),9);
       assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,"horizontal overflow");
       assert.equal(await page.locator(".cm-viewport").evaluate((el)=>getComputedStyle(el).backgroundColor),"rgb(255, 255, 255)");
       await page.locator("[data-search]").fill("cafeteria");
@@ -76,6 +76,15 @@ const server = http.createServer((req,res) => {
       assert.notEqual(await page.locator(".cm-svg").getAttribute("viewBox"),dragBefore);
       await page.locator('[data-action="reset"]').click();
       assert.equal(await page.locator("[data-zoom]").textContent(),"100%");
+      await page.locator('[data-select="posgrado"]').click();
+      assert.match(await page.locator('.cm-room-plan').textContent(),/Auditorio de Posgrado.*Salón 2.*Salón 1/);
+      await page.locator('[data-floor="upper"]').click();
+      assert.match(await page.locator('.cm-room-plan').textContent(),/Salón 5.*Salón 6.*Salón 7.*Salón 8/);
+      assert.equal(await page.locator('.cm-room-plan').evaluate(el=>getComputedStyle(el).flexDirection),'row-reverse');
+      await page.locator('[data-select="administracion-posgrado"]').click();
+      assert.match(await page.locator('.cm-room-plan').textContent(),/Sala A.*Sala B/);
+      await page.locator('[data-floor="upper"]').click();
+      assert.match(await page.locator('.cm-room-plan').textContent(),/Área Administrativa de Posgrado/);
       // Render again after a real drag to ensure the first next control click works.
       await page.locator('[data-select="edificio-b"]').click();
       await page.locator('[data-action="origin"]').click();

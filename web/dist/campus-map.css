@@ -113,3 +113,32 @@
 @media (prefers-reduced-motion:reduce) {
   .cm-campus *, .cm-campus *::before, .cm-campus *::after { animation:none !important; transition:none !important; }
 }
+
+/* Arquitectura del campus: azoteas grises y fachadas guinda claro. */
+.cm-site { fill:#f1f0ea; stroke:#c8c8be; stroke-width:2; stroke-linejoin:round; }
+.cm-shadow { fill:#343840; opacity:.13; pointer-events:none; }
+.cm-campus .cm-roof { fill:#a8adb2; stroke:#626970; stroke-width:2; }
+.cm-campus .cm-wall { fill:#b96570; stroke:#854450; stroke-width:1; }
+.cm-campus .cm-building:hover .cm-roof { fill:#bbc0c5; }
+.cm-campus .cm-building.is-selected .cm-roof { fill:#a8adb2; stroke:#ff0000; stroke-width:3; }
+.cm-campus .cm-building.is-selected .cm-wall { fill:#b96570; stroke:#854450; }
+.cm-roof-rim { fill:none; stroke:#e1e3e5; stroke-width:3; stroke-linejoin:round; pointer-events:none; }
+.cm-building.is-selected .cm-roof-rim { stroke:#ff0000; }
+.cm-plinth { fill:#824450; }
+.cm-cornice { fill:#d8b1b5; }
+.cm-window { fill:#405b68; stroke:#e2d9da; stroke-width:1; }
+.cm-door { fill:#384650; stroke:#d8b1b5; stroke-width:1; }
+.cm-curb { fill:#deded8; stroke:#b4b6b2; stroke-width:1.5; }
+.cm-parking { fill:#737c83; stroke:#59636a; stroke-width:1.5; }
+.cm-parking-line { stroke:#f3f0df; stroke-width:1.5; }
+.cm-lane { fill:none; stroke:#e5cf8d; stroke-width:1.5; stroke-dasharray:7 9; }
+.cm-car { fill:#e4e7ea; stroke:#404b53; stroke-width:.7; }
+.cm-car-1 { fill:#b77b7c; }.cm-car-2 { fill:#8198ab; }
+.cm-car-glass { fill:#344b5b; }
+.cm-campo { fill:#64874c; stroke:#4e6d39; stroke-width:2; }
+.cm-grass-light { fill:#84a961; }.cm-grass-dark { fill:#789e56; }
+.cm-court-line { stroke:#fff9e9; stroke-width:1.6; }
+.cm-goal { fill:#edf1e7; stroke:#fafcf7; stroke-width:2; }
+.cm-cancha { fill:#ba7964; stroke:#81574b; stroke-width:2; }
+.cm-court-surface { fill:#739b91; }
+.cm-dot-building { background:#b96570; }.cm-dot-sport { background:#84a961; }

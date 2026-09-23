@@ -743,6 +743,7 @@ function createApp({
   app.use("/api/profile", authenticate, createProfileRouter({ db, limit }));
   app.use("/api/events", authenticate, createEventsRouter({ db, limit, siteUrl }));
   app.use("/api/chatbot", authenticate, createChatbotRouter({ db, limit, chatbot }));
+  app.use("/api/presence", authenticate, require("./presence.cjs").createPresenceRouter({db,limit}));
   app.use("/api/academic-chat", authenticate, createAcademicChatRouter({ db, limit }));
   app.use(
     "/api/food",

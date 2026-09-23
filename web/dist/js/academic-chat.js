@@ -59,7 +59,7 @@
   function paintContacts(c,rows){
     const host=document.querySelector('#academic-contact-results');if(!host)return;
     if(!rows.length){host.innerHTML='<p class="hint academic-search-hint">No encontramos coincidencias.</p>';return;}
-    host.innerHTML=rows.map(x=>`<button type="button" class="academic-contact-card" data-contact="${c.esc(x.id)}"><span class="academic-avatar">${c.esc(initials(x.full_name))}</span><span><strong>${c.esc(x.full_name)}</strong><small>${c.esc(x.identity || roleLabel(x.account_type))}${x.career?` · ${c.esc(x.career)}`:''}</small></span><span class="academic-contact-plus">+</span></button>`).join('');
+    host.innerHTML=rows.map(x=>`<button type="button" class="academic-contact-card" data-contact="${c.esc(x.id)}"><span class="academic-avatar">${c.esc(initials(x.full_name))}</span><span><strong>${c.esc(x.full_name)}</strong>${root.FIT_PRESENCE?.badge(x.id)||''}<small>${c.esc(x.identity || roleLabel(x.account_type))}${x.career?` · ${c.esc(x.career)}`:''}</small></span><span class="academic-contact-plus">+</span></button>`).join('');
     host.querySelectorAll('[data-contact]').forEach(btn=>btn.onclick=async()=>{
       btn.disabled=true;
       try{
@@ -83,7 +83,7 @@
     if(!items.length){host.innerHTML='<div class="academic-list-empty"><p>Aún no tienes conversaciones.</p><small>Busca un contacto arriba para comenzar.</small></div>';return;}
     host.innerHTML=items.map(x=>`<button type="button" class="academic-chat-row ${activeChat===x.id?'active':''}" data-chat="${c.esc(x.id)}">
       <span class="academic-avatar">${c.esc(initials(x.counterpart_name))}</span>
-      <span class="academic-chat-row-body"><span class="academic-chat-row-top"><strong>${c.esc(x.counterpart_name)}</strong><small>${c.esc(time(x.last_message_at||x.updated_at))}</small></span><small class="academic-identity">${c.esc(x.counterpart_identity||roleLabel(x.counterpart_type))}</small><span class="academic-chat-row-bottom"><small>${x.last_message?`${x.last_message_mine?'Tú: ':''}${c.esc(x.last_message)}`:'Conversación nueva'}</small>${Number(x.unread_count||0)?`<b>${Number(x.unread_count)>99?'99+':Number(x.unread_count)}</b>`:''}</span></span>
+      <span class="academic-chat-row-body"><span class="academic-chat-row-top"><strong>${c.esc(x.counterpart_name)}</strong>${root.FIT_PRESENCE?.badge(x.counterpart_id)||''}<small>${c.esc(time(x.last_message_at||x.updated_at))}</small></span><small class="academic-identity">${c.esc(x.counterpart_identity||roleLabel(x.counterpart_type))}</small><span class="academic-chat-row-bottom"><small>${x.last_message?`${x.last_message_mine?'Tú: ':''}${c.esc(x.last_message)}`:'Conversación nueva'}</small>${Number(x.unread_count||0)?`<b>${Number(x.unread_count)>99?'99+':Number(x.unread_count)}</b>`:''}</span></span>
     </button>`).join('');
     host.querySelectorAll('[data-chat]').forEach(btn=>btn.onclick=async()=>{
       activeChat=btn.dataset.chat;c.state.messagesFocusChat=activeChat;
@@ -104,7 +104,7 @@
     const messages=chat.messages||[];
     renderedChatId=chat.id;
     detailSignature=JSON.stringify([chat.id,messages.map(m=>m.id)]);
-    host.innerHTML=`<div class="academic-chat-header"><div class="academic-person"><span class="academic-avatar large">${c.esc(initials(chat.counterpart_name))}</span><div><h2>${c.esc(chat.counterpart_name)}</h2><p>${c.esc(chat.counterpart_identity||roleLabel(chat.counterpart_type))}</p></div></div><span class="academic-retention-chip">Mensajes por 7 días</span></div>
+    host.innerHTML=`<div class="academic-chat-header"><div class="academic-person"><span class="academic-avatar large">${c.esc(initials(chat.counterpart_name))}</span><div><h2>${c.esc(chat.counterpart_name)}</h2>${root.FIT_PRESENCE?.badge(chat.counterpart_id)||''}<p>${c.esc(chat.counterpart_identity||roleLabel(chat.counterpart_type))}</p></div></div><span class="academic-retention-chip">Mensajes por 7 días</span></div>
       <div class="academic-retention-note">${c.icon('chat')}<span>Los mensajes están disponibles aquí durante una semana.</span></div>
       <div class="academic-message-list" id="academic-message-list">${messages.length?messages.map(m=>`<article class="academic-message ${m.mine?'mine':'theirs'}"><p>${c.esc(m.body)}</p><small>${c.esc(new Date(m.created_at).toLocaleString('es-MX',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}))}</small></article>`).join(''):'<div class="academic-conversation-empty"><p>Aún no hay mensajes.</p><small>Escribe el primero para iniciar la conversación.</small></div>'}</div>
       <form id="academic-message-form" class="academic-message-form"><textarea name="text" rows="2" maxlength="${maxText}" placeholder="Escribe un mensaje…" aria-label="Mensaje"></textarea><button class="btn" type="submit">${c.icon('send')} Enviar</button></form>`;

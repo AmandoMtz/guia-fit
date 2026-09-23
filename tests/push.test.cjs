@@ -28,6 +28,11 @@ test('Push: solo destinatario, sesiones vigentes, bajas 410 y reintentos',async 
  assert.equal((await db.query('select * from fit_push_subscriptions where endpoint=$1',[devices[2].endpoint])).rows.length,0);
  assert.equal((await db.query('select attempts from fit_push_outbox')).rows[0].attempts,1);
  retry=false;await db.query('update fit_push_outbox set next_attempt=now()');await service.run();assert.equal((await db.query('select * from fit_push_outbox')).rows.length,0);
+ sends=[];
+ await db.query("insert into user_presence_preferences(user_id,mode) values($1,'dnd')",[seller]);
+ await db.query("insert into fit_push_outbox(id,user_id,chat_id,expires_at) values($1,$2,$3,now()+interval '1 hour')",[randomUUID(),seller,chat]);
+ await service.run();assert.equal(sends.length,0,'No molestar debe silenciar push');
+ await db.query("update user_presence_preferences set mode='online' where user_id=$1",[seller]);
  sends=[];await db.query('delete from sessions where token_hash=$1',[seller]);await db.query("insert into fit_push_outbox(id,user_id,chat_id,expires_at) values($1,$2,$3,now()+interval '1 hour')",[randomUUID(),seller,chat]);await service.run();assert.equal(sends.length,0);
  await db.query("insert into fit_push_outbox(id,user_id,chat_id,expires_at) values($1,$2,$3,now()-interval '1 minute')",[randomUUID(),buyer,chat]);await service.run();assert.equal(sends.length,0);
 });

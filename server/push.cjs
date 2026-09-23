@@ -44,7 +44,7 @@ function createPushService({db,siteUrl,transport,logger=console}) {
         let retry=false, delivered=0, deviceCount=0;
         try {
           const devices=(await db.query(`select p.* from fit_push_subscriptions p join sessions s on s.token_hash=p.session_hash
-            where p.user_id=$1 and s.user_id=p.user_id and s.expires_at>now()`,[job.user_id])).rows;
+            where p.user_id=$1 and s.user_id=p.user_id and s.expires_at>now() and not exists(select 1 from user_presence_preferences pref where pref.user_id=p.user_id and pref.mode='dnd')`,[job.user_id])).rows;
           deviceCount=devices.length;
           const ttl=Math.max(0,Math.min(3600,Math.floor((new Date(job.expires_at)-Date.now())/1000)));
           if (ttl) for (const device of devices) {

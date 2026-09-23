@@ -169,6 +169,7 @@
   function render() {
     if (state.user || state.demo) shell();
     else authView();
+    window.FIT_PRESENCE?.mount(moduleContext());
     window.FIT_PUSH?.mount(moduleContext());
     window.FIT_ATTENDANCE?.mount(moduleContext());
     window.FIT_OFFLINE_GAME?.mount(moduleContext());
@@ -656,6 +657,7 @@
     try {
       window.FIT_FOOD?.disconnect?.();
       window.FIT_ACADEMIC_CHAT?.disconnect?.();
+      await window.FIT_PRESENCE?.leave();
       const priorUserId = state.user?.id;
       if (client && !state.demo && !state.offline) {
         const { error } = await client.auth.signOut();

@@ -45,6 +45,7 @@ function createTemporaryFoodChat({db,onMessage=null}){
     return {
       id: chat.id,
       role: seller ? "seller" : "buyer",
+      counterpart_id: seller ? chat.buyer_id : chat.seller_user_id,
       counterpart_name: seller ? chat.buyer_name : chat.business_name,
       business_name: chat.business_name,
       buyer_name: chat.buyer_name,

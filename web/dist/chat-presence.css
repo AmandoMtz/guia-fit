@@ -1,0 +1,42 @@
+.fit-presence{display:inline-flex;align-items:center;gap:6px;font-size:.78rem;line-height:1.5;font-weight:500;white-space:nowrap;color:var(--muted,#61575a)}
+.fit-presence::before{content:'';width:8px;height:8px;border-radius:50%;background:#888;flex:none}
+.fit-presence[data-presence-status=online]::before{background:#168443}
+.fit-presence[data-presence-status=away]::before{background:#b87900}
+.fit-presence[data-presence-status=dnd]::before{background:#d02435}
+.fit-presence-control{display:flex;flex-direction:column;gap:2px;font-size:.72rem}
+.fit-presence-control select{max-width:145px;padding:6px;border-radius:8px;border:1px solid var(--line,#ddd);background:var(--fit-surface,#fff);color:var(--fit-ink,#292326)}
+.academic-chat-grid{height:clamp(420px,74dvh,760px);min-height:0;align-items:stretch}
+.academic-chat-main,.academic-chat-side{height:100%;min-height:0;min-width:0}
+.academic-chat-main>.academic-message-list{flex:1 1 0;min-height:0;max-height:none;overflow-y:auto;overscroll-behavior:contain;overflow-wrap:anywhere}
+.academic-chat-header,.academic-retention-note,.academic-message-form{flex-shrink:0}
+.academic-chat-main .academic-message{flex-shrink:0;max-width:90%;overflow-wrap:anywhere}
+.academic-chat-main textarea{resize:none;max-height:90px}
+.academic-chat-list{min-height:0;overflow:auto;flex:1}
+.academic-contact-results{max-height:150px;overflow:auto;flex-shrink:0}
+.academic-chat-row-top{flex-wrap:wrap}
+.academic-person,.academic-person>div{min-width:0;overflow-wrap:anywhere}
+dialog:has(.chat-dialog){height:min(850px,94dvh);max-height:94dvh;box-sizing:border-box;overflow:hidden}
+dialog[open]:has(.chat-dialog){display:flex;flex-direction:column}
+dialog:has(.chat-dialog)>.module-dialog-close{flex:none}
+.chat-dialog{flex:1 1 0;min-height:0}
+.chat-dialog:not(.ordering){height:auto;max-height:100%;display:flex;flex-direction:column;min-height:0;overflow:hidden}
+.chat-dialog>.chat-messages{flex:1 1 0;min-height:0;max-height:none;overflow-y:auto;overscroll-behavior:contain;overflow-wrap:anywhere}
+.chat-dialog>:not(.chat-messages):not(#chat-order-panel){flex-shrink:0}
+.chat-dialog textarea{resize:none;max-height:80px}
+.chat-bubble{overflow-wrap:anywhere;min-width:0}
+.chat-bubble img{max-width:100%;max-height:240px;object-fit:contain}
+.chat-dialog-head>div{min-width:0;overflow-wrap:anywhere}
+@media(max-width:760px){
+ .academic-chat-grid{height:auto;min-height:0;grid-template-columns:minmax(0,1fr)}
+ .academic-chat-side{height:320px}
+ .academic-chat-main{height:72dvh;min-height:360px}
+ .academic-chat-header{padding:12px;gap:8px}
+ .academic-chat-header h2{font-size:1rem}
+ .academic-retention-note{padding:8px 12px;font-size:.75rem}
+ .academic-retention-chip{white-space:normal;text-align:center}
+ .chat-dialog-head h2{font-size:1rem;margin:4px 0}
+ .chat-expiry-banner{padding:8px;font-size:.75rem}
+ .chat-bottom{font-size:.7rem;padding:4px}
+ .chat-dialog-head p{margin:4px 0;font-size:.75rem}
+ .fit-presence-control select{max-width:122px}
+}

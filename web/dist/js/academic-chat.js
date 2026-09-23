@@ -1,6 +1,6 @@
 (function(root){
   'use strict';
-  let ctx=null, activeChat=null, pollTimer=null, listTimer=null, generation=0, searchTimer=null, detailSignature='';
+  let ctx=null, activeChat=null, pollTimer=null, listTimer=null, generation=0, searchTimer=null, detailSignature='', renderedChatId=null;
   const maxText=1500;
 
   const academicRole=user=>{
@@ -33,7 +33,7 @@
   function disconnect(){
     generation++;
     clearInterval(pollTimer);clearInterval(listTimer);clearTimeout(searchTimer);
-    pollTimer=listTimer=searchTimer=null;ctx=null;activeChat=null;detailSignature='';
+    pollTimer=listTimer=searchTimer=null;ctx=null;activeChat=null;detailSignature='';renderedChatId=null;
   }
   function updateUnreadBadge(count){
     const el=document.querySelector('#academic-chat-count');
@@ -102,7 +102,8 @@
   function paintDetail(c,chat,draft='',refocus=false){
     const host=document.querySelector('#academic-chat-main');if(!host)return;
     const messages=chat.messages||[];
-    detailSignature=messages.map(m=>m.id).join('|');
+    renderedChatId=chat.id;
+    detailSignature=JSON.stringify([chat.id,messages.map(m=>m.id)]);
     host.innerHTML=`<div class="academic-chat-header"><div class="academic-person"><span class="academic-avatar large">${c.esc(initials(chat.counterpart_name))}</span><div><h2>${c.esc(chat.counterpart_name)}</h2><p>${c.esc(chat.counterpart_identity||roleLabel(chat.counterpart_type))}</p></div></div><span class="academic-retention-chip">Mensajes por 7 días</span></div>
       <div class="academic-retention-note">${c.icon('chat')}<span>Los mensajes están disponibles aquí durante una semana.</span></div>
       <div class="academic-message-list" id="academic-message-list">${messages.length?messages.map(m=>`<article class="academic-message ${m.mine?'mine':'theirs'}"><p>${c.esc(m.body)}</p><small>${c.esc(new Date(m.created_at).toLocaleString('es-MX',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}))}</small></article>`).join(''):'<div class="academic-conversation-empty"><p>Aún no hay mensajes.</p><small>Escribe el primero para iniciar la conversación.</small></div>'}</div>
@@ -124,11 +125,17 @@
     if(!eligible(c)||c.state.view!=='messages'||!id)return;
     const token=++generation;
     try{
-      const before=document.querySelector('#academic-message-form textarea');
+      const sameChat=renderedChatId===id;
+      const before=sameChat?document.querySelector('#academic-message-form textarea'):null;
+      if(!sameChat){
+        const host=document.querySelector('#academic-chat-main');
+        if(host)host.innerHTML='<div class="academic-chat-empty"><p>Cargando conversación…</p></div>';
+        renderedChatId=null;
+      }
       const draft=before?.value||'',refocus=document.activeElement===before;
       const chat=await api(c,`/chats/${encodeURIComponent(id)}`);
       if(token!==generation||c.state.view!=='messages'||activeChat!==id)return;
-      const signature=(chat.messages||[]).map(m=>m.id).join('|');
+      const signature=JSON.stringify([chat.id,(chat.messages||[]).map(m=>m.id)]);
       if(signature!==detailSignature||!document.querySelector('#academic-message-form'))paintDetail(c,chat,draft,refocus);
       await loadListQuiet(c);
     }catch(e){

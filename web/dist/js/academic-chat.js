@@ -2,6 +2,7 @@
   'use strict';
   let ctx=null, activeChat=null, pollTimer=null, listTimer=null, generation=0, searchTimer=null, detailSignature='', renderedChatId=null;
   const maxText=1500;
+  let refreshing=false;
 
   const academicRole=user=>{
     const explicit=String(user?.account_type||'').toLowerCase();
@@ -121,7 +122,7 @@
       if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();form.requestSubmit();}
     };
   }
-  async function loadDetail(c,id){
+  async function loadDetail(c,id,force=false){
     if(!eligible(c)||c.state.view!=='messages'||!id)return;
     const token=++generation;
     try{
@@ -136,10 +137,14 @@
       const chat=await api(c,`/chats/${encodeURIComponent(id)}`);
       if(token!==generation||c.state.view!=='messages'||activeChat!==id)return;
       const signature=JSON.stringify([chat.id,(chat.messages||[]).map(m=>m.id)]);
-      if(signature!==detailSignature||!document.querySelector('#academic-message-form'))paintDetail(c,chat,draft,refocus);
+      if(force||signature!==detailSignature||!document.querySelector('#academic-message-form')){
+        const current=sameChat?document.querySelector('#academic-message-form textarea'):null;
+        paintDetail(c,chat,current?.value??draft,current?document.activeElement===current:refocus);
+      }
       await loadListQuiet(c);
     }catch(e){
       if(token!==generation)return;
+      if(force)throw e;
       const host=document.querySelector('#academic-chat-main');if(host)host.innerHTML=`<div class="academic-chat-empty"><h2>No pudimos abrir la conversación</h2><p>${c.esc(e.message)}</p></div>`;
       if(/no encontrada/i.test(e.message)){activeChat=null;delete c.state.messagesFocusChat;}
     }
@@ -147,9 +152,22 @@
   async function loadListQuiet(c){
     try{paintList(c,await api(c,'/chats'));}catch{}
   }
+  async function refreshAll(c,button){
+    if(refreshing)return;
+    refreshing=true;button.disabled=true;button.textContent='Actualizando…';button.setAttribute('aria-busy','true');
+    try{
+      const data=await api(c,'/chats');
+      if(c.state.view!=='messages')return;
+      paintList(c,data);
+      if(activeChat)await loadDetail(c,activeChat,true);
+      await root.FIT_PRESENCE?.refresh(true);
+      c.toast('Mensajes y estados actualizados.');
+    }catch(e){c.toast(e.message||'No se pudo actualizar. Intenta de nuevo.');}
+    finally{refreshing=false;button.disabled=false;button.textContent='Actualizar';button.removeAttribute('aria-busy');}
+  }
   function startPolling(c){
     clearInterval(pollTimer);clearInterval(listTimer);
-    pollTimer=setInterval(()=>{if(document.hidden||c.state.view!=='messages'||!activeChat)return;loadDetail(c,activeChat);},5000);
+    pollTimer=setInterval(()=>{if(refreshing||document.hidden||c.state.view!=='messages'||!activeChat)return;loadDetail(c,activeChat);},5000);
     listTimer=setInterval(()=>{if(document.hidden||c.state.view!=='messages')return;loadListQuiet(c);},15000);
   }
   function render(c){
@@ -160,7 +178,8 @@
     const q=host.querySelector('#academic-contact-query');
     q.oninput=()=>{clearTimeout(searchTimer);searchTimer=setTimeout(()=>searchContacts(c,q.value),280);};
     q.onfocus=()=>{if(q.value.trim().length<2)document.querySelector('#academic-contact-results').innerHTML='<p class="hint academic-search-hint">Escribe al menos 2 letras.</p>';};
-    host.querySelector('#academic-refresh').onclick=()=>loadList(c);
+    const refresh=host.querySelector('#academic-refresh');
+    refresh.onclick=()=>refreshAll(c,refresh);
     loadList(c);if(activeChat)loadDetail(c,activeChat);startPolling(c);
   }
   document.addEventListener('visibilitychange',()=>{if(!document.hidden&&ctx?.state.view==='messages'){loadListQuiet(ctx);if(activeChat)loadDetail(ctx,activeChat);}});

@@ -21,7 +21,6 @@ const catalog = [
  {id:'frame-muertos',slot:'frame',name:'Flor de Cempasúchil',price:180,description:'Un aro de pétalos dorados y acentos violeta.'},
  {id:'frame-newyear',slot:'frame',name:'Año Nuevo',price:200,description:'Destellos dorados y plateados de celebración.'},
  {id:'frame-valentine',slot:'frame',name:'San Valentín',price:150,description:'Un resplandor rosa que late suavemente.'},
-<<<<<<< HEAD
  {id:'frame-dia-madre',slot:'frame',name:'Día de las Madres 🌷',price:170,description:'Flores animadas y brillo rosa para celebrar a mamá.'},
  {id:'frame-dia-padre',slot:'frame',name:'Día del Padre 🎩',price:170,description:'Un estilo elegante con destellos azules.'},
  {id:'frame-navidad-nieve',slot:'frame',name:'Nevada Navideña ❄️',price:220,description:'Copos de nieve animados alrededor del perfil.'},
@@ -36,8 +35,6 @@ const catalog = [
  {id:'frame-aniversario',slot:'frame',name:'Aniversario FIT ✨',price:180,description:'Brillos especiales de celebración.'},
  {id:'frame-luna',slot:'frame',name:'Noche Estrellada 🌙',price:210,description:'Estrellas y partículas suaves.'},
  {id:'frame-fuego',slot:'frame',name:'Energía FIT 🔥',price:200,description:'Partículas de fuego animadas.'},
-=======
->>>>>>> d582be2503e3561cb278e9abc41f0577c1d169c5
  {id:'chat-ruby',slot:'chat',name:'Chat Rubí',price:50,description:'Bordes rojos para tus conversaciones.'},
  {id:'chat-gold',slot:'chat',name:'Chat Honor',price:100,description:'Marcos dorados en tus chats.'},
  {id:'bot-petals',slot:'background',name:'Pétalos FIT',price:75,description:'Fondo suave de puntos para Castor FIT.'},

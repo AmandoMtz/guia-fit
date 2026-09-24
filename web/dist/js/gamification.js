@@ -21,6 +21,7 @@
  }
  function decorate(scope=document){
 
+<<<<<<< HEAD
   const seasonal={
 'frame-halloween':['flames','candy'],
 'frame-christmas':['snow'],
@@ -43,6 +44,9 @@
 'frame-luna':['sparkles'],
 'frame-fuego':['flames']
 };
+=======
+  const seasonal={'frame-halloween':['flames','candy'],'frame-christmas':['snow'],'frame-mexico':['confetti'],'frame-muertos':['petals'],'frame-newyear':['sparkles'],'frame-valentine':['hearts']};
+>>>>>>> d582be2503e3561cb278e9abc41f0577c1d169c5
   scope.querySelectorAll('.profile-avatar,.reward-preview>span').forEach(el=>{
    const card=el.closest('.reward-preview');
    const id=card?Array.from(card.classList).find(x=>x.startsWith('frame-')||x.startsWith('custom-')):document.body.dataset.fitframe;

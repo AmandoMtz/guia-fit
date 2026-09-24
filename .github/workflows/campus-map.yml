@@ -1,0 +1,37 @@
+name: Validar mapa del campus
+on:
+  pull_request:
+    paths:
+      - 'web/dist/**'
+      - 'scripts/test-campus-map-browser.cjs'
+      - '.github/workflows/campus-map.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'web/dist/**'
+      - 'scripts/test-campus-map-browser.cjs'
+      - '.github/workflows/campus-map.yml'
+permissions:
+  contents: read
+jobs:
+  navegador:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Preparar navegador aislado
+        run: npm install --prefix "$RUNNER_TEMP/fit-map-browser" --no-audit --no-fund --ignore-scripts playwright@1.63.0
+      - name: Instalar Chromium
+        run: '"$RUNNER_TEMP/fit-map-browser/node_modules/.bin/playwright" install --with-deps chromium'
+      - name: Probar mapa en escritorio y celular
+        run: NODE_PATH="$RUNNER_TEMP/fit-map-browser/node_modules" node scripts/test-campus-map-browser.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mapa-campus-capturas
+          path: map-browser-results/
+          if-no-files-found: ignore
+          retention-days: 7

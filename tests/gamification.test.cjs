@@ -11,7 +11,22 @@ test('recompensas, canjes, categorías y valoraciones se validan en servidor',as
  const db={query,connect:async()=>{const prev=tail;let release;tail=new Promise(r=>release=r);await prev;return {query,release};}};
  const buyer=randomUUID(),seller=randomUUID(),stranger=randomUUID();
  for(const uid of [buyer,seller,stranger])await query("insert into users(id,email,password_hash,email_confirmed_at) values($1,$2,'fixture',now())",[uid,uid+'@uat.edu.mx']);
- const app=express();app.use(express.json());app.use((req,res,next)=>{req.user={id:req.headers['x-user']||buyer,email:req.headers['x-external']?'guest@gmail.com':'teacher@uat.edu.mx',role:'user'};next();});app.use('/g',createGamificationRouter({db}));app.use((e,req,res,next)=>{if(!e.status) console.error(e.message);res.status(e.status||500).json({message:e.message});});const api=request(app);
+ const app=express();app.use(express.json());app.use((req,res,next)=>{req.user={id:req.headers['x-user']||buyer,email:req.headers['x-external']?'guest@gmail.com':'teacher@uat.edu.mx',role:req.headers['x-admin']==='yes'?'admin':'user'};next();});app.use('/g',createGamificationRouter({db}));app.use((e,req,res,next)=>{if(!e.status) console.error(e.message);res.status(e.status||500).json({message:e.message});});const api=request(app);
+ await t.test('solo administradores publican estilos persistentes y se canjean normalmente',async()=>{
+  const design={name:'Mi marco',slot:'frame',primary:'#ff0000',secondary:'#33cc77',surface:'#ffffff',ink:'#222222',effect:'candy',speed:4,price:0,minLevel:1};
+  await api.post('/g/custom').send(design).expect(403);
+  await api.post('/g/custom').set('x-admin','yes').send({...design,primary:'red;display:none'}).expect(400);
+  await api.post('/g/custom').set('x-admin','yes').send({...design,price:-1}).expect(400);
+  const result=await api.post('/g/custom').set('x-admin','yes').send(design).expect(200);
+  const id=result.body.data.id;
+  assert.ok((await api.get('/g/me')).body.data.catalog.some(x=>x.id===id));
+  await api.post('/g/buy').send({item:id}).expect(200);
+  await api.post('/g/equip').send({item:id,slot:'frame'}).expect(200);
+  assert.equal((await api.get('/g/me')).body.data.equipped.frame,id);
+  await query('delete from fit_inventory where item=$1',[id]);
+  await query('delete from fit_custom_styles where id=$1',[id]);
+  await api.post('/g/equip').send({item:null,slot:'frame'}).expect(200);
+ });
  await t.test('día único, primer horario único y semana lunes a viernes',async()=>{
   await Promise.all([api.post('/g/sync').send({}).expect(200),api.post('/g/sync').send({}).expect(200)]);
   assert.equal((await api.get('/g/me')).body.data.xp,10);

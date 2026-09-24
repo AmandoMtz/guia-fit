@@ -656,11 +656,11 @@
     const user = context?.state?.user;
     if (!user) return !navigator.onLine || !!root.FIT_OFFLINE?.getSession?.()?.user;
     const type = String(user.account_type || "").toLowerCase();
-    return ["student", "teacher"].includes(type) || /@(alumnos\.)?uat\.edu\.mx$/i.test(user.email || "") || /@docentes\.uat\.edu\.mx$/i.test(user.email || "");
+    return ["student", "teacher", "admin"].includes(type) || /@(alumnos\.)?uat\.edu\.mx$/i.test(user.email || "") || /@docentes\.uat\.edu\.mx$/i.test(user.email || "");
   }
 
   function updateLauncher() {
-    const show = !navigator.onLine && eligible() && !overlay?.classList.contains("visible");
+    const show = (context?.state?.offline || !navigator.onLine) && eligible() && !overlay?.classList.contains("visible");
     if (!show) {
       launcher?.remove();
       launcher = null;

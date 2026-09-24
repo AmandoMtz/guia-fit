@@ -7,9 +7,52 @@
  const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const previewText=item=>item.slot==='frame'?'FIT':item.slot==='theme'?'Tema FIT':item.slot==='font'?'Aa FIT':'Hola, ¿cómo va tu día?';
  const api=async(path,body)=>{const c=ctx;if(!c)throw Error('Inicia sesión.');const r=await c.client.request('/api/gamification'+path,body===undefined?'GET':'POST',body);if(r.error)throw Error(r.error.message||'No pudimos completar la operación.');return r.data;};
+ let previewDesign=null;
+ const effectSymbols={sparkles:'✦',flames:'♨',candy:'🍬',snow:'❄',hearts:'♥',petals:'✿',confetti:'▰'};
+ function customCSS(items){
+  let style=document.querySelector('#custom-reward-styles');if(!style){style=document.createElement('style');style.id='custom-reward-styles';document.head.append(style);}
+  style.textContent=items.filter(x=>x.design&&/^custom-[a-z0-9-]+$/.test(x.id)).map(x=>{
+   const d=x.design;if(![d.primary,d.secondary,d.surface,d.ink].every(v=>/^#[0-9a-f]{6}$/i.test(v)))return '';
+   const sel=`body[data-fit${x.slot}="${x.id}"]`,card=`.reward-preview.${x.id}`;
+   if(x.slot==='frame')return `${sel} .profile-avatar,${card}>span{--frame-a:${d.primary};--frame-b:${d.secondary};border:4px solid ${d.primary};border-radius:50%;overflow:visible;position:relative;animation:fit-frame-shimmer ${d.speed}s ease-in-out infinite} ${sel} .profile-avatar img{border-radius:50%}`;
+   if(x.slot==='background')return `${sel} .fit-chat-panel,${sel} .fit-chat-messages,${card}{background:${d.surface};color:${d.ink}} ${sel} .fit-chat-header,${sel} .fit-chat-send{background:${d.primary};color:${d.ink}}`;
+   return `${sel}{--read-action:${d.primary};--read-hover:${d.secondary};--read-link:${d.primary};--read-muted:${d.ink};--read-on-action:${d.ink};--fit-accent:${d.primary};--fit-accent-dark:${d.secondary};--fit-bg:${d.surface};--fit-surface:${d.surface};--fit-soft:${d.surface};--fit-line:${d.secondary};--fit-ink:${d.ink};--fit-muted:${d.ink};--orange:${d.primary};--orange-dark:${d.secondary};--red:${d.primary};--navy:${d.primary};--line:${d.secondary};--soft:${d.surface};--ink:${d.ink};--muted:${d.ink}} ${card}{background:${d.surface};color:${d.ink};border:3px solid ${d.primary}}`;
+  }).join('\n');
+ }
+ function decorate(scope=document){
+  scope.querySelectorAll('.fit-frame-particles').forEach(x=>x.remove());
+  const seasonal={'frame-halloween':['flames','candy'],'frame-christmas':['snow'],'frame-mexico':['confetti'],'frame-muertos':['petals'],'frame-newyear':['sparkles'],'frame-valentine':['hearts']};
+  scope.querySelectorAll('.profile-avatar,.reward-preview>span').forEach(el=>{
+   const id=el.closest('.reward-preview')?.className.split(' ').find(x=>x.startsWith('frame-')||x.startsWith('custom-'))||document.body.dataset.fitframe;
+   const d=(id==='custom-preview'?previewDesign:data?.catalog?.find(x=>x.id===id)?.design);
+   const effects=d?(d.effect==='none'?[]:[d.effect]):seasonal[id]||[];if(!effects.length)return;
+   const layer=document.createElement('span');layer.className='fit-frame-particles';layer.setAttribute('aria-hidden','true');
+   for(let i=0;i<8;i++){const e=document.createElement('i'),effect=effects[i%effects.length];e.textContent=effectSymbols[effect]||'✦';e.dataset.effect=effect;e.style.setProperty('--n',i);e.style.setProperty('--duration',(d?.speed||4)+'s');if(d)e.style.color=d.secondary;layer.append(e);}
+   el.append(layer);
+  });
+ }
+ function preview(item){
+  previewDesign=item.design;
+  apply();if(item.id==='custom-preview')customCSS([...data.catalog,item]);document.body.dataset['fit'+item.slot]=item.id;
+  const avatar=document.querySelector('.profile-hero .profile-avatar,.top-actions .profile-avatar');
+  const modal=ctx.dialog(`<section class="style-preview-dialog"><h2>${esc(item.name)}</h2><div class="style-preview-stage">${avatar?avatar.outerHTML:'<span class="avatar profile-avatar">FIT</span>'}</div>${item.slot!=='frame'?'<div class="panel"><h3>Así se verá tu espacio</h3><p>Guía FIT · Tu campus, tu estilo.</p><button class="btn" type="button">Botón de ejemplo</button></div><div class="fit-chat-panel"><div class="fit-chat-header">Castor FIT</div><div class="fit-chat-messages">Hola, ¿en qué puedo ayudarte?</div></div>':''}<p>Vista previa sin gastar monedas. Cierra para volver a tu estilo.</p><button class="btn" data-close type="button">Cerrar vista previa</button></section>`);
+  modal.classList.add('reward-preview-modal');decorate();
+  modal.addEventListener('close',()=>{apply();decorate();},{once:true});
+ }
+ function editor(content){
+  content.innerHTML=`<section class="panel"><h3>Crear marcos y temas</h3><p>Publica un diseño para que la comunidad pueda canjearlo.</p><form id="style-editor" class="style-editor"><label>Nombre<input name="name" maxlength="70" required></label><label>Tipo<select name="slot"><option value="frame">Marco de perfil</option><option value="theme">Tema de la aplicación</option><option value="background">Tema del chatbot</option></select></label><label>Color principal<input name="primary" type="color" value="#ff0000"></label><label>Color secundario<input name="secondary" type="color" value="#33cc77"></label><label>Fondo<input name="surface" type="color" value="#ffffff"></label><label>Texto<input name="ink" type="color" value="#322024"></label><label data-frame-option>Efecto del marco<select name="effect">${Object.entries({none:'Sin partículas',sparkles:'Destellos',flames:'Llamitas verdes',candy:'Dulces',snow:'Nieve',hearts:'Corazones',petals:'Flores',confetti:'Confeti'}).map(([v,n])=>`<option value="${v}">${n}</option>`).join('')}</select></label><label data-frame-option>Duración del ciclo (segundos)<input name="speed" type="number" min="2" max="12" value="4" required></label><label>Precio en monedas<input name="price" type="number" min="0" max="100000" value="50" required></label><label>Nivel mínimo<input name="minLevel" type="number" min="1" max="1000" value="1" required></label><div class="button-row"><button class="btn secondary" type="button" id="style-try">Previsualizar</button><button class="btn" type="submit">Publicar diseño</button></div><p role="status" id="style-result"></p></form></section>`;
+  const form=content.querySelector('form'),read=()=>{const b=Object.fromEntries(new FormData(form));for(const k of ['price','minLevel','speed'])b[k]=Number(b[k]);return b;};
+  form.elements.slot.onchange=()=>form.querySelectorAll('[data-frame-option]').forEach(x=>x.hidden=form.elements.slot.value!=='frame');
+  content.querySelector('#style-try').onclick=()=>{if(!form.reportValidity())return;const b=read(),item={...b,id:'custom-preview',design:b};customCSS([...data.catalog,item]);preview(item);};
+  form.onsubmit=async e=>{e.preventDefault();const button=form.querySelector('[type=submit]');button.disabled=true;try{await api('/custom',read());data=await api('/me');apply();form.querySelector('#style-result').textContent='Diseño publicado. Ya está disponible en Personalizar.';form.elements.name.value='';}catch(e){form.querySelector('#style-result').textContent=e.message;}finally{button.disabled=false;}};
+ }
+
  function apply(){
+  customCSS(data?.catalog||[]);
   const b=document.body;for(const slot of ['frame','chat','background','motion','theme','font'])b.dataset['fit'+slot]=data?.equipped?.[slot]||'';
   b.classList.toggle('fit-no-motion',data?.animations===false);
+  try{b.classList.toggle('fit-force-motion',data?.animations!==false&&localStorage.getItem('fit-force-motion')==='yes');}catch{}
+  decorate();
  }
  function clear(){identity=null;data=null;version++;apply();}
  async function refresh(){
@@ -28,14 +71,14 @@
    if(!host.isConnected)return;
    const items=data.catalog||[];
    host.innerHTML=`<div class="account-reward-preview-head"><div><b>${data.coins} monedas disponibles</b><span>Nivel ${data.level} · ${data.xp} EXP</span></div><div class="button-row"><button class="btn secondary small" type="button" data-preview-reset hidden>Restaurar mis estilos</button><button class="btn small" type="button" data-open-rewards>Ver todos los premios</button></div></div><div class="account-reward-grid">${items.map(item=>`<article class="account-reward-item"><div class="reward-preview ${esc(item.id)}" aria-hidden="true"><span>${previewText(item)}</span></div><div><strong>${esc(item.name)}</strong><small>${esc(item.description)}</small><b>${item.minLevel&&data.level<item.minLevel?'Nivel '+item.minLevel:data.inventory.includes(item.id)?'Ya es tuyo':item.price+' monedas'}</b></div><button class="text-button" type="button" data-preview-item="${esc(item.id)}">Previsualizar</button></article>`).join('')}</div><p class="hint" data-preview-status>Prueba un estilo aquí sin gastar monedas. Solo se guarda cuando lo canjeas y lo equipas desde Mi progreso y premios.</p>`;
+   decorate();
    const reset=host.querySelector('[data-preview-reset]'),status=host.querySelector('[data-preview-status]');
    const restore=()=>{apply();reset.hidden=true;status.textContent='Prueba un estilo aquí sin gastar monedas. Solo se guarda cuando lo canjeas y lo equipas desde Mi progreso y premios.';};
    reset.onclick=restore;
    host.querySelector('[data-open-rewards]').onclick=()=>{restore();c.state.view='rewards';c.render();};
    host.querySelectorAll('[data-preview-item]').forEach(button=>button.onclick=()=>{
     const item=items.find(x=>x.id===button.dataset.previewItem);if(!item)return;
-    apply();document.body.dataset['fit'+item.slot]=item.id;reset.hidden=false;
-    status.textContent=`Vista previa activa: ${item.name}. No se han gastado monedas.`;
+    preview(item);
    });
   }catch(e){if(host.isConnected)host.innerHTML=`<div class="notice error">${esc(e.message||'No se pudo cargar la vista previa de premios.')}</div>`;}
  }
@@ -53,13 +96,18 @@
     if(saved?.classes?.length){await api('/schedule',{classes:saved.classes.map(x=>({subject:x.subject,day:x.day,start:x.start,end:x.end}))}).catch(()=>{});data=await api('/me');}
    }
    if(v!==version||!host.isConnected)return;
-   host.innerHTML=`<section class="reward-hero"><div><span class="eyebrow">TU CAMINO EN LA FIT</span><h2>Nivel ${data.level}</h2><p>Cada actividad cuenta. Cada nivel es tuyo.</p></div><div class="reward-balance"><strong>${data.coins}</strong><span>monedas disponibles</span></div><div class="reward-progress"><progress max="100" value="${data.xp%100}" aria-label="Progreso del nivel"></progress><span>${data.xp} EXP total · Faltan ${data.next} EXP para subir</span></div></section><nav class="reward-tabs" aria-label="Progreso y premios">${[['progress','Mi actividad'],['shop','Personalizar'],['ranking','Mejores vendedores'],['community','Ranking de la comunidad'],['ratings','Mis valoraciones']].map(([id,name])=>`<button class="btn ${tab===id?'':'secondary'}" data-tab="${id}" aria-pressed="${tab===id}">${name}</button>`).join('')}</nav><section id="reward-content"></section>`;
+   host.innerHTML=`<section class="reward-hero"><div><span class="eyebrow">TU CAMINO EN LA FIT</span><h2>Nivel ${data.level}</h2><p>Cada actividad cuenta. Cada nivel es tuyo.</p></div><div class="reward-balance"><strong>${data.coins}</strong><span>monedas disponibles</span></div><div class="reward-progress"><progress max="100" value="${data.xp%100}" aria-label="Progreso del nivel"></progress><span>${data.xp} EXP total · Faltan ${data.next} EXP para subir</span></div></section><nav class="reward-tabs" aria-label="Progreso y premios">${[['progress','Mi actividad'],['shop','Personalizar'],['ranking','Mejores vendedores'],['community','Ranking de la comunidad'],['ratings','Mis valoraciones'],...(c.state.admin?[['editor','Crear diseños']]:[])].map(([id,name])=>`<button class="btn ${tab===id?'':'secondary'}" data-tab="${id}" aria-pressed="${tab===id}">${name}</button>`).join('')}</nav><section id="reward-content"></section>`;
    host.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{tab=b.dataset.tab;render(c);});
    const content=host.querySelector('#reward-content');
-   if(tab==='progress'){
+   if(tab==='editor'&&c.state.admin){editor(content);
+   }else if(tab==='progress'){
     content.innerHTML=`<div class="reward-grid"><article class="reward-card"><h3>Tu semana FIT</h3><div class="reward-week">${['L','M','M','J','V'].map((d,i)=>{const hit=data.days.some(date=>new Date(date+'T12:00:00').getDay()===i+1);return `<span class="${hit?'earned':''}" aria-label="${['Lunes','Martes','Miércoles','Jueves','Viernes'][i]}: ${hit?'completado':'pendiente'}">${d}<small>${hit?'✓':'—'}</small></span>`;}).join('')}</div><p>10 EXP por día. Completa lunes a viernes y recibe 50 EXP extra.</p></article><article class="reward-card"><h3>Así creces</h3><p>Primer horario: <b>30 EXP</b><br>Asistencia con QR: <b>40 EXP</b><br>Valoración recibida: <b>10 EXP</b></p><p>Cada 100 EXP subes un nivel y recibes 50 monedas. Tus canjes son permanentes y no restan EXP.</p><small>Valoraciones: hasta 5 recompensas diarias y una por comprador cada semana. Asistencias contadas una vez por evento.</small></article></div><h3>Tu actividad reciente</h3><div class="reward-history">${data.history.map(x=>`<div><span>${label(x.activity)}<small>${new Date(x.created_at).toLocaleDateString('es-MX')}</small></span><b>+${x.xp} EXP</b></div>`).join('')||'<p>Aquí aparecerán tus primeras actividades.</p>'}</div>`;
    }else if(tab==='shop'){
-    content.innerHTML=`<div class="reward-settings"><label><input type="checkbox" id="reward-motion" ${data.animations?'checked':''}> Activar animaciones suaves</label><p>Los temas cambian toda tu experiencia al iniciar sesión: menú lateral, encabezados, fondos, botones, tarjetas, ventanas y detalles visuales. También puedes combinar tipografías, marcos y estilos del chat.</p></div><div class="reward-grid">${data.catalog.map(item=>{const owned=data.inventory.includes(item.id),active=data.equipped[item.slot]===item.id,locked=item.minLevel&&data.level<item.minLevel;return `<article class="reward-card ${locked?'reward-locked':''}"><div class="reward-preview ${esc(item.id)}" aria-hidden="true"><span>${previewText(item)}</span></div><h3>${esc(item.name)}</h3><p>${esc(item.description)}</p><p><b>${locked?'Se desbloquea en nivel '+item.minLevel:owned?'Ya es tuyo':item.price+' monedas'}</b></p><button class="btn ${active?'secondary':''}" data-item="${item.id}" ${locked||(!owned&&data.coins<item.price)?'disabled':''}>${locked?'Nivel '+item.minLevel:active?'Quitar':owned?'Equipar':'Canjear'}</button></article>`;}).join('')}</div>`;
+    content.innerHTML=`<div class="reward-settings"><label><input type="checkbox" id="reward-motion" ${data.animations?'checked':''}> Activar animaciones suaves</label><label><input type="checkbox" id="reward-force-motion"> Mostrar animaciones aunque este dispositivo tenga movimiento reducido</label><p>Los temas cambian toda tu experiencia al iniciar sesión: menú lateral, encabezados, fondos, botones, tarjetas, ventanas y detalles visuales. También puedes combinar tipografías, marcos y estilos del chat.</p></div><div class="reward-grid">${data.catalog.map(item=>{const owned=data.inventory.includes(item.id),active=data.equipped[item.slot]===item.id,locked=item.minLevel&&data.level<item.minLevel;return `<article class="reward-card ${locked?'reward-locked':''}"><div class="reward-preview ${esc(item.id)}" aria-hidden="true"><span>${previewText(item)}</span></div><h3>${esc(item.name)}</h3><p>${esc(item.description)}</p><p><b>${locked?'Se desbloquea en nivel '+item.minLevel:owned?'Ya es tuyo':item.price+' monedas'}</b></p><button type="button" class="text-button" data-try="${esc(item.id)}">Previsualizar</button><button class="btn ${active?'secondary':''}" data-item="${item.id}" ${locked||(!owned&&data.coins<item.price)?'disabled':''}>${locked?'Nivel '+item.minLevel:active?'Quitar':owned?'Equipar':'Canjear'}</button></article>`;}).join('')}</div>`;
+    decorate();
+    content.querySelectorAll('[data-try]').forEach(b=>b.onclick=()=>preview(data.catalog.find(x=>x.id===b.dataset.try)));
+    const force=content.querySelector('#reward-force-motion');try{force.checked=localStorage.getItem('fit-force-motion')==='yes';}catch{}
+    force.onchange=()=>{try{localStorage.setItem('fit-force-motion',force.checked?'yes':'no');}catch{}apply();};
     content.querySelector('#reward-motion').onchange=e=>mutate('/animations',{enabled:e.target.checked});
     content.querySelectorAll('[data-item]').forEach(b=>b.onclick=()=>{const item=data.catalog.find(x=>x.id===b.dataset.item);mutate(data.inventory.includes(item.id)?'/equip':'/buy',data.inventory.includes(item.id)?{slot:item.slot,item:data.equipped[item.slot]===item.id?null:item.id}:{item:item.id});});
    }else if(tab==='ranking'){

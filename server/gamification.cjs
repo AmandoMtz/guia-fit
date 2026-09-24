@@ -53,17 +53,28 @@ async function sync(c,uid) {
 }
 function createGamificationRouter({db,limit}) {
  const r=Router();
+ const getCatalog=async()=>[...catalog,...(await db.query('select definition from fit_custom_styles order by created_at')).rows.map(x=>x.definition)];
  r.use(async(req,res,next)=>{
   if(!['student','teacher','admin'].includes(accountType(req.user.email,req.user.role)))throw fail(403,'Los beneficios están disponibles para alumnos y docentes con correo institucional.');
   if(req.method!=='GET'&&limit)await limit(req,`rewards:${req.user.id}`,90,15*60*1000);
   next();
  });
  r.get('/me',async(req,res)=>{
+  const catalog=await getCatalog();
   const p=(await db.query('select * from fit_progress where user_id=$1',[req.user.id])).rows[0]||{xp:0,coins:0,equipped:{},animations:true};
   const inventory=(await db.query('select item from fit_inventory where user_id=$1',[req.user.id])).rows.map(x=>x.item);
   const history=(await db.query('select activity,xp,created_at from fit_rewards where user_id=$1 order by created_at desc limit 20',[req.user.id])).rows;
   const days=(await db.query("select activity from fit_rewards where user_id=$1 and activity like 'day:%' and substring(activity from 5)::date between date_trunc('week',now() at time zone 'America/Monterrey')::date and date_trunc('week',now() at time zone 'America/Monterrey')::date+4",[req.user.id])).rows.map(x=>x.activity.slice(4));
   res.json({data:{...p,level:1+Math.floor(p.xp/100),next:100-p.xp%100,inventory,catalog,history,days,categories}});
+ });
+ r.post('/custom',async(req,res)=>{
+  if(req.user.role!=='admin')throw fail(403,'Solo administradores pueden crear estilos.');
+  const b=req.body||{}, hex=x=>typeof x==='string'&&/^#[0-9a-f]{6}$/i.test(x);
+  if(typeof b.name!=='string'||!b.name.trim()||b.name.length>70||!['frame','theme','background'].includes(b.slot)||!Number.isInteger(b.price)||b.price<0||b.price>100000||!Number.isInteger(b.minLevel)||b.minLevel<1||b.minLevel>1000||!hex(b.primary)||!hex(b.secondary)||!hex(b.surface)||!hex(b.ink)||!['none','sparkles','flames','candy','snow','hearts','petals','confetti'].includes(b.effect)||!Number.isInteger(b.speed)||b.speed<2||b.speed>12)throw fail(400,'Revisa nombre, colores, efecto, velocidad, precio y nivel.');
+  const id='custom-'+require('node:crypto').randomUUID();
+  const definition={id,name:b.name.trim(),slot:b.slot,price:b.price,minLevel:b.minLevel,description:'Diseño de la comunidad FIT',design:{primary:b.primary,secondary:b.secondary,surface:b.surface,ink:b.ink,effect:b.effect,speed:b.speed}};
+  await db.query('insert into fit_custom_styles(id,definition,created_by) values($1,$2,$3)',[id,JSON.stringify(definition),req.user.id]);
+  res.json({data:definition});
  });
  r.post('/sync',async(req,res)=>res.json({data:{earned:await transaction(db,c=>sync(c,req.user.id))}}));
  r.post('/schedule',async(req,res)=>{
@@ -72,6 +83,7 @@ function createGamificationRouter({db,limit}) {
   res.json({data:{earned:await transaction(db,c=>award(c,req.user.id,'first-schedule',30))}});
  });
  r.post('/buy',async(req,res)=>{
+  const catalog=await getCatalog();
   const item=catalog.find(x=>x.id===req.body?.item);if(!item)throw fail(400,'Personalización desconocida.');
   await transaction(db,async c=>{
    const p=await lock(c,req.user.id);
@@ -84,6 +96,7 @@ function createGamificationRouter({db,limit}) {
   });res.json({data:{}});
  });
  r.post('/equip',async(req,res)=>{
+  const catalog=await getCatalog();
   const {slot,item}=req.body||{};
   if(!['frame','chat','background','motion','theme','font'].includes(slot))throw fail(400,'Estilo desconocido.');
   if(item!==null&&!catalog.some(x=>x.id===item&&x.slot===slot))throw fail(400,'Estilo incompatible.');

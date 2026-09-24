@@ -5254,3 +5254,35 @@ body[data-fitframe="frame-christmas"] :is(.profile-avatar,.avatar)::before,.rewa
 body[data-fitframe="frame-muertos"] :is(.profile-avatar,.avatar)::before,.reward-preview.frame-muertos>span::before{content:"";position:absolute;right:-8px;bottom:-6px;width:23px;height:23px;background:url("assets/frames/muertos.svg") center/contain no-repeat;z-index:3;pointer-events:none;}
 body[data-fitframe="frame-newyear"] :is(.profile-avatar,.avatar)::before,.reward-preview.frame-newyear>span::before{content:"";position:absolute;right:-8px;bottom:-6px;width:23px;height:23px;background:url("assets/frames/newyear.svg") center/contain no-repeat;z-index:3;pointer-events:none;}
 body[data-fitframe="frame-valentine"] :is(.profile-avatar,.avatar)::before,.reward-preview.frame-valentine>span::before{content:"";position:absolute;right:-8px;bottom:-6px;width:23px;height:23px;background:url("assets/frames/valentine.svg") center/contain no-repeat;z-index:3;pointer-events:none;}
+
+/* Vista previa, editor y efectos compartidos por escritorio y móvil. */
+.profile-shortcut{border:0;background:transparent;padding:5px;flex:0 0 auto;cursor:pointer;border-radius:50%}
+.top-actions .profile-shortcut .profile-avatar{display:grid!important;width:38px;height:38px;font-size:1rem}
+.reward-preview-modal{width:min(540px,calc(100vw - 24px));max-height:90dvh;overflow:auto}
+.style-preview-dialog{text-align:center}.style-preview-stage{min-height:245px;display:grid;place-items:center;padding:42px}
+.style-preview-stage .profile-avatar{display:grid!important;width:150px!important;height:150px!important;font-size:3rem}
+.style-preview-stage .profile-avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%}
+.style-preview-dialog .fit-chat-panel{position:relative;inset:auto;display:block;width:100%;height:auto;min-height:90px;margin:16px 0;padding:16px;border-radius:16px}
+.style-editor{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.style-editor label{display:grid;gap:6px}.style-editor input,.style-editor select{width:100%;min-height:44px}.style-editor .button-row,.style-editor [role=status]{grid-column:1/-1}
+.profile-avatar{position:relative;isolation:isolate}
+.profile-avatar>.fit-frame-particles,.reward-preview>span>.fit-frame-particles{position:absolute!important;inset:-14px!important;width:auto!important;height:auto!important;display:block!important;border:0!important;border-radius:0!important;background:none!important;box-shadow:none!important;pointer-events:none;z-index:6;animation:none!important;overflow:visible}
+.fit-frame-particles i{position:absolute;left:calc(5% + var(--n)*12%);top:calc(12% + (var(--n) - 4)*9%);font-style:normal;font-size:15px;color:var(--frame-b,#56d96b);text-shadow:0 0 5px currentColor;animation:fit-particle-rise var(--duration,4s) ease-in-out infinite;animation-delay:calc(var(--n)*-.47s)}
+.fit-frame-particles i:nth-child(even){top:78%}
+.fit-frame-particles i[data-effect=flames]{color:#55ef78!important;font-size:0;width:11px;height:20px;border-radius:80% 10% 65% 40%;background:radial-gradient(ellipse at bottom,#e7ff94,#33df62 55%,#079755);transform:rotate(30deg);box-shadow:0 0 9px #33ef68}
+@keyframes fit-particle-rise{0%,100%{translate:0 4px;opacity:.35;scale:.7}50%{translate:0 -16px;opacity:1;scale:1.15}}
+body.fit-no-motion .fit-frame-particles i{animation:none!important}
+@media(prefers-reduced-motion:reduce){.fit-frame-particles i{animation:none!important}}
+@media(max-width:700px){
+ .app-top .top-actions{display:flex;gap:8px;width:100%;align-items:center;justify-content:space-between;min-width:0}
+ .app-top .top-actions .fit-presence-control{flex:1 1 85px;min-width:0;max-width:145px}
+ .app-top .top-actions .guide-mark{display:none}
+ .app-top .top-actions .notification-bell{flex:0 0 36px;width:36px;height:36px}
+ .app-top .top-actions #logout{font-size:0;padding:9px;min-width:36px;flex:0 0 36px}
+ .app-top .top-actions #logout svg{width:20px;height:20px}
+ .style-editor{grid-template-columns:1fr}
+}
+.style-preview-dialog .fit-chat-panel{opacity:1;visibility:visible;transform:none;pointer-events:auto}
+.style-preview-dialog .fit-chat-messages{min-height:65px;padding:18px}
+/* Preferencia explícita del usuario para equipos con movimiento reducido. */
+body.fit-force-motion:not(.fit-no-motion)[data-fitframe] .profile-avatar,body.fit-force-motion:not(.fit-no-motion) .reward-preview[class*="frame-"]>span{animation:fit-frame-shimmer 4s ease-in-out infinite!important}
+body.fit-force-motion:not(.fit-no-motion) .fit-frame-particles i{animation:fit-particle-rise var(--duration,4s) ease-in-out infinite!important;animation-delay:calc(var(--n)*-.47s)!important}

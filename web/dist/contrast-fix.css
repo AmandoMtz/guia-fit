@@ -1,0 +1,38 @@
+/* Correccion de contraste: solo presentacion, sin cambios en recompensas. */
+body,body[data-fittheme]{--read-action:#c40000;--read-hover:#a60000;--read-link:#b80000;--read-muted:#66545a;--read-on-action:#fff}
+body[data-fittheme="theme-pink"]{--read-action:#ae285b;--read-hover:#91204b;--read-link:#a02353;--read-muted:#725361}
+body[data-fittheme="theme-blue"]{--read-action:#2165a7;--read-hover:#195187;--read-link:#205f9c;--read-muted:#4d6478}
+body[data-fittheme="theme-purple"]{--read-action:#7040b4;--read-hover:#59318f;--read-link:#6637a8;--read-muted:#665773}
+body[data-fittheme="theme-lilac"]{--read-action:#7c46a8;--read-hover:#633687;--read-link:#73409d;--read-muted:#6b5873}
+body[data-fittheme="theme-mint"]{--read-action:#206c55;--read-hover:#195440;--read-link:#20664f;--read-muted:#48675c}
+body[data-fittheme="theme-dark"]{--read-action:#bc243c;--read-hover:#9d1b30;--read-link:#ff9ca8;--read-muted:#c0c4ce}
+/* Superficies solidas: el fondo decorativo no se mezcla con el texto. */
+body[data-fittheme]{--fit-glass:var(--fit-surface);--fit-muted:var(--read-muted);--muted:var(--read-muted)}
+body[data-fittheme] :is(a,.text-button,.reward-rank,.eyebrow){color:var(--read-link)}
+body[data-fittheme] .nav-item.active{color:var(--read-link)}
+body[data-fittheme] :is(.btn:not(.secondary),.chat-send-button,.photo-save,.photo-file-picker,.notification-bell span,.reward-week .earned){background:var(--read-action);color:var(--read-on-action);text-shadow:none}
+body[data-fittheme] :is(.btn:not(.secondary),.chat-send-button):hover{background:var(--read-hover);filter:none}
+body[data-fittheme] .btn.secondary{background:var(--fit-surface);color:var(--fit-ink)}
+body[data-fittheme] .reward-hero{background:var(--read-action);color:#fff}
+body[data-fittheme] .reward-hero::after{display:none}
+body[data-fittheme] .reward-hero :is(h2,p,span,strong,small,label,.eyebrow,.muted,.hint){color:#fff;opacity:1}
+body[data-fittheme] .reward-week .earned small{color:#fff;opacity:1}
+body[data-fittheme] .reward-card.reward-locked{opacity:1}
+/* Cada tarjeta conserva una pareja de colores, incluso siendo un enlace. */
+body .faculty-card,body[data-fittheme] .faculty-card{background:#fff;color:#322024;border-color:#e0dadd;opacity:1;filter:none;text-shadow:none}
+body .faculty-social,body[data-fittheme] .faculty-social{background:#f2f6ff;color:#163968;border-color:#d8e2f3}
+body .faculty-admission,body[data-fittheme] .faculty-admission{background:var(--read-action);color:#fff;border-color:var(--read-action)}
+body .faculty-admission::before,body[data-fittheme] .faculty-admission::before{display:none}
+body .faculty-card :is(h3,p,small,span,svg),body[data-fittheme] .faculty-card :is(h3,p,small,span,svg){color:inherit;opacity:1;text-shadow:none}
+body .faculty-card-action,body[data-fittheme] .faculty-card-action{border-top-color:currentColor}
+body .faculty-heading,body[data-fittheme] .faculty-heading{color:var(--fit-ink,var(--ink))}
+body .faculty-heading p,body[data-fittheme] .faculty-heading p{color:var(--read-muted);opacity:1}
+body .faculty-heading .eyebrow,body[data-fittheme] .faculty-heading .eyebrow{color:var(--read-link)}
+body[data-fittheme="theme-dark"] .faculty-card{background:#1b1d22;color:#f5f5f6;border-color:#454953}
+body[data-fittheme="theme-dark"] .faculty-social{background:#172b40;color:#e7f1ff;border-color:#38526c}
+body[data-fittheme="theme-dark"] .faculty-admission{background:var(--read-action);color:#fff;border-color:var(--read-action)}
+/* El pie mantiene su fondo claro y no hereda texto claro del tema oscuro. */
+body .institutional-footer,body[data-fittheme] .institutional-footer{background:#fff;color:#51464b}
+body .institutional-footer p,body[data-fittheme] .institutional-footer p{color:#51464b;opacity:1}
+body[data-fittheme] .auth-aside :is(.eyebrow,.intro,.aside-bottom){color:#fff;opacity:1}
+body[data-fittheme="theme-dark"] :is(.notice.error,.notice.success,.notification.unread,.chat-expiry-banner,.chat-privacy-note,.food-status-banner,.chat-notification-banner){background:#24272e;color:#f5f5f6;border-color:#454953}

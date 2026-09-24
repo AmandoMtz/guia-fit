@@ -1,0 +1,43 @@
+# Castor FIT · asistente contextual
+
+El chatbot se abre desde la mascota de Guía FIT en la barra superior o desde el botón flotante **¿Necesitas apoyo?**. Funciona tanto en la pantalla pública como después de iniciar sesión. Las dudas frecuentes se responden con lógica local del servidor; Gemini es un complemento opcional para preguntas abiertas.
+
+## Configuración en Render
+
+Agrega estas variables de entorno al servicio web:
+
+- `GEMINI_API_KEY`: clave privada creada en Google AI Studio. Nunca debe enviarse al navegador ni subirse a Git.
+- `CHATBOT_MODEL`: por defecto `gemini-2.5-flash-lite`. Este modelo dispone de nivel gratuito sujeto a límites de uso de Google.
+
+No es necesario habilitar facturación para usar el nivel gratuito disponible. Si se supera el límite gratuito, Castor FIT mostrará un error temporal en lugar de generar cargos automáticamente, salvo que el proyecto se cambie expresamente a un nivel con facturación.
+
+Después de guardar las variables, vuelve a desplegar el servicio. `AUTO_MIGRATE=true` aplica `006_chatbot.sql` automáticamente.
+
+## Comportamiento
+
+- El historial activo es temporal, por sesión, y se conserva en memoria hasta 2 horas.
+- Cada petición usa el historial reciente y contexto real del usuario.
+- Eventos, pedidos, comida y espacios se consultan en PostgreSQL.
+- El horario se toma del almacenamiento local del dispositivo y se envía de forma resumida al backend para ese turno.
+- La clave del proveedor nunca sale del backend.
+- Se limita a 30 mensajes por usuario cada 15 minutos.
+- Las preguntas y respuestas se registran en `chatbot_logs` durante un máximo operativo de 90 días para revisar dudas frecuentes y mejorar el prompt.
+- Los casos de pagos, quejas formales, seguridad, problemas delicados de cuenta y otros asuntos que requieren decisión humana se marcan para escalamiento.
+
+## Privacidad
+
+El contexto enviado al modelo evita correo, matrícula y otros identificadores directos. No se almacena el prompt del sistema ni claves/tokens en `chatbot_logs`.
+
+
+## Nota sobre el nivel gratuito de Gemini
+
+Google indica que el nivel gratuito de determinados modelos puede utilizar las entradas y salidas para mejorar sus productos. Guía FIT minimiza los datos enviados al modelo y no incluye correo ni matrícula en el contexto, pero antes de usarlo con información institucional real conviene revisar la política de privacidad aplicable.
+
+## Acceso desde la pantalla de inicio
+
+Castor FIT también está disponible antes de iniciar sesión. En modo visitante solo recibe contexto público: orientación de registro/acceso, eventos públicos, comida disponible y espacios verificados. No tiene acceso a horario, perfil, pedidos, asistencias ni datos privados hasta que el usuario inicia sesión. El historial visitante es temporal y se identifica únicamente con una sesión aleatoria del navegador.
+
+
+## Respuestas locales
+
+Castor FIT responde sin depender de Gemini para registro, cuentas docentes, recuperación de contraseña, verificación de correo, modo sin conexión, horario guardado, eventos, comida, pedidos, directorio/mapa, asistencia QR y Mi cuenta. Si Gemini no está configurado o falla, el endpoint devuelve una respuesta local en vez de un error 502 para estas dudas y una orientación general para preguntas no reconocidas.

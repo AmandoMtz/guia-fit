@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="theme-color" content="#493ba8" />
+    <meta name="description" content="Castor Runner, minijuego de Guía FIT." />
+    <title>Castor Runner · Guía FIT</title>
+    <link rel="icon" type="image/png" href="assets/guia-fit-mascota.png" />
+    <link rel="stylesheet" href="styles.css?v=20260917a" />
+    <link rel="stylesheet" href="offline-game.css?v=20260918b" />
+    <script defer src="js/offline-game.js?v=20260924c"></script>
+    <script defer src="js/offline-game-page.js?v=20260918a"></script>
+    <style>
+      body{min-height:100vh;padding:clamp(14px,4vw,48px);background:linear-gradient(145deg,#eff8ff,#f0ecff)}
+      #view{width:min(1120px,100%);margin:0 auto}
+      .standalone-back{display:inline-flex;margin:0 auto 18px;color:#493ba8;font-weight:800;text-decoration:none}
+      #toast{position:fixed;left:50%;bottom:18px;z-index:1200;transform:translateX(-50%);padding:10px 15px;border-radius:12px;background:#242b4b;color:#fff;opacity:0;pointer-events:none;transition:opacity .2s}
+      #toast.show{opacity:1}
+    </style>
+  </head>
+  <body>
+    <main>
+      <a class="standalone-back" href="/">← Volver a Guía FIT</a>
+      <div id="view"></div>
+    </main>
+    <div id="toast" role="status" aria-live="polite"></div>
+  </body>
+</html>

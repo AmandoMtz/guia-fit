@@ -1,0 +1,197 @@
+{
+  "places": [
+    {
+      "id": "entrada-lopez",
+      "name": "Entrada Blvd. A. López Mateos",
+      "code": "",
+      "category": "Acceso",
+      "building": "Acceso norte",
+      "floor": "Por confirmar",
+      "x": 90,
+      "y": 16,
+      "description": "Acceso señalado en la parte superior del croquis.",
+      "photo_url": null,
+      "verified": false,
+      "source": "Croquis proporcionado por el usuario",
+      "source_date": null,
+      "updated_at": "2026-09-07T00:00:00Z"
+    },
+    {
+      "id": "entrada-faja",
+      "name": "Entrada Av. Faja de Oro",
+      "code": "",
+      "category": "Acceso",
+      "building": "Acceso sur",
+      "floor": "Por confirmar",
+      "x": 12,
+      "y": 95,
+      "description": "Acceso señalado en la parte inferior del croquis.",
+      "photo_url": null,
+      "verified": false,
+      "source": "Croquis proporcionado por el usuario",
+      "source_date": null,
+      "updated_at": "2026-09-07T00:00:00Z"
+    },
+    {
+      "id": "auditorio-posgrado",
+      "name": "Auditorio Posgrado",
+      "code": "",
+      "category": "Auditorio",
+      "building": "Posgrado",
+      "floor": "Por confirmar",
+      "x": 64,
+      "y": 42,
+      "description": "Ubicado junto a las salas A y B en el croquis.",
+      "photo_url": null,
+      "verified": false,
+      "source": "Croquis proporcionado por el usuario",
+      "source_date": null,
+      "updated_at": "2026-09-07T00:00:00Z"
+    },
+    {
+      "id": "sala-a",
+      "name": "Sala A",
+      "code": "",
+      "category": "Sala",
+      "building": "Posgrado",
+      "floor": "Por confirmar",
+      "x": 71,
+      "y": 40,
+      "description": "Sala identificada como A en el croquis proporcionado.",
+      "photo_url": null,
+      "verified": false,
+      "source": "Croquis proporcionado por el usuario",
+      "source_date": null,
+      "updated_at": "2026-09-07T00:00:00Z"
+    },
+    {
+      "id": "sala-b",
+      "name": "Sala B",
+      "code": "",
+      "category": "Sala",
+      "building": "Posgrado",
+      "floor": "Por confirmar",
+      "x": 71,
+      "y": 45,
+      "description": "Sala identificada como B en el croquis proporcionado.",
+      "photo_url": null,
+      "verified": false,
+      "source": "Croquis proporcionado por el usuario",
+      "source_date": null,
+      "updated_at": "2026-09-07T00:00:00Z"
+    },
+    {
+      "id": "aula-interactiva",
+      "name": "Aula Interactiva FIT",
+      "code": "",
+      "category": "Aula",
+      "building": "Por confirmar",
+      "floor": "Por confirmar",
+      "x": 54,
+      "y": 57.5,
+      "description": "Punto señalado al costado del campo de futbol.",
+      "photo_url": null,
+      "verified": false,
+      "source": "Croquis proporcionado por el usuario",
+      "source_date": null,
+      "updated_at": "2026-09-07T00:00:00Z"
+    },
+    {
+      "id": "sala-negocios",
+      "name": "Sala de Negocios",
+      "code": "",
+      "category": "Sala",
+      "building": "Por confirmar",
+      "floor": "Por confirmar",
+      "x": 74,
+      "y": 80.7,
+      "description": "Espacio señalado hacia el acceso de Av. Faja de Oro.",
+      "photo_url": null,
+      "verified": false,
+      "source": "Croquis proporcionado por el usuario",
+      "source_date": null,
+      "updated_at": "2026-09-07T00:00:00Z"
+    },
+    {
+      "id": "cafeteria",
+      "name": "Cafetería de Ingeniería",
+      "code": "",
+      "category": "Servicio",
+      "building": "Por confirmar",
+      "floor": "Por confirmar",
+      "x": 84,
+      "y": 73,
+      "description": "Espacio señalado en el costado derecho del croquis.",
+      "photo_url": null,
+      "verified": false,
+      "source": "Croquis proporcionado por el usuario",
+      "source_date": null,
+      "updated_at": "2026-09-07T00:00:00Z"
+    },
+    {
+      "id": "campo-futbol",
+      "name": "Campo de futbol",
+      "code": "",
+      "category": "Deportivo",
+      "building": "Exterior",
+      "floor": "Por confirmar",
+      "x": 35,
+      "y": 39,
+      "description": "Área deportiva identificada en el croquis.",
+      "photo_url": null,
+      "verified": false,
+      "source": "Croquis proporcionado por el usuario",
+      "source_date": null,
+      "updated_at": "2026-09-07T00:00:00Z"
+    }
+  ],
+  "edges": [],
+  "demoPlaces": [
+    {
+      "id": "demo-inicio",
+      "name": "Entrada de ejemplo",
+      "verified": false
+    },
+    {
+      "id": "demo-pasillo",
+      "name": "Pasillo de ejemplo",
+      "verified": false
+    },
+    {
+      "id": "demo-101",
+      "name": "Salón de ejemplo 101",
+      "verified": false
+    },
+    {
+      "id": "demo-102",
+      "name": "Salón de ejemplo 102",
+      "verified": false
+    }
+  ],
+  "demoEdges": [
+    {
+      "id": "demo-1",
+      "from_id": "demo-inicio",
+      "to_id": "demo-pasillo",
+      "instruction": "En este ejemplo, entra al pasillo principal.",
+      "verified": false,
+      "accessible": true
+    },
+    {
+      "id": "demo-2",
+      "from_id": "demo-pasillo",
+      "to_id": "demo-101",
+      "instruction": "Continúa por el pasillo hasta pasar el salón de ejemplo 101.",
+      "verified": false,
+      "accessible": true
+    },
+    {
+      "id": "demo-3",
+      "from_id": "demo-101",
+      "to_id": "demo-102",
+      "instruction": "Sigue hasta el salón de ejemplo 102. Este es el destino de la demostración.",
+      "verified": false,
+      "accessible": true
+    }
+  ]
+}

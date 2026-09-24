@@ -141,7 +141,7 @@
     renderedChatId=chat.id;
     detailSignature=JSON.stringify([chat.id,messages.map(m=>m.id)]);
     host.innerHTML=`<div class="academic-chat-header"><div class="academic-person"><span class="academic-avatar large">${c.esc(initials(chat.counterpart_name))}</span><div><h2>${c.esc(chat.counterpart_name)}</h2>${root.FIT_PRESENCE?.badge(chat.counterpart_id)||''}<p>${c.esc(chat.counterpart_identity||roleLabel(chat.counterpart_type))}</p></div></div><span class="academic-retention-chip">Mensajes por 7 días</span></div>
-      <div class="academic-retention-note">${c.icon('chat')}<span>Los mensajes están disponibles aquí durante una semana.</span></div>
+      <div class="academic-retention-note">${c.icon('chat')}<span>Los mensajes están disponibles aquí durante 7 días.</span></div>
       <div class="academic-message-list" id="academic-message-list">${messages.length?messages.map(m=>`<article class="academic-message ${m.mine?'mine':'theirs'}"><p>${c.esc(m.body)}</p><small>${c.esc(new Date(m.created_at).toLocaleString('es-MX',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}))}</small></article>`).join(''):'<div class="academic-conversation-empty"><p>Aún no hay mensajes.</p><small>Escribe el primero para iniciar la conversación.</small></div>'}</div>
       <form id="academic-message-form" class="academic-message-form"><textarea name="text" rows="2" maxlength="${maxText}" placeholder="Escribe un mensaje…" aria-label="Mensaje"></textarea><button class="btn" type="submit">${c.icon('send')} Enviar</button></form>`;
     const list=host.querySelector('#academic-message-list');if(list)list.scrollTop=list.scrollHeight;

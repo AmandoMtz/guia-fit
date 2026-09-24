@@ -20,14 +20,22 @@
   }).join('\n');
  }
  function decorate(scope=document){
-  scope.querySelectorAll('.fit-frame-particles').forEach(x=>x.remove());
+
   const seasonal={'frame-halloween':['flames','candy'],'frame-christmas':['snow'],'frame-mexico':['confetti'],'frame-muertos':['petals'],'frame-newyear':['sparkles'],'frame-valentine':['hearts']};
   scope.querySelectorAll('.profile-avatar,.reward-preview>span').forEach(el=>{
-   const id=el.closest('.reward-preview')?.className.split(' ').find(x=>x.startsWith('frame-')||x.startsWith('custom-'))||document.body.dataset.fitframe;
+   const card=el.closest('.reward-preview');
+   const id=card?Array.from(card.classList).find(x=>x.startsWith('frame-')||x.startsWith('custom-')):document.body.dataset.fitframe;
    const d=(id==='custom-preview'?previewDesign:data?.catalog?.find(x=>x.id===id)?.design);
-   const effects=d?(d.effect==='none'?[]:[d.effect]):seasonal[id]||[];if(!effects.length)return;
-   const layer=document.createElement('span');layer.className='fit-frame-particles';layer.setAttribute('aria-hidden','true');
-   for(let i=0;i<8;i++){const e=document.createElement('i'),effect=effects[i%effects.length];e.textContent=effectSymbols[effect]||'✦';e.dataset.effect=effect;e.style.setProperty('--n',i);e.style.setProperty('--duration',(d?.speed||4)+'s');if(d)e.style.color=d.secondary;layer.append(e);}
+   const item=data?.catalog?.find(x=>x.id===id);
+   const effects=d?(((item&&item.slot!=='frame')||(id==='custom-preview'&&d.slot!=='frame'))||d.effect==='none'?[]:[d.effect]):seasonal[id]||[];
+   const old=el.querySelector(':scope > .fit-frame-particles');
+   const signature=JSON.stringify([id,effects,d]);
+   if(!effects.length){old?.remove();el.classList.remove('fit-particle-host');return;}
+   el.classList.add('fit-particle-host');
+   if(old?.dataset.signature===signature)return;
+   old?.remove();
+   const layer=document.createElement('span');layer.className='fit-frame-particles';layer.dataset.signature=signature;layer.setAttribute('aria-hidden','true');
+   for(let i=0;i<4;i++){const e=document.createElement('i'),effect=effects[i%effects.length];e.textContent=effectSymbols[effect]||'✦';e.dataset.effect=effect;e.style.setProperty('--n',i);e.style.left=(50+40*Math.cos(i*Math.PI/2))+'%';e.style.top=(50+40*Math.sin(i*Math.PI/2))+'%';e.style.setProperty('--duration',(d?.speed||4)+'s');if(d)e.style.color=d.secondary;layer.append(e);}
    el.append(layer);
   });
  }
@@ -51,7 +59,7 @@
   customCSS(data?.catalog||[]);
   const b=document.body;for(const slot of ['frame','chat','background','motion','theme','font'])b.dataset['fit'+slot]=data?.equipped?.[slot]||'';
   b.classList.toggle('fit-no-motion',data?.animations===false);
-  try{b.classList.toggle('fit-force-motion',data?.animations!==false&&localStorage.getItem('fit-force-motion')==='yes');}catch{}
+  b.classList.toggle('fit-force-motion',data?.animations===true);
   decorate();
  }
  function clear(){identity=null;data=null;version++;apply();}
@@ -103,11 +111,9 @@
    }else if(tab==='progress'){
     content.innerHTML=`<div class="reward-grid"><article class="reward-card"><h3>Tu semana FIT</h3><div class="reward-week">${['L','M','M','J','V'].map((d,i)=>{const hit=data.days.some(date=>new Date(date+'T12:00:00').getDay()===i+1);return `<span class="${hit?'earned':''}" aria-label="${['Lunes','Martes','Miércoles','Jueves','Viernes'][i]}: ${hit?'completado':'pendiente'}">${d}<small>${hit?'✓':'—'}</small></span>`;}).join('')}</div><p>10 EXP por día. Completa lunes a viernes y recibe 50 EXP extra.</p></article><article class="reward-card"><h3>Así creces</h3><p>Primer horario: <b>30 EXP</b><br>Asistencia con QR: <b>40 EXP</b><br>Valoración recibida: <b>10 EXP</b></p><p>Cada 100 EXP subes un nivel y recibes 50 monedas. Tus canjes son permanentes y no restan EXP.</p><small>Valoraciones: hasta 5 recompensas diarias y una por comprador cada semana. Asistencias contadas una vez por evento.</small></article></div><h3>Tu actividad reciente</h3><div class="reward-history">${data.history.map(x=>`<div><span>${label(x.activity)}<small>${new Date(x.created_at).toLocaleDateString('es-MX')}</small></span><b>+${x.xp} EXP</b></div>`).join('')||'<p>Aquí aparecerán tus primeras actividades.</p>'}</div>`;
    }else if(tab==='shop'){
-    content.innerHTML=`<div class="reward-settings"><label><input type="checkbox" id="reward-motion" ${data.animations?'checked':''}> Activar animaciones suaves</label><label><input type="checkbox" id="reward-force-motion"> Mostrar animaciones aunque este dispositivo tenga movimiento reducido</label><p>Los temas cambian toda tu experiencia al iniciar sesión: menú lateral, encabezados, fondos, botones, tarjetas, ventanas y detalles visuales. También puedes combinar tipografías, marcos y estilos del chat.</p></div><div class="reward-grid">${data.catalog.map(item=>{const owned=data.inventory.includes(item.id),active=data.equipped[item.slot]===item.id,locked=item.minLevel&&data.level<item.minLevel;return `<article class="reward-card ${locked?'reward-locked':''}"><div class="reward-preview ${esc(item.id)}" aria-hidden="true"><span>${previewText(item)}</span></div><h3>${esc(item.name)}</h3><p>${esc(item.description)}</p><p><b>${locked?'Se desbloquea en nivel '+item.minLevel:owned?'Ya es tuyo':item.price+' monedas'}</b></p><button type="button" class="text-button" data-try="${esc(item.id)}">Previsualizar</button><button class="btn ${active?'secondary':''}" data-item="${item.id}" ${locked||(!owned&&data.coins<item.price)?'disabled':''}>${locked?'Nivel '+item.minLevel:active?'Quitar':owned?'Equipar':'Canjear'}</button></article>`;}).join('')}</div>`;
+    content.innerHTML=`<div class="reward-settings"><label><input type="checkbox" id="reward-motion" ${data.animations?'checked':''}> Activar animaciones suaves</label><p>Los temas cambian toda tu experiencia al iniciar sesión: menú lateral, encabezados, fondos, botones, tarjetas, ventanas y detalles visuales. También puedes combinar tipografías, marcos y estilos del chat.</p></div><div class="reward-grid">${data.catalog.map(item=>{const owned=data.inventory.includes(item.id),active=data.equipped[item.slot]===item.id,locked=item.minLevel&&data.level<item.minLevel;return `<article class="reward-card ${locked?'reward-locked':''}"><div class="reward-preview ${esc(item.id)}" aria-hidden="true"><span>${previewText(item)}</span></div><h3>${esc(item.name)}</h3><p>${esc(item.description)}</p><p><b>${locked?'Se desbloquea en nivel '+item.minLevel:owned?'Ya es tuyo':item.price+' monedas'}</b></p><button type="button" class="text-button" data-try="${esc(item.id)}">Previsualizar</button><button class="btn ${active?'secondary':''}" data-item="${item.id}" ${locked||(!owned&&data.coins<item.price)?'disabled':''}>${locked?'Nivel '+item.minLevel:active?'Quitar':owned?'Equipar':'Canjear'}</button></article>`;}).join('')}</div>`;
     decorate();
     content.querySelectorAll('[data-try]').forEach(b=>b.onclick=()=>preview(data.catalog.find(x=>x.id===b.dataset.try)));
-    const force=content.querySelector('#reward-force-motion');try{force.checked=localStorage.getItem('fit-force-motion')==='yes';}catch{}
-    force.onchange=()=>{try{localStorage.setItem('fit-force-motion',force.checked?'yes':'no');}catch{}apply();};
     content.querySelector('#reward-motion').onchange=e=>mutate('/animations',{enabled:e.target.checked});
     content.querySelectorAll('[data-item]').forEach(b=>b.onclick=()=>{const item=data.catalog.find(x=>x.id===b.dataset.item);mutate(data.inventory.includes(item.id)?'/equip':'/buy',data.inventory.includes(item.id)?{slot:item.slot,item:data.equipped[item.slot]===item.id?null:item.id}:{item:item.id});});
    }else if(tab==='ranking'){

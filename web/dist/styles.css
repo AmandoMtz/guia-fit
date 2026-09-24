@@ -5265,13 +5265,15 @@ body[data-fitframe="frame-valentine"] :is(.profile-avatar,.avatar)::before,.rewa
 .style-preview-dialog .fit-chat-panel{position:relative;inset:auto;display:block;width:100%;height:auto;min-height:90px;margin:16px 0;padding:16px;border-radius:16px}
 .style-editor{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.style-editor label{display:grid;gap:6px}.style-editor input,.style-editor select{width:100%;min-height:44px}.style-editor .button-row,.style-editor [role=status]{grid-column:1/-1}
 .profile-avatar{position:relative;isolation:isolate}
-.profile-avatar>.fit-frame-particles,.reward-preview>span>.fit-frame-particles{position:absolute!important;inset:-14px!important;width:auto!important;height:auto!important;display:block!important;border:0!important;border-radius:0!important;background:none!important;box-shadow:none!important;pointer-events:none;z-index:6;animation:none!important;overflow:visible}
-.fit-frame-particles i{position:absolute;left:calc(5% + var(--n)*12%);top:calc(12% + (var(--n) - 4)*9%);font-style:normal;font-size:15px;color:var(--frame-b,#56d96b);text-shadow:0 0 5px currentColor;animation:fit-particle-rise var(--duration,4s) ease-in-out infinite;animation-delay:calc(var(--n)*-.47s)}
-.fit-frame-particles i:nth-child(even){top:78%}
-.fit-frame-particles i[data-effect=flames]{color:#55ef78!important;font-size:0;width:11px;height:20px;border-radius:80% 10% 65% 40%;background:radial-gradient(ellipse at bottom,#e7ff94,#33df62 55%,#079755);transform:rotate(30deg);box-shadow:0 0 9px #33ef68}
-@keyframes fit-particle-rise{0%,100%{translate:0 4px;opacity:.35;scale:.7}50%{translate:0 -16px;opacity:1;scale:1.15}}
-body.fit-no-motion .fit-frame-particles i{animation:none!important}
-@media(prefers-reduced-motion:reduce){.fit-frame-particles i{animation:none!important}}
+/* Capa local: cada efecto pertenece exclusivamente a su foto o muestra de marco. */
+.fit-particle-host{position:relative!important;isolation:isolate}
+.fit-particle-host>.fit-frame-particles{position:absolute!important;inset:-7px!important;width:auto!important;height:auto!important;display:block!important;border:0!important;border-radius:50%!important;background:none!important;box-shadow:none!important;pointer-events:none;z-index:6;animation:none!important;overflow:hidden!important;contain:layout paint;clip-path:circle(50%)}
+.fit-frame-particles>i{position:absolute!important;display:block;width:7px;height:9px;font-style:normal;font-size:8px;line-height:9px;text-align:center;color:var(--frame-b,#56d96b);animation:fit-particle-rise var(--duration,4s) ease-in-out infinite;animation-delay:calc(var(--n)*-.47s);transform:translate(-50%,-50%);pointer-events:none}
+.style-preview-stage .fit-frame-particles>i,.profile-avatar.large .fit-frame-particles>i{width:13px;height:17px;font-size:14px;line-height:17px}
+.fit-frame-particles>i[data-effect=flames]{color:#55ef78!important;font-size:0!important;border-radius:80% 10% 65% 40%;background:radial-gradient(ellipse at bottom,#e7ff94,#33df62 55%,#079755)}
+@keyframes fit-particle-rise{0%,100%{transform:translate(-50%,-40%) scale(.65);opacity:.4}50%{transform:translate(-50%,-70%) scale(1);opacity:1}}
+body.fit-no-motion .fit-frame-particles>i{animation:none!important}
+@media(prefers-reduced-motion:reduce){.fit-frame-particles>i{animation:none!important}}
 @media(max-width:700px){
  .app-top .top-actions{display:flex;gap:8px;width:100%;align-items:center;justify-content:space-between;min-width:0}
  .app-top .top-actions .fit-presence-control{flex:1 1 85px;min-width:0;max-width:145px}
@@ -5286,3 +5288,7 @@ body.fit-no-motion .fit-frame-particles i{animation:none!important}
 /* Preferencia explícita del usuario para equipos con movimiento reducido. */
 body.fit-force-motion:not(.fit-no-motion)[data-fitframe] .profile-avatar,body.fit-force-motion:not(.fit-no-motion) .reward-preview[class*="frame-"]>span{animation:fit-frame-shimmer 4s ease-in-out infinite!important}
 body.fit-force-motion:not(.fit-no-motion) .fit-frame-particles i{animation:fit-particle-rise var(--duration,4s) ease-in-out infinite!important;animation-delay:calc(var(--n)*-.47s)!important}
+
+/* La preferencia Animaciones de la cuenta se aplica también en escritorio. */
+body.fit-force-motion:not(.fit-no-motion) .fit-particle-host::after{animation:fit-frame-orbit 18s linear infinite!important}
+body.fit-force-motion:not(.fit-no-motion)[data-fitframe=""] .profile-avatar{animation:none!important}

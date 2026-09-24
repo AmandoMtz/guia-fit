@@ -17,3 +17,9 @@ Después del despliegue abrir una vez con internet y recargar para que se instal
 Pasaron 11 pruebas del módulo de recompensas (incluye permiso de administrador, validación de diseños, canje y equipamiento) y 2 pruebas de DOM/caché (foto en ventana, partículas, restauración al cerrar, editor y dependencias locales).
 
 No fue posible ejecutar la revisión visual ni la desconexión real en navegador en este entorno porque la descarga de Chromium falló. Comprobar después de desplegar: ventana en celular/escritorio, posición del menú, perfil visible, editor con cuenta administradora y juego tras abrir con internet y activar modo avión. Se incluye scripts/test-style-preview-browser.cjs para esa validación con Playwright y un servidor local en el puerto 8765.
+
+## Corrección de partículas (24 de septiembre)
+
+Cuatro partículas pequeñas por marco, distribuidas alrededor de la foto y recortadas dentro de una capa local. Las muestras de temas y tipografías ya no heredan partículas del marco equipado. Las actualizaciones que no cambian el diseño conservan la animación sin reconstruirla. Activar animaciones suaves en Personalizar controla también el movimiento en escritorio; apagar esa opción detiene los efectos. Se actualizó la versión de caché para descargar la corrección.
+
+Validación de esta revisión: suite completa de 165 pruebas; revisión visual en dispositivos pendiente.

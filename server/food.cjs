@@ -1,4 +1,5 @@
 const { Router } = require("express");
+const crypto = require("crypto");
 const multer = require("multer");
 const { normalizeImage, imageUploadSlot } = require("./images.cjs");
 const { transaction } = require("./db.cjs");
@@ -531,6 +532,35 @@ function createFoodRouter({ db, siteUrl, administrator, limit, push = null }) {
     });
     res.json({ data: await withChat(req.user.id, result) });
   });
+
+  // QR único de confirmación de entrega. El vendedor no puede marcar completado sin validación.
+  router.post("/orders/:id/delivery-qr", async (req, res) => {
+    const result = await transaction(db, async (client) => {
+      const row = (await client.query(
+        "select o.*,v.user_id as seller_user_id from food_orders o join food_vendors v on v.id=o.vendor_id where o.id=$1 for update of o",
+        [id(req.params.id)]
+      )).rows[0];
+      if (!row || row.seller_user_id !== req.user.id) throw error(404, "Pedido no encontrado.");
+      if (row.status !== "ready") throw error(409, "El pedido aún no está listo para entrega.");
+      const token = crypto.randomUUID();
+      await client.query("update food_orders set delivery_qr=$1,delivery_qr_used=false,updated_at=now() where id=$2", [token,row.id]);
+      return token;
+    });
+    res.json({data:{qr:result}});
+  });
+
+  router.post("/orders/:id/scan-qr", async (req, res) => {
+    fields(req.body,["qr"]);
+    const result = await transaction(db, async (client) => {
+      const row=(await client.query("select o.*,v.user_id as seller_user_id from food_orders o join food_vendors v on v.id=o.vendor_id where o.id=$1 for update of o",[id(req.params.id)])).rows[0];
+      if(!row || row.buyer_id!==req.user.id) throw error(404,"Pedido no encontrado.");
+      if(row.delivery_qr!==req.body.qr || row.delivery_qr_used) throw error(409,"Código QR inválido o ya utilizado.");
+      await client.query("update food_orders set status='completed',delivery_qr_used=true,delivery_qr_used_at=now(),updated_at=now() where id=$1",[row.id]);
+      return orderDetails(client,row.id);
+    });
+    res.json({data:await withChat(req.user.id,result)});
+  });
+
   router.get("/notifications", async (req, res) => {
     const items = (
       await db.query(

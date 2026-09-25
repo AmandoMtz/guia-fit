@@ -5,12 +5,13 @@
   else root.FIT_FOOD_FLOW = api;
 })(typeof window === "undefined" ? globalThis : window, function () {
   "use strict";
-  const steps = ["requested", "accepted", "ready", "completed"];
+  const steps = ["requested", "accepted", "ready", "completed", "rated"];
   const names = {
     requested: "Por confirmar",
     accepted: "En preparación",
     ready: "Listo para recoger",
     completed: "Entregado",
+    rated: "Calificado",
     rejected: "Rechazado",
     cancelled: "Cancelado",
   };
@@ -23,6 +24,7 @@
       ready:
         "Tu pedido está listo. Acércate al punto de entrega y menciona tu nombre.",
       completed: "El vendedor marcó tu pedido como entregado.",
+      rated: "Ya calificaste este pedido. Gracias por tu opinión.",
       rejected:
         "El vendedor no pudo atender este pedido. Puedes elegir otro producto.",
       cancelled: "Cancelaste esta solicitud. Puedes volver a explorar el menú.",
@@ -33,7 +35,8 @@
       accepted: "Prepara el pedido y avisa al cliente cuando pueda recogerlo.",
       ready:
         "El cliente ya puede recogerlo. Marca la entrega cuando lo reciba.",
-      completed: "Entrega finalizada. Este pedido queda en tu historial.",
+      completed: "Entrega finalizada. Este pedido queda en tu historial. Puedes calificarlo o iniciar una nueva compra.",
+      rated: "Venta completada y calificación registrada.",
       rejected:
         "El cliente recibió un aviso de que no puedes atender este pedido.",
       cancelled:
@@ -54,13 +57,14 @@
           ["rejected", "Cancelar preparación"],
         ],
         ready: [["completed", "Confirmar entrega"]],
+        completed: [["rated", "Registrar calificación"]],
       }[status] || []
     );
   }
   function matches(status, filter) {
     if (filter === "all") return true;
     if (filter === "history")
-      return ["completed", "rejected", "cancelled"].includes(status);
+      return ["completed", "rated", "rejected", "cancelled"].includes(status);
     if (filter === "active")
       return ["requested", "accepted", "ready"].includes(status);
     return status === filter;

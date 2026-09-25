@@ -59,6 +59,8 @@ test("las acciones del seguimiento respetan cada etapa y el papel del usuario", 
   assert.deepEqual(F.actions("requested", false), [
     ["cancelled", "Cancelar pedido"],
   ]);
-  assert.deepEqual(F.actions("completed", true), []);
+  assert.deepEqual(F.actions("completed", true), [
+  ["rated", "Registrar calificación"],
+]);
   assert.match(F.hints.buyer.requested, /Espera su confirmación/);
 });

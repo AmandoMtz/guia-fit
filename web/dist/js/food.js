@@ -533,7 +533,7 @@
         const signature=JSON.stringify([o.id,o.status,o.total_cents]);
         if(signature===orderSignature)return;orderSignature=signature;
         const seller=chat.role==='seller';
-        orderState.innerHTML=`<section class="shared-order-card" aria-label="Pedido y seguimiento"><div class="section-heading"><strong>${c.esc(o.product_name)} · ${money(o.total_cents)}</strong><span class="order-status ${c.esc(o.status)}">${c.esc(F.names[o.status]||o.status)}</span></div>${progress(c,o)}<p class="order-next">${c.esc(F.hints[seller?'seller':'buyer'][o.status]||'')}</p><small>${c.esc(F.quantity(o))} · ${c.esc(o.pickup_location)}</small>${o.note?`<p class="hint">Nota: ${c.esc(o.note)}</p>`:''}<div class="button-row">${F.actions(o.status,seller).map(([status,title])=>`<button type="button" class="btn ${['rejected','cancelled'].includes(status)?'secondary':''} small" data-inline-status="${status}">${c.esc(title)}</button>`).join('')}${!seller&&o.status==='completed'?'<button class="btn small" type="button" data-inline-rate>Calificar compra</button>':''}</div></section>`;
+        orderState.innerHTML=`<section class="shared-order-card" aria-label="Pedido y seguimiento"><div class="section-heading"><strong>${c.esc(o.product_name)} · ${money(o.total_cents)}</strong><span class="order-status ${c.esc(o.status)}">${c.esc(F.names[o.status]||o.status)}</span></div>${progress(c,o)}<p class="order-next">${c.esc(F.hints[seller?'seller':'buyer'][o.status]||'')}</p><small>${c.esc(F.quantity(o))} · ${c.esc(o.pickup_location)}</small>${o.note?`<p class="hint">Nota: ${c.esc(o.note)}</p>`:''}<div class="button-row">${F.actions(o.status,seller).map(([status,title])=>`<button type="button" class="btn ${['rejected','cancelled'].includes(status)?'secondary':''} small" data-inline-status="${status}">${c.esc(title)}</button>`).join('')}${!seller&&o.status==='completed'?'<button class="btn small" type="button" data-inline-rate>⭐ Calificar compra</button><button class="btn small" type="button" data-inline-buy-again>🛒 Comprar nuevamente</button><button class="btn small secondary" type="button" data-inline-history>📋 Ver pedido</button>':''}</div></section>`;
         orderState.querySelectorAll('[data-inline-status]').forEach(b=>b.onclick=async()=>{
           const status=b.dataset.inlineStatus;
           if(['completed','rejected','cancelled'].includes(status)&&!confirm(status==='completed'?'¿El cliente ya recibió su pedido?':'¿Confirmas cancelar este pedido?'))return;
@@ -542,6 +542,13 @@
           catch(e){errorBox.textContent=e.message;b.disabled=false;}
         });
         orderState.querySelector('[data-inline-rate]')?.addEventListener('click',()=>root.FIT_PURCHASE_RATING.open(c,o.id));
+        orderState.querySelector('[data-inline-buy-again]')?.addEventListener('click',()=>{
+          const item=document.querySelector(`[data-order-product="${o.product_id}"]`);
+          item?.scrollIntoView({behavior:'smooth',block:'center'});
+        });
+        orderState.querySelector('[data-inline-history]')?.addEventListener('click',()=>{
+          orderState.innerHTML += '<p class="hint">Pedido completado guardado en historial.</p>';
+        });
       }catch(e){if(!orderSignature)orderState.innerHTML=`<p role="status">No se pudo actualizar el pedido. Reintentando…</p>`;}
       finally{orderLoading=false;}
     };

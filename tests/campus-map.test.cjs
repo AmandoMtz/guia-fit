@@ -92,9 +92,9 @@ test("Posgrado: edificio contiguo y espacios por planta",()=>{
  assert.equal(map.BUILDINGS[2].id,'posgrado');
  assert.equal(map.BUILDINGS[8].id,'administracion-posgrado');
  const lower=map.floorMarkup('posgrado','ground'),upper=map.floorMarkup('posgrado','upper');
- assert.ok(lower.indexOf('<strong>Auditorio de Posgrado')<lower.indexOf('<strong>Salón 2'));
- assert.ok(lower.indexOf('<strong>Salón 2')<lower.indexOf('<strong>Salón 1'));
- assert.match(upper,/from-right/);
+ assert.ok(lower.indexOf('data-room="Auditorio de Posgrado"')<lower.indexOf('data-room="Salón 2"'));
+ assert.ok(lower.indexOf('data-room="Salón 2"')<lower.indexOf('data-room="Salón 1"'));
+ assert.match(upper,/Recorrido en primera persona/);
  for(const room of [5,6,7,8])assert.match(upper,new RegExp('Salón '+room));
  assert.doesNotMatch(lower,/Salón 5/);
  assert.match(map.floorMarkup('administracion-posgrado','ground'),/Sala A/);

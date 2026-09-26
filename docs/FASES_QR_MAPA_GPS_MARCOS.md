@@ -9,7 +9,7 @@ El vendedor abre «Mostrar QR de entrega» cuando el pedido está listo. El comp
 | B | 101–115 | 401–412 |
 | C | 201–213 | 301–315 |
 
-El mapa incluye plantas seleccionables, volúmenes de salones, giro y selección individual. La distribución física, puertas y escaleras son ilustrativas: necesitan validación en sitio. Los rangos son los facilitados por el administrador.
+El mapa abre un recorrido en primera persona al seleccionar un edificio. Se puede avanzar, retroceder, mirar arrastrando y usar flechas o WASD. Las plantas son seleccionables; pulsar un salón sitúa la cámara frente a su puerta. Los edificios sin salones registrados muestran un interior genérico sin inventar numeración. La distribución física, puertas y escaleras son ilustrativas: necesitan validación en sitio. Los rangos son los facilitados por el administrador.
 
 ## Ubicación exterior
 En «Cómo llegar» se activa voluntariamente la ubicación. Se muestra la posición, precisión y destino sobre cartografía OpenStreetMap, con enlace de indicaciones a pie en Google Maps. La referencia general 22.277055, -97.864674 procede del enlace de mapa de https://fiuat.mx/contacto/; no representa una entrada verificada.
@@ -32,3 +32,5 @@ Las migraciones 019 y 020 agregan la caducidad del QR y los accesos geográficos
 
 ## Verificación
 169 pruebas automáticas correctas. Chromium: vista previa/editor a 390 y 1280 px, mapa B superior con 12 salones y selección del 412 en ambos tamaños; juego disponible en contexto sin conexión. La ubicación se verificó con datos simulados. Queda pendiente comprobar cámara y GPS con dispositivos físicos en el campus. Los cambios no se han publicado desde este entorno.
+
+Actualización del recorrido: verificados desplazamiento, giro por teclado, selección de salón y presentación a 390 y 1280 px. Las 12 pruebas de mapa y fases pasan tras adaptar la prueba de Posgrado a la nueva interfaz.

@@ -192,13 +192,49 @@
     'administracion-posgrado':{ground:['Sala A','Sala B'],upper:['Área Administrativa de Posgrado']}
   };
   function floorMarkup(id,floor='ground'){
-    const rooms=FLOORS[id];if(!rooms)return '';
+    const rooms=FLOORS[id];
     floor=floor==='upper'?'upper':'ground';
-    const reverse=id==='posgrado'&&floor==='upper';
-    if(id==='edificio-b'||id==='edificio-c')return '<section class="cm-floors cm-interior"><h4>'+esc(byId(id).name)+' · Salones</h4><div class="cm-floor-tabs">'+['ground','upper'].map(key=>'<button type="button" data-floor="'+key+'" aria-pressed="'+(floor===key)+'">'+(key==='ground'?'Planta baja':'Planta alta')+'</button>').join('')+'</div><div class="cm-interior-stage"><div class="cm-interior-model">'+rooms[floor].map(name=>'<button type="button" class="cm-room-box" data-room="'+esc(name)+'"><span>'+esc(name)+'</span></button>').join('')+'</div></div><label>Girar interior<input type="range" data-interior-angle min="-25" max="25" value="-8"></label><p class="cm-room-selection" data-room-selection role="status">Selecciona un salón para destacarlo.</p><p class="cm-small">Modelo ilustrativo por planta. La numeración está confirmada por el proyecto; el orden físico, puertas y escaleras requieren comprobación en sitio.</p></section>';
-    return '<section class="cm-floors" aria-label="Espacios por planta"><h4>Dentro del edificio</h4><div class="cm-floor-tabs" role="group" aria-label="Seleccionar planta">'+
-      ['ground','upper'].map(key=>'<button type="button" data-floor="'+key+'" aria-pressed="'+(floor===key)+'">'+(key==='ground'?'Planta baja':'Planta alta')+'</button>').join('')+'</div><p class="cm-floor-direction">'+(reverse?'Desde el lado derecho: 5 → 6 → 7 → 8':id==='posgrado'?'Orden indicado: Auditorio → Salón 2 → Salón 1':'Espacios de esta planta')+'</p><div class="cm-room-plan'+(reverse?' from-right':'')+'">'+rooms[floor].map((name,i)=>'<div class="cm-room"><span>'+(i+1)+'</span><strong>'+esc(name)+'</strong></div>').join('')+'</div><p class="cm-small">Distribución esquemática, sin escala. No representa puertas ni dimensiones.</p></section>';
+    const names=rooms?rooms[floor]:[];
+    return '<section class="cm-floors cm-interior"><h4>Recorrido en primera persona</h4>'+(rooms?'<div class="cm-floor-tabs">'+['ground','upper'].map(key=>'<button type="button" data-floor="'+key+'" aria-pressed="'+(floor===key)+'">'+(key==='ground'?'Planta baja':'Planta alta')+'</button>').join('')+'</div>':'')+'<canvas class="cm-walk" width="900" height="560" tabindex="0" aria-label="Recorrido interior. Flechas o WASD para caminar; arrastra para mirar."></canvas><div class="cm-walk-controls"><button type="button" data-walk="left" aria-label="Mirar a la izquierda">↶</button><button type="button" data-walk="forward">Avanzar</button><button type="button" data-walk="back">Retroceder</button><button type="button" data-walk="right" aria-label="Mirar a la derecha">↷</button><button type="button" data-walk="reset">Entrada</button></div><p class="cm-small">Arrastra para mirar alrededor. Usa los botones o las flechas / WASD para caminar.</p><div class="cm-walk-rooms">'+names.map(name=>'<button type="button" data-room="'+esc(name)+'">'+esc(name)+'</button>').join('')+'</div><p data-room-selection role="status">Entrada · '+esc(byId(id).name)+'</p><p class="cm-small">Recorrido ilustrativo: pasillos, puertas y distancias aproximados. No representa una ruta interior verificada.</p></section>';
   }
+  function walkInterior(section,names){
+    const canvas=section.querySelector('canvas');if(!canvas)return;
+    const ctx=canvas.getContext('2d');if(!ctx)return;
+    const length=Math.max(14,Math.ceil(names.length/2)*4+4);
+    let x=0,z=1.8,yaw=0,pitch=0,drag=null;
+    const surfaces=[];
+    const quad=(points,color,label)=>surfaces.push({points,color,label});
+    quad([[-3,0,0],[3,0,0],[3,0,length],[-3,0,length]],'#cbd5df');
+    quad([[-3,3.5,0],[-3,3.5,length],[3,3.5,length],[3,3.5,0]],'#f6f4ed');
+    quad([[-3,0,0],[-3,0,length],[-3,3.5,length],[-3,3.5,0]],'#eee6dc');
+    quad([[3,0,length],[3,0,0],[3,3.5,0],[3,3.5,length]],'#e0e7ef');
+    for(const depth of [0,length])quad([[-3,0,depth],[3,0,depth],[3,3.5,depth],[-3,3.5,depth]],'#b9c8d7');
+    names.forEach((name,i)=>{const side=i%2?1:-1,depth=4+Math.floor(i/2)*4,wall=side*2.98;
+      quad([[wall,0,depth-0.65],[wall,0,depth+0.65],[wall,2.5,depth+0.65],[wall,2.5,depth-0.65]],i%2?'#754838':'#8d5744');
+      quad([[wall*.998,2.55,depth-.7],[wall*.998,2.55,depth+.7],[wall*.998,3,depth+.7],[wall*.998,3,depth-.7]],'#fff',name);
+    });
+    for(let d=2;d<length;d+=4)quad([[-.6,3.48,d],[.6,3.48,d],[.6,3.48,d+1],[-.6,3.48,d+1]],'#ffffff');
+    const view=([px,py,pz])=>{const dx=px-x,dz=pz-z;return [dx*Math.cos(yaw)-dz*Math.sin(yaw),py-1.65,dx*Math.sin(yaw)+dz*Math.cos(yaw)];};
+    function draw(){
+      ctx.fillStyle='#e6edf3';ctx.fillRect(0,0,900,560);
+      const faces=surfaces.map(f=>({...f,points:f.points.map(view)})).sort((a,b)=>b.points.reduce((n,p)=>n+p[2],0)-a.points.reduce((n,p)=>n+p[2],0));
+      for(const face of faces){let clipped=[];const ps=face.points;for(let i=0;i<ps.length;i++){const a=ps[i],b=ps[(i+1)%ps.length],inside=a[2]>=.08,next=b[2]>=.08;if(inside)clipped.push(a);if(inside!==next){const t=(.08-a[2])/(b[2]-a[2]);clipped.push(a.map((v,j)=>v+(b[j]-v)*t));}}if(clipped.length<3)continue;
+        const points=clipped.map(p=>[450+p[0]*480/p[2],280+pitch-p[1]*480/p[2]]);
+        ctx.beginPath();points.forEach((p,i)=>i?ctx.lineTo(...p):ctx.moveTo(...p));ctx.closePath();ctx.fillStyle=face.color;ctx.fill();ctx.strokeStyle='#718096';ctx.lineWidth=1;ctx.stroke();
+        if(face.label&&ps.every(p=>p[2]>.2)){const center=ps.reduce((a,p)=>a.map((v,j)=>v+p[j]/4),[0,0,0]);ctx.fillStyle='#222';ctx.font='bold '+Math.max(10,Math.min(30,150/center[2]))+'px sans-serif';ctx.textAlign='center';ctx.fillText(face.label,450+center[0]*480/center[2],280+pitch-center[1]*480/center[2]);}
+      }
+      ctx.fillStyle='#ffffffdd';ctx.fillRect(12,12,225,32);ctx.fillStyle='#243244';ctx.font='16px sans-serif';ctx.textAlign='left';ctx.fillText('Pasillo · '+Math.round(z)+' m desde entrada',22,34);
+    }
+    function move(action){section.querySelectorAll("[data-room]").forEach(b=>b.setAttribute("aria-pressed","false"));section.querySelector("[data-room-selection]").textContent="Recorriendo el pasillo";if(action==='left')yaw-=.22;if(action==='right')yaw+=.22;if(action==='reset'){x=0;z=1.8;yaw=0;pitch=0;}if(action==='forward'||action==='back'){const step=action==='forward'?.75:-.75;x=Math.max(-2.4,Math.min(2.4,x+Math.sin(yaw)*step));z=Math.max(.6,Math.min(length-.6,z+Math.cos(yaw)*step));}draw();}
+    section.querySelectorAll('[data-walk]').forEach(b=>b.onclick=()=>move(b.dataset.walk));
+    canvas.onkeydown=e=>{const action={ArrowUp:'forward',w:'forward',ArrowDown:'back',s:'back',ArrowLeft:'left',a:'left',ArrowRight:'right',d:'right'}[e.key];if(action){e.preventDefault();e.stopPropagation();move(action);}};
+    canvas.onpointerdown=e=>{drag=[e.clientX,e.clientY];canvas.setPointerCapture(e.pointerId);canvas.focus({preventScroll:true});};
+    canvas.onpointermove=e=>{if(!drag)return;yaw-=(e.clientX-drag[0])*.007;pitch=Math.max(-150,Math.min(150,pitch+(e.clientY-drag[1])*1.2));drag=[e.clientX,e.clientY];draw();};
+    canvas.onpointerup=canvas.onpointercancel=()=>{drag=null;};
+    section.querySelectorAll('[data-room]').forEach((b,i)=>b.addEventListener('click',()=>{z=4+Math.floor(i/2)*4;x=0;yaw=i%2?Math.PI/2:-Math.PI/2;pitch=0;draw();}));
+    draw();
+  }
+
   function detailMarkup(id, places, origin, canOpen, floor='ground') {
     const b=byId(id);
     if(!b) return '<h3>Explora tu facultad</h3><p>Toca un edificio en el mapa o búscalo por su nombre.</p>';
@@ -221,7 +257,7 @@
       '<div class="cm-layout"><div class="cm-map-column"><div class="cm-viewport" data-scene tabindex="0" aria-label="Mapa. Usa las flechas para desplazarlo al acercar; más y menos cambian el zoom."></div>'+
       '<p class="cm-caption">Selecciona un número para ver el edificio. Acerca y arrastra para explorar.</p>'+
       '<div class="cm-legend"><span><i class="cm-dot cm-dot-selected"></i>Selección</span><span><i class="cm-dot cm-dot-building"></i>Edificio</span><span><i class="cm-dot cm-dot-sport"></i>Cancha</span><span><i class="cm-dot cm-dot-unknown"></i>Sin identificar</span></div>'+
-      '<p class="cm-disclaimer">Esquema del plano de planta alta, conjunto oriente. Los contornos son aproximados y las alturas ilustrativas. No es un recorrido de interiores.</p></div>'+
+      '<p class="cm-disclaimer">Esquema del plano de planta alta, conjunto oriente. Los contornos son aproximados y las alturas ilustrativas. Selecciona un edificio para abrir su recorrido interior ilustrativo.</p></div>'+
       '<aside class="cm-sidebar"><label class="cm-search-label">Buscar edificio o espacio<input type="search" data-search placeholder="Edificio B, cafetería…" maxlength="100" autocomplete="off"></label>'+
       '<div class="cm-list" data-list aria-label="Edificios del plano"></div><div class="cm-detail" data-detail></div></aside></div>'+
       '<div class="cm-bottom"><p data-location role="status">Puedes indicar en qué edificio estás desde su ficha.</p>'+
@@ -247,11 +283,12 @@
     }
     function drawDetail() {
       q("[data-detail]").innerHTML=detailMarkup(selected,places,origin,typeof options.onDetails==="function",floor);
+      walkInterior(q("[data-detail]"),FLOORS[selected]?.[floor]||[]);
       q("[data-location]").textContent=origin?"Referencia indicada por ti: "+byId(origin).name+". No es una posición GPS.":"Puedes indicar en qué edificio estás desde su ficha.";
     }
     function choose(id,keyboard) {
       if(!byId(id)) return;
-      selected=id; floor="ground"; drawScene(); drawList(); drawDetail(); announce("Seleccionaste "+byId(id).name+".");
+      host.classList.add("cm-walking"); selected=id; floor="ground"; drawScene(); drawList(); drawDetail(); q(".cm-interior")?.scrollIntoView({block:"center",behavior:"smooth"}); announce("Seleccionaste "+byId(id).name+".");
       if(keyboard) {
         const target=viewport.querySelector('[data-building="'+id+'"]');
         if(target) target.focus({preventScroll:true});

@@ -62,6 +62,15 @@ test("Comidas: permisos, dinero, pedidos y notificaciones persistentes", async (
     );
     return body === undefined ? r : r.send(body);
   };
+  await t.test('accesos GPS: solo administración registra coordenadas válidas',async()=>{
+    const point={latitude:22.277055,longitude:-97.864674,accuracy:8};
+    await api.put('/api/campus-locations/edificio-b').set('Authorization','Bearer '+buyer.token).send(point).expect(403);
+    await api.put('/api/campus-locations/edificio-b').set('Authorization','Bearer '+admin.token).send({...point,accuracy:100}).expect(400);
+    await api.put('/api/campus-locations/edificio-b').set('Authorization','Bearer '+admin.token).send({...point,latitude:25}).expect(400);
+    await api.put('/api/campus-locations/edificio-b').set('Authorization','Bearer '+admin.token).send(point).expect(200);
+    const rows=(await api.get('/api/campus-locations').set('Authorization','Bearer '+buyer.token).expect(200)).body.data;
+    assert.equal(rows[0].id,'edificio-b');assert.equal(rows[0].latitude,point.latitude);
+  });
   let vendor, otherVendor, product, order, photo, chat;
   const vendorBody = {
     business_name: "Puesto de prueba",
@@ -441,6 +450,18 @@ test("Comidas: permisos, dinero, pedidos y notificaciones persistentes", async (
       await req(seller, "patch", "/orders/" + order.id, {
         status: "ready",
       }).expect(200);
+      await req(buyer,'post','/orders/'+order.id+'/delivery-qr',{}).expect(404);
+      const issued=(await req(seller,'post','/orders/'+order.id+'/delivery-qr',{}).expect(200)).body.data;
+      assert.match(issued.svg,/<svg/);
+      assert.equal((await req(buyer,'get','/orders/'+order.id)).body.data.delivery_qr,undefined);
+      await req(stranger,'post','/orders/'+order.id+'/scan-qr',{qr:issued.qr}).expect(404);
+      await req(buyer,'post','/orders/'+order.id+'/scan-qr',{qr:randomUUID()}).expect(409);
+      await query("update food_orders set delivery_qr_expires_at=now()-interval '1 minute' where id=$1",[order.id]);
+      await req(buyer,'post','/orders/'+order.id+'/scan-qr',{qr:issued.qr}).expect(409);
+      const fresh=(await req(seller,'post','/orders/'+order.id+'/delivery-qr',{}).expect(200)).body.data;
+      assert.notEqual(fresh.qr,issued.qr);
+      await req(buyer,'post','/orders/'+order.id+'/scan-qr',{qr:'FIT-FOOD:'+fresh.qr}).expect(200);
+      await req(buyer,'post','/orders/'+order.id+'/scan-qr',{qr:fresh.qr}).expect(409);
       await req(seller, "patch", "/orders/" + order.id, {
         status: "completed",
       }).expect(200);

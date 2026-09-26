@@ -1,11 +1,13 @@
 /* App shell sin conexión. Las respuestas /api nunca se guardan aquí. */
 importScripts('/push-worker.js?v=3');
-const CACHE = "guia-fit-shell-styles-20260924c";
+const CACHE = "guia-fit-shell-styles-20260926a";
 const SHELL = [
+  "/js/food-delivery.js?v=20260926a",
+  "/js/live-location.js?v=20260926a",
   '/assets/guia-fit-mascota.png',
   '/assets/guia-fit-mascota.png',
-  '/styles.css?v=20260924c',
-  '/campus-map.css?v=20260923e',
+  '/styles.css?v=20260926a',
+  '/campus-map.css?v=20260926a',
   '/offline-game.css?v=20260918b',
   '/config.js',
   '/js/api.js',
@@ -13,7 +15,7 @@ const SHELL = [
   '/js/core.js',
   '/js/offline.js?v=20260918c',
   '/js/food-flow.js',
-  '/js/food.js?v=20260924c',
+  '/js/food.js?v=20260926a',
   '/js/schedule-core.js?v=19',
   '/js/schedule-store.js',
   '/vendor/tesseract/tesseract.min.js',
@@ -23,16 +25,16 @@ const SHELL = [
   '/js/attendance-security.js',
   '/js/events.js',
   '/js/chatbot.js?v=20260916d',
-  '/js/purchase-rating.js?v=20260924c',
-  '/js/gamification.js?v=20260924c',
-  '/js/push-notifications.js?v=20260924c',
-  '/js/offline-game.js?v=20260924c',
+  '/js/purchase-rating.js?v=20260926a',
+  '/js/gamification.js?v=20260926a',
+  '/js/push-notifications.js?v=20260926a',
+  '/js/offline-game.js?v=20260926a',
   '/js/presence.js?v=20260923c',
   '/chat-presence.css?v=20260923c',
-  '/js/academic-chat.js?v=20260924c',
-  '/js/campus-map.js?v=20260923e',
+  '/js/academic-chat.js?v=20260926a',
+  '/js/campus-map.js?v=20260926a',
   '/js/audit.js?v=20260918c',
-  '/js/app.js?v=20260924c',
+  '/js/app.js?v=20260926a',
   '/contrast-fix.css?v=1',
   '/photo-color-fix.css?v=1',
   '/manifest.webmanifest',
@@ -40,7 +42,7 @@ const SHELL = [
   '/assets/guia-fit-mascota.png',
   '/styles.css?v=20260917a',
   '/offline-game.css?v=20260918b',
-  '/js/offline-game.js?v=20260924c',
+  '/js/offline-game.js?v=20260926a',
   '/js/offline-game-page.js?v=20260918a',
 
   "/assets/frames/halloween.svg",
@@ -159,7 +161,7 @@ self.addEventListener("install", (event) => {
         }),
       );
       // Nunca activar una instalación incompleta del juego: conservar la versión anterior.
-      await cache.addAll(['/index.html','/juego-castor.html','/js/offline-game.js?v=20260924c','/js/offline-game-page.js?v=20260918a','/offline-game.css?v=20260918b','/assets/guia-fit-mascota.png']);
+      await cache.addAll(['/index.html','/juego-castor.html','/js/offline-game.js?v=20260926a','/js/offline-game-page.js?v=20260918a','/offline-game.css?v=20260918b','/assets/guia-fit-mascota.png']);
       await self.skipWaiting();
     }),
   );

@@ -154,3 +154,9 @@
 .cm-tire { fill:#20242a; }.cm-special-glass { fill:#6b9dac; stroke:#283c49; stroke-width:.5; }
 .cm-headlight { fill:#fff8d0; }.cm-taillight { fill:#b10d23; }
 .cm-spoiler { fill:#353943; }.cm-racing-stripe { fill:#272b34; }
+.cm-interior-stage{perspective:850px;overflow:hidden;min-height:210px;padding:30px 15px;background:linear-gradient(145deg,#f7e9e9,#e7eef5);border-radius:18px}
+.cm-interior-model{--interior-angle:-8deg;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:15px 6px;transform:rotateX(35deg) rotateZ(var(--interior-angle));transform-style:preserve-3d;padding:15px 5px;background:#d4dce5;border:6px solid #aab7c7;box-shadow:8px 12px 0 #9aa7b5;transition:transform .2s}
+.cm-room-box{position:relative;min-height:50px;border:2px solid #b83c46!important;background:#fff6f6!important;color:#7b1420!important;box-shadow:0 7px 0 #bb747b,4px 9px 0 #b1a3ac;border-radius:4px!important;padding:3px!important;transform:translateZ(8px);font:inherit;font-size:10px!important;cursor:pointer}
+.cm-room-box[aria-pressed=true],.cm-room-box:focus-visible{background:#c40000!important;color:#fff!important;transform:translateZ(18px);outline:3px solid #ffb238;outline-offset:3px}
+.cm-interior label{display:grid;gap:8px;margin:14px 0}.cm-room-selection{font-weight:700}.cm-interior-model button span{pointer-events:none}
+@media(prefers-reduced-motion:reduce){.cm-interior-model{transition:none}}

@@ -42,6 +42,7 @@ const catalog = [
  {id:'motion-rise',slot:'motion',name:'Entrada flotante',price:75,description:'Los mensajes aparecen con un movimiento suave.'},
  {id:'motion-glow',slot:'motion',name:'Destello',price:125,description:'Un brillo breve al recibir mensajes.'},
 ];
+for(const item of require('./seasonal-frames.cjs')){const existing=catalog.find(x=>x.id===item.id);if(existing){existing.design=item.design;}else catalog.push(item);}
 const fail=(status,message)=>Object.assign(new Error(message),{status,code:'gamification_error'});
 async function lock(c,uid) {
  await c.query('insert into fit_progress(user_id) values($1) on conflict do nothing',[uid]);

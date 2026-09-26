@@ -5292,3 +5292,5 @@ body.fit-force-motion:not(.fit-no-motion) .fit-frame-particles i{animation:fit-p
 /* La preferencia Animaciones de la cuenta se aplica también en escritorio. */
 body.fit-force-motion:not(.fit-no-motion) .fit-particle-host::after{animation:fit-frame-orbit 18s linear infinite!important}
 body.fit-force-motion:not(.fit-no-motion)[data-fitframe=""] .profile-avatar{animation:none!important}
+.delivery-dialog{max-width:480px}.delivery-dialog video{width:100%;max-height:280px;object-fit:cover}.delivery-dialog label{display:block;margin:14px 0}.delivery-dialog input:not([type=checkbox]){width:100%;min-width:0}.delivery-qr{display:grid;place-items:center;background:white;margin:18px 0}.delivery-qr svg{width:min(100%,280px);height:auto}.delivery-dialog .check input{width:auto}
+.live-location{margin-bottom:24px}.live-location label{display:grid;gap:8px;margin:12px 0}.live-location select{max-width:100%}.live-location [data-gps-map]{max-width:650px;margin:16px auto}.live-location svg{width:100%;background:#eef1f4;border-radius:16px;display:block}.live-location small{display:block;margin:8px 0}

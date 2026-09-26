@@ -43,7 +43,7 @@ function createFoodRouter({ db, siteUrl, administrator, limit, push = null }) {
     origin = new URL(siteUrl).origin,
     chat = createTemporaryFoodChat({ db, onMessage: push?.enqueue });
   const withChat = async (userId, row) =>
-    row ? { ...row, chat_id: await chat.chatIdForOrder(userId, row.id) } : row;
+    row ? { ...row, delivery_qr: undefined, chat_id: await chat.chatIdForOrder(userId, row.id) } : row;
   const picture = (r) => ({
     ...r,
     photo_url: r.photo_id ? origin + "/api/photos/" + r.photo_id : null,
@@ -533,8 +533,9 @@ function createFoodRouter({ db, siteUrl, administrator, limit, push = null }) {
     res.json({ data: await withChat(req.user.id, result) });
   });
 
-  // QR único de confirmación de entrega. El vendedor no puede marcar completado sin validación.
+  // Alternativa QR: vendedor muestra, comprador confirma al recibir. El flujo manual se conserva.
   router.post("/orders/:id/delivery-qr", async (req, res) => {
+    fields(req.body, []);
     const result = await transaction(db, async (client) => {
       const row = (await client.query(
         "select o.*,v.user_id as seller_user_id from food_orders o join food_vendors v on v.id=o.vendor_id where o.id=$1 for update of o",
@@ -542,20 +543,27 @@ function createFoodRouter({ db, siteUrl, administrator, limit, push = null }) {
       )).rows[0];
       if (!row || row.seller_user_id !== req.user.id) throw error(404, "Pedido no encontrado.");
       if (row.status !== "ready") throw error(409, "El pedido aún no está listo para entrega.");
-      const token = crypto.randomUUID();
-      await client.query("update food_orders set delivery_qr=$1,delivery_qr_used=false,updated_at=now() where id=$2", [token,row.id]);
-      return token;
+      const token = row.delivery_qr && !row.delivery_qr_used && new Date(row.delivery_qr_expires_at)>new Date() ? row.delivery_qr : crypto.randomUUID();
+      const expires=token===row.delivery_qr?row.delivery_qr_expires_at:new Date(Date.now()+5*60*1000);
+      await client.query("update food_orders set delivery_qr=$1,delivery_qr_used=false,delivery_qr_expires_at=$3 where id=$2", [token,row.id,expires]);
+      return {qr:token,expires_at:expires,svg:require('./qr.cjs').svg('FIT-FOOD:'+token)};
     });
-    res.json({data:{qr:result}});
+    res.set("Cache-Control","no-store").json({data:result});
   });
 
   router.post("/orders/:id/scan-qr", async (req, res) => {
     fields(req.body,["qr"]);
+    const token=String(req.body.qr||'').trim().replace(/^FIT-FOOD:/,'');
+    if(!uuid.test(token))throw error(400,'Escribe o escanea un código de entrega válido.');
     const result = await transaction(db, async (client) => {
       const row=(await client.query("select o.*,v.user_id as seller_user_id from food_orders o join food_vendors v on v.id=o.vendor_id where o.id=$1 for update of o",[id(req.params.id)])).rows[0];
       if(!row || row.buyer_id!==req.user.id) throw error(404,"Pedido no encontrado.");
-      if(row.delivery_qr!==req.body.qr || row.delivery_qr_used) throw error(409,"Código QR inválido o ya utilizado.");
+      if(row.status!=='ready')throw error(409,'El pedido ya no está listo para esta entrega.');
+      if(!row.delivery_qr_expires_at||new Date(row.delivery_qr_expires_at)<=new Date())throw error(409,'El código venció. Pide al vendedor uno nuevo.');
+      if(row.delivery_qr!==token || row.delivery_qr_used) throw error(409,"Código QR inválido o ya utilizado.");
       await client.query("update food_orders set status='completed',delivery_qr_used=true,delivery_qr_used_at=now(),updated_at=now() where id=$1",[row.id]);
+      await notify(client,row.seller_user_id,'food_order','Pedido: Entregado',row.product_name,row.id);
+      await notify(client,row.buyer_id,'food_order','Entrega confirmada',row.product_name,row.id);
       return orderDetails(client,row.id);
     });
     res.json({data:await withChat(req.user.id,result)});

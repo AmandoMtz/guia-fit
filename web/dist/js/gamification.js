@@ -11,7 +11,7 @@
  const effectSymbols={sparkles:'✦',flames:'♨',candy:'🍬',snow:'❄',hearts:'♥',petals:'✿',confetti:'▰'};
  function customCSS(items){
   let style=document.querySelector('#custom-reward-styles');if(!style){style=document.createElement('style');style.id='custom-reward-styles';document.head.append(style);}
-  style.textContent=items.filter(x=>x.design&&/^custom-[a-z0-9-]+$/.test(x.id)).map(x=>{
+  style.textContent=items.filter(x=>x.design&&/^(custom|frame)-[a-z0-9-]+$/.test(x.id)).map(x=>{
    const d=x.design;if(![d.primary,d.secondary,d.surface,d.ink].every(v=>/^#[0-9a-f]{6}$/i.test(v)))return '';
    const sel=`body[data-fit${x.slot}="${x.id}"]`,card=`.reward-preview.${x.id}`;
    if(x.slot==='frame')return `${sel} .profile-avatar,${card}>span{--frame-a:${d.primary};--frame-b:${d.secondary};border:4px solid ${d.primary};border-radius:50%;overflow:visible;position:relative;animation:fit-frame-shimmer ${d.speed}s ease-in-out infinite} ${sel} .profile-avatar img{border-radius:50%}`;
@@ -55,7 +55,7 @@
    if(old?.dataset.signature===signature)return;
    old?.remove();
    const layer=document.createElement('span');layer.className='fit-frame-particles';layer.dataset.signature=signature;layer.setAttribute('aria-hidden','true');
-   for(let i=0;i<4;i++){const e=document.createElement('i'),effect=effects[i%effects.length];e.textContent=effectSymbols[effect]||'✦';e.dataset.effect=effect;e.style.setProperty('--n',i);e.style.left=(50+40*Math.cos(i*Math.PI/2))+'%';e.style.top=(50+40*Math.sin(i*Math.PI/2))+'%';e.style.setProperty('--duration',(d?.speed||4)+'s');if(d)e.style.color=d.secondary;layer.append(e);}
+   for(let i=0;i<6;i++){const e=document.createElement('i'),effect=effects[i%effects.length];e.textContent=d?.symbols?.length?d.symbols[i%d.symbols.length]:(effectSymbols[effect]||'✦');e.dataset.effect=effect;e.style.setProperty('--n',i);e.style.left=(50+40*Math.cos(i*Math.PI/3))+'%';e.style.top=(50+40*Math.sin(i*Math.PI/3))+'%';e.style.setProperty('--duration',(d?.speed||4)+'s');if(d)e.style.color=d.secondary;layer.append(e);}
    el.append(layer);
   });
  }

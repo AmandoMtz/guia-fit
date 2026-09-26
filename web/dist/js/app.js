@@ -167,6 +167,7 @@
       )
       .join("");
   function render() {
+    window.FIT_LIVE_LOCATION?.clear?.();
     if(state.view!=="messages")window.FIT_ACADEMIC_CHAT?.disconnect?.();
     if (state.user || state.demo) shell();
     else authView();
@@ -838,6 +839,7 @@
   function routeView() {
     $("#view").innerHTML =
       `<div class="route-layout"><div><section class="panel"><form id="route-form"><div class="field"><label for="origin">¿Desde dónde sales?</label><select id="origin" required>${options(state.places, state.origin)}</select></div><div class="field"><label for="destination">¿A dónde quieres ir?</label><select id="destination" required>${options(state.places, state.destination)}</select></div><label class="check"><input type="checkbox" id="accessible" ${state.accessible ? "checked" : ""}> Usar únicamente tramos verificados como accesibles</label><button class="btn full" style="margin-top:22px">${icon("route")} Buscar recorrido</button></form><div id="route-message" role="status"></div></section><div id="route-steps"></div></div><aside><section class="panel"><h2>Una indicación a la vez</h2><p class="muted">Confirma cada paso cuando llegues al punto indicado. La guía no detecta tu posición dentro del edificio.</p><button class="btn secondary full" id="demo-route">Ver ejemplo de recorrido</button><p class="hint" style="margin-top:12px">El ejemplo utiliza salones ficticios y no corresponde a una ruta real.</p></section><section class="panel"><h2>Fotografías de referencia</h2><p class="hint">Consulta la entrada y el número del salón para identificar tu destino. Los espacios sin imagen se muestran como pendientes.</p></section></aside></div>`;
+    const gpsHost=document.createElement("div");$("#view").prepend(gpsHost);window.FIT_LIVE_LOCATION?.mount(moduleContext(),gpsHost);
     $("#route-form").onsubmit = (e) => {
       e.preventDefault();
       state.origin = $("#origin").value;

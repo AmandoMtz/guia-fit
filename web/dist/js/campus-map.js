@@ -184,7 +184,10 @@
       '<g aria-hidden="true">'+surfaces+parking+shadow+'</g>'+objects+'<g class="cm-courts" aria-hidden="true">'+courts+'</g>'+labels+marker+'</svg>'+
       '<div class="cm-compass" aria-label="Norte del plano"><svg viewBox="0 0 60 60" aria-hidden="true"><circle cx="30" cy="30" r="26"/><g transform="rotate('+angle+' 30 30)"><path d="M30 9l9 27-9-5-9 5z"/><text x="30" y="49">N</text></g></svg></div>';
   }
+  const range=(a,b)=>Array.from({length:b-a+1},(_,i)=>'Salón '+(a+i));
   const FLOORS={
+    'edificio-b':{ground:range(101,115),upper:range(401,412)},
+    'edificio-c':{ground:range(201,213),upper:range(301,315)},
     posgrado:{ground:['Auditorio de Posgrado','Salón 2','Salón 1'],upper:['Salón 5','Salón 6','Salón 7','Salón 8']},
     'administracion-posgrado':{ground:['Sala A','Sala B'],upper:['Área Administrativa de Posgrado']}
   };
@@ -192,6 +195,7 @@
     const rooms=FLOORS[id];if(!rooms)return '';
     floor=floor==='upper'?'upper':'ground';
     const reverse=id==='posgrado'&&floor==='upper';
+    if(id==='edificio-b'||id==='edificio-c')return '<section class="cm-floors cm-interior"><h4>'+esc(byId(id).name)+' · Salones</h4><div class="cm-floor-tabs">'+['ground','upper'].map(key=>'<button type="button" data-floor="'+key+'" aria-pressed="'+(floor===key)+'">'+(key==='ground'?'Planta baja':'Planta alta')+'</button>').join('')+'</div><div class="cm-interior-stage"><div class="cm-interior-model">'+rooms[floor].map(name=>'<button type="button" class="cm-room-box" data-room="'+esc(name)+'"><span>'+esc(name)+'</span></button>').join('')+'</div></div><label>Girar interior<input type="range" data-interior-angle min="-25" max="25" value="-8"></label><p class="cm-room-selection" data-room-selection role="status">Selecciona un salón para destacarlo.</p><p class="cm-small">Modelo ilustrativo por planta. La numeración está confirmada por el proyecto; el orden físico, puertas y escaleras requieren comprobación en sitio.</p></section>';
     return '<section class="cm-floors" aria-label="Espacios por planta"><h4>Dentro del edificio</h4><div class="cm-floor-tabs" role="group" aria-label="Seleccionar planta">'+
       ['ground','upper'].map(key=>'<button type="button" data-floor="'+key+'" aria-pressed="'+(floor===key)+'">'+(key==='ground'?'Planta baja':'Planta alta')+'</button>').join('')+'</div><p class="cm-floor-direction">'+(reverse?'Desde el lado derecho: 5 → 6 → 7 → 8':id==='posgrado'?'Orden indicado: Auditorio → Salón 2 → Salón 1':'Espacios de esta planta')+'</p><div class="cm-room-plan'+(reverse?' from-right':'')+'">'+rooms[floor].map((name,i)=>'<div class="cm-room"><span>'+(i+1)+'</span><strong>'+esc(name)+'</strong></div>').join('')+'</div><p class="cm-small">Distribución esquemática, sin escala. No representa puertas ni dimensiones.</p></section>';
   }
@@ -254,6 +258,7 @@
       }
     }
     host.querySelector(".cm-campus").addEventListener("input",(event)=>{
+      if(event.target.matches('[data-interior-angle]'))q('.cm-interior-model').style.setProperty('--interior-angle',event.target.value+'deg');
       if(event.target.matches("[data-search]")) { query=event.target.value; drawList(); }
     });
     host.querySelector(".cm-campus").addEventListener("click",(event)=>{
@@ -261,7 +266,7 @@
         suppressClick=false;
         if(viewport.contains(event.target)) return;
       }
-      const target=event.target.closest("[data-building],[data-select],[data-action],[data-mode],[data-place],[data-floor]");
+      const target=event.target.closest("[data-building],[data-select],[data-action],[data-mode],[data-place],[data-floor],[data-room]");
       if(!target || !host.contains(target)) return;
       if(target.dataset.building || target.dataset.select) {
         const isKeyboard=event.detail===0;
@@ -272,6 +277,11 @@
       if(target.dataset.place && typeof options.onDetails==="function") {
         const item=placesFor(selected,places).find((p)=>p.id===target.dataset.place);
         if(item) options.onDetails(item.id);
+        return;
+      }
+      if(target.dataset.room){
+        host.querySelectorAll('[data-room]').forEach(el=>el.setAttribute('aria-pressed',String(el===target)));
+        q('[data-room-selection]').textContent=byId(selected).name+' · '+(floor==='upper'?'Planta alta':'Planta baja')+' · '+target.dataset.room;
         return;
       }
       if(target.dataset.floor){floor=target.dataset.floor==='upper'?'upper':'ground';drawDetail();drawScene();q('[data-floor="'+floor+'"]').focus({preventScroll:true});return;}
@@ -329,5 +339,5 @@
     drawScene(); drawList(); drawDetail();
     return { destroy() { host.replaceChildren(); } };
   }
-  return Object.freeze({ BUILDINGS, project, viewBox, camera, placesFor, searchBuildings, scene, floorMarkup, detailMarkup, mount });
+  return Object.freeze({ BUILDINGS, FLOORS, project, viewBox, camera, placesFor, searchBuildings, scene, floorMarkup, detailMarkup, mount });
 });

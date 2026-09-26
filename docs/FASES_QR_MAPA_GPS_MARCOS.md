@@ -34,3 +34,5 @@ Las migraciones 019 y 020 agregan la caducidad del QR y los accesos geográficos
 169 pruebas automáticas correctas. Chromium: vista previa/editor a 390 y 1280 px, mapa B superior con 12 salones y selección del 412 en ambos tamaños; juego disponible en contexto sin conexión. La ubicación se verificó con datos simulados. Queda pendiente comprobar cámara y GPS con dispositivos físicos en el campus. Los cambios no se han publicado desde este entorno.
 
 Actualización del recorrido: verificados desplazamiento, giro por teclado, selección de salón y presentación a 390 y 1280 px. Las 12 pruebas de mapa y fases pasan tras adaptar la prueba de Posgrado a la nueva interfaz.
+
+Corrección de CI: test-campus-map-browser.cjs usa los selectores del recorrido actual y comprueba movimiento, giro y selección de salón. Ejecución completa correcta en Chromium a 1365 y 390 px, incluyendo arrastre táctil.

@@ -18,7 +18,7 @@ const server = http.createServer((req,res) => {
 });
 (async () => {
   await new Promise((resolve)=>server.listen(0,"127.0.0.1",resolve));
-  const browser=await chromium.launch();
+  const browser=await chromium.launch(process.env.FIT_CHROMIUM_PATH ? {executablePath:process.env.FIT_CHROMIUM_PATH,args:["--no-sandbox"]} : {});
   const url="http://127.0.0.1:"+server.address().port+"/mapa-campus-demo.html";
   const output=path.resolve(__dirname,"../map-browser-results");
   fs.mkdirSync(output,{recursive:true});
@@ -77,14 +77,23 @@ const server = http.createServer((req,res) => {
       await page.locator('[data-action="reset"]').click();
       assert.equal(await page.locator("[data-zoom]").textContent(),"100%");
       await page.locator('[data-select="posgrado"]').click();
-      assert.match(await page.locator('.cm-room-plan').textContent(),/Auditorio de Posgrado.*Salón 2.*Salón 1/);
+      assert.match(await page.locator('.cm-walk-rooms').textContent(),/Auditorio de Posgrado.*Salón 2.*Salón 1/);
       await page.locator('[data-floor="upper"]').click();
-      assert.match(await page.locator('.cm-room-plan').textContent(),/Salón 5.*Salón 6.*Salón 7.*Salón 8/);
-      assert.equal(await page.locator('.cm-room-plan').evaluate(el=>getComputedStyle(el).flexDirection),'row-reverse');
+      assert.match(await page.locator('.cm-walk-rooms').textContent(),/Salón 5.*Salón 6.*Salón 7.*Salón 8/);
+      const canvas=page.locator('canvas.cm-walk');
+      const entrance=await canvas.evaluate(el=>el.toDataURL());
+      await page.locator('[data-walk="forward"]').click();
+      assert.notEqual(await canvas.evaluate(el=>el.toDataURL()),entrance);
+      const advanced=await canvas.evaluate(el=>el.toDataURL());
+      await canvas.focus();
+      await page.keyboard.press('ArrowRight');
+      assert.notEqual(await canvas.evaluate(el=>el.toDataURL()),advanced);
+      await page.locator('[data-room="Salón 8"]').click();
+      assert.match(await page.locator('[data-room-selection]').textContent(),/Salón 8/);
       await page.locator('[data-select="administracion-posgrado"]').click();
-      assert.match(await page.locator('.cm-room-plan').textContent(),/Sala A.*Sala B/);
+      assert.match(await page.locator('.cm-walk-rooms').textContent(),/Sala A.*Sala B/);
       await page.locator('[data-floor="upper"]').click();
-      assert.match(await page.locator('.cm-room-plan').textContent(),/Área Administrativa de Posgrado/);
+      assert.match(await page.locator('.cm-walk-rooms').textContent(),/Área Administrativa de Posgrado/);
       // Render again after a real drag to ensure the first next control click works.
       await page.locator('[data-select="edificio-b"]').click();
       await page.locator('[data-action="origin"]').click();

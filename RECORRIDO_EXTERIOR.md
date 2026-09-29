@@ -1,13 +1,14 @@
-# Recorrido exterior de salones
+# Recorrido POV: una fila por planta
 
-Selecciona Edificio B o C. Arrastra la vista para mirar. Mantén Avanzar/Retroceder o W/S; A/D mueve de lado. Las flechas izquierda/derecha giran. Rodea los extremos de las hileras para pasar a otra. El minimapa señala tu posición virtual. Los botones de salón te colocan frente a su puerta.
+Edificio B: planta baja 101–115; planta alta 401–412.
+Edificio C: planta baja 201–213; planta alta 301–315.
 
-Se representan cuatro hileras por planta seleccionada, con corredores abiertos, barandales blancos, puertas color guinda y vegetación. La distribución entre hileras es provisional: la fotografía no establece el orden real de todos los salones. Cambiar de planta carga sus números; no se simulan escaleras. No incluye realidad aumentada, seguimiento GPS interior ni compatibilidad con visores VR.
+Cada edificio tiene un bloque con dos plantas y una fila consecutiva de salones en cada una. Al avanzar de menor a mayor los salones quedan a la izquierda. Pulsa Dar la vuelta y avanza para volver del mayor al menor, con los salones a la derecha. Retroceder camina hacia atrás sin girar la vista.
 
-Validación: 12 pruebas automatizadas aprobadas. No se realizó verificación visual en navegador por falta del ejecutable de Chromium en el entorno.
+Arrastra para mirar; mantén W/S o los botones para caminar, A/D para desplazarte lateralmente. Las flechas izquierda/derecha giran. Seleccionar un salón te sitúa un poco antes de su puerta, mirando hacia los números mayores. El selector de planta cambia la altura de la cámara y los números disponibles. El corredor superior tiene barandal y la vista al patio está abierta. Las columnas, jardineras y palmeras se inspiran en la foto; las medidas son aproximadas. No se simulan escaleras ni seguimiento GPS.
 
-Para actualizar GitHub desde PowerShell, extrae el ZIP, entra a guia-fit-main y ejecuta:
+Validación: 13 pruebas aprobadas, incluidas las cuatro series de números, su orden, el retorno y los límites. Sin comprobación visual en navegador en este entorno.
+
+Para subir los cambios, extrae este ZIP, abre PowerShell dentro de guia-fit-main y ejecuta:
 
     powershell -ExecutionPolicy Bypass -File .\ACTUALIZAR_RECORRIDO_GITHUB.ps1
-
-El script copia únicamente los archivos del mapa modificados sobre una copia nueva del repositorio y los sube a GitHub. Requiere Git instalado y acceso al repositorio.

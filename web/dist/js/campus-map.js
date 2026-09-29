@@ -191,13 +191,120 @@
     posgrado:{ground:['Auditorio de Posgrado','Salón 2','Salón 1'],upper:['Salón 5','Salón 6','Salón 7','Salón 8']},
     'administracion-posgrado':{ground:['Sala A','Sala B'],upper:['Área Administrativa de Posgrado']}
   };
-  function floorMarkup(id,floor='ground'){
+  function originalFloorMarkup(id,floor='ground'){
     const rooms=FLOORS[id];
     floor=floor==='upper'?'upper':'ground';
     const names=rooms?rooms[floor]:[];
     return '<section class="cm-floors cm-interior"><h4>Recorrido en primera persona</h4>'+(rooms?'<div class="cm-floor-tabs">'+['ground','upper'].map(key=>'<button type="button" data-floor="'+key+'" aria-pressed="'+(floor===key)+'">'+(key==='ground'?'Planta baja':'Planta alta')+'</button>').join('')+'</div>':'')+'<canvas class="cm-walk" width="900" height="560" tabindex="0" aria-label="Recorrido interior. Flechas o WASD para caminar; arrastra para mirar."></canvas><div class="cm-walk-controls"><button type="button" data-walk="left" aria-label="Mirar a la izquierda">↶</button><button type="button" data-walk="forward">Avanzar</button><button type="button" data-walk="back">Retroceder</button><button type="button" data-walk="right" aria-label="Mirar a la derecha">↷</button><button type="button" data-walk="reset">Entrada</button></div><p class="cm-small">Arrastra para mirar alrededor. Usa los botones o las flechas / WASD para caminar.</p><div class="cm-walk-rooms">'+names.map(name=>'<button type="button" data-room="'+esc(name)+'">'+esc(name)+'</button>').join('')+'</div><p data-room-selection role="status">Entrada · '+esc(byId(id).name)+'</p><p class="cm-small">Recorrido ilustrativo: pasillos, puertas y distancias aproximados. No representa una ruta interior verificada.</p></section>';
   }
+  function floorMarkup(id,floor='ground'){
+    if(!['edificio-b','edificio-c'].includes(id))return originalFloorMarkup(id,floor);
+    const rooms=FLOORS[id];
+    floor=floor==='upper'?'upper':'ground';
+    const names=rooms?rooms[floor]:[];
+    return '<section class="cm-floors cm-interior"><h4>Recorrido en primera persona</h4>'+(rooms?'<div class="cm-floor-tabs">'+['ground','upper'].map(key=>'<button type="button" data-floor="'+key+'" aria-pressed="'+(floor===key)+'">'+(key==='ground'?'Planta baja':'Planta alta')+'</button>').join('')+'</div>':'')+'<canvas class="cm-walk" width="900" height="560" tabindex="0" aria-label="Recorrido al aire libre. Flechas o WASD para caminar; arrastra para mirar."></canvas><div class="cm-walk-controls"><button type="button" data-walk="left" aria-label="Mirar a la izquierda">↶</button><button type="button" data-walk="forward">Avanzar</button><button type="button" data-walk="back">Retroceder</button><button type="button" data-walk="right" aria-label="Mirar a la derecha">↷</button><button type="button" data-walk="strafe-left">Paso izquierdo</button><button type="button" data-walk="strafe-right">Paso derecho</button><button type="button" data-walk="reset">Entrada</button></div><p class="cm-small">Arrastra para mirar alrededor. Mantén pulsados los botones o W/S para caminar; A/D para moverte de lado y las flechas para girar. Rodea los extremos para cambiar de hilera.</p><div class="cm-walk-rooms">'+names.map(name=>'<button type="button" data-room="'+esc(name)+'">'+esc(name)+'</button>').join('')+'</div><p data-room-selection role="status">Entrada · '+esc(byId(id).name)+'</p><p class="cm-small">Modelo ilustrativo de cuatro hileras al aire libre, inspirado en la foto. La asignación de salones y las distancias son aproximadas; selecciona la planta para recorrerla. Movimiento virtual, sin seguimiento GPS ni visor VR.</p></section>';
+  }
   function walkInterior(section,names){
+    if(!names.some(name=>/^Salón [1-4]\d{2}$/.test(name)))return walkOriginalInterior(section,names);
+    const canvas=section.querySelector('canvas');if(!canvas)return;
+    const ctx=canvas.getContext('2d');if(!ctx)return;
+    const length= Math.max(24,Math.ceil(names.length/4)*6+10);
+    let x=0,z=2,yaw=0,pitch=0,drag=null;
+    const surfaces=[], locations=[];
+    const quad=(points,color,label)=>surfaces.push({points,color,label});
+    function box(x0,y0,z0,x1,y1,z1,color){
+      quad([[x0,y0,z0],[x1,y0,z0],[x1,y1,z0],[x0,y1,z0]],color);
+      quad([[x0,y0,z1],[x0,y1,z1],[x1,y1,z1],[x1,y0,z1]],color);
+      quad([[x0,y0,z0],[x0,y1,z0],[x0,y1,z1],[x0,y0,z1]],color);
+      quad([[x1,y0,z0],[x1,y0,z1],[x1,y1,z1],[x1,y1,z0]],color);
+      quad([[x0,y1,z0],[x1,y1,z0],[x1,y1,z1],[x0,y1,z1]],'#bec1c1');
+    }
+    quad([[-38,0,-8],[38,0,-8],[38,0,length+8],[-38,0,length+8]],'#81a96b');
+    quad([[-35,.01,-3],[35,.01,-3],[35,.01,4],[-35,.01,4]],'#d8d4c9');
+    quad([[-35,.01,length-3],[35,.01,length-3],[35,.01,length+3],[-35,.01,length+3]],'#d8d4c9');
+    const rows=[-24,-8,8,24];
+    rows.forEach((wall,row)=>{
+      box(wall,0,5,wall+5,3.8,length-4,'#ece9e2');
+      quad([[wall-3,.02,4],[wall,.02,4],[wall,.02,length-3],[wall-3,.02,length-3]],'#d7d4cf');
+      // Cubierta sobre el corredor, con un costado abierto hacia el jardín.
+      box(wall-3,3.5,4,wall+5,3.7,length-3,'#e2dfd8');
+      for(let d=5;d<length-3;d+=6){
+        box(wall-3,0,d,wall-2.8,3.5,d+.2,'#f2eee6');
+        for(const h of [.45,.8,1.12])box(wall-3,h,d,wall-2.9,h+.09,Math.min(d+5,length-3),'#fafafa');
+      }
+      const rowNames=names.map((name,i)=>({name,i})).filter(item=>item.i%4===row);
+      rowNames.forEach(({name,i},j)=>{
+        const depth=7+j*6;
+        quad([[wall-.025,0,depth-1],[wall-.025,2.6,depth-1],[wall-.025,2.6,depth+.4],[wall-.025,0,depth+.4]],'#813f43');
+        quad([[wall-.04,2.65,depth-1.3],[wall-.04,3.12,depth-1.3],[wall-.04,3.12,depth+.7],[wall-.04,2.65,depth+.7]],'#ffffff',name);
+        quad([[wall-.03,1.3,depth+1],[wall-.03,2.8,depth+1],[wall-.03,2.8,depth+3],[wall-.03,1.3,depth+3]],'#334c55');
+        locations[i]={x:wall-1.5,z:depth,yaw:Math.PI/2};
+      });
+    });
+    // Jardineras y árboles fuera de las rutas transitables.
+    for(const tx of [-17,-1,15,31])for(const tz of [10,length-8]){
+      box(tx-.7,0,tz-.7,tx+.7,.45,tz+.7,'#af5554');
+      box(tx-.12,.45,tz-.12,tx+.12,2.8,tz+.12,'#90725a');
+      box(tx-1.1,2.2,tz-1.1,tx+1.1,3.6,tz+1.1,'#477651');
+    }
+    const view=([px,py,pz])=>{const dx=px-x,dz=pz-z;return [dx*Math.cos(yaw)-dz*Math.sin(yaw),py-1.65,dx*Math.sin(yaw)+dz*Math.cos(yaw)];};
+    function draw(){
+      const sky=ctx.createLinearGradient(0,0,0,560);sky.addColorStop(0,'#8bc4ed');sky.addColorStop(1,'#eef7fc');ctx.fillStyle=sky;ctx.fillRect(0,0,900,560);
+      const faces=surfaces.map(f=>({...f,points:f.points.map(view)})).sort((a,b)=>b.points.reduce((n,p)=>n+p[2],0)-a.points.reduce((n,p)=>n+p[2],0));
+      for(const face of faces){let clipped=[];const ps=face.points;for(let i=0;i<ps.length;i++){const a=ps[i],b=ps[(i+1)%ps.length],inside=a[2]>=.08,next=b[2]>=.08;if(inside)clipped.push(a);if(inside!==next){const t=(.08-a[2])/(b[2]-a[2]);clipped.push(a.map((v,j)=>v+(b[j]-v)*t));}}if(clipped.length<3)continue;
+        const points=clipped.map(p=>[450+p[0]*480/p[2],280+pitch-p[1]*480/p[2]]);
+        ctx.beginPath();points.forEach((p,i)=>i?ctx.lineTo(...p):ctx.moveTo(...p));ctx.closePath();ctx.fillStyle=face.color;ctx.fill();ctx.strokeStyle='#718096';ctx.lineWidth=1;ctx.stroke();
+        if(face.label&&ps.every(p=>p[2]>.2)){const center=ps.reduce((a,p)=>a.map((v,j)=>v+p[j]/4),[0,0,0]);ctx.fillStyle='#222';ctx.font='bold '+Math.max(10,Math.min(30,150/center[2]))+'px sans-serif';ctx.textAlign='center';ctx.fillText(face.label,450+center[0]*480/center[2],280+pitch-center[1]*480/center[2]);}
+      }
+      canvas.dataset.position=JSON.stringify({x,z,yaw});
+      ctx.fillStyle='#ffffffdd';ctx.fillRect(720,12,168,108);
+      ctx.fillStyle='#44663c';ctx.font='12px sans-serif';ctx.textAlign='left';ctx.fillText('CUATRO HILERAS',730,29);
+      rows.forEach(w=>{ctx.fillStyle='#b97478';ctx.fillRect(728+(w+34)*2,44,10,56);});
+      ctx.fillStyle='#ff0000';ctx.beginPath();ctx.arc(728+(x+34)*2,40+z/length*62,4,0,Math.PI*2);ctx.fill();
+      ctx.strokeStyle='#ff0000';ctx.beginPath();ctx.moveTo(728+(x+34)*2,40+z/length*62);ctx.lineTo(728+(x+34)*2+Math.sin(yaw)*10,40+z/length*62+Math.cos(yaw)*10);ctx.stroke();
+      ctx.fillStyle='#ffffffdd';ctx.fillRect(12,12,225,32);ctx.fillStyle='#243244';ctx.font='16px sans-serif';ctx.textAlign='left';ctx.fillText('Exterior · 4 hileras de salones',22,34);
+    }
+    function clearSelection(){section.querySelectorAll('[data-room]').forEach(b=>b.setAttribute('aria-pressed','false'));section.querySelector('[data-room-selection]').textContent='Recorriendo las hileras al aire libre';}
+    function valid(nx,nz){
+      if(nx < -34 || nx > 34 || nz < -2 || nz > length+2)return false;
+      return !rows.some(w=>nx>w-0.35&&nx<w+5.35&&nz>4.65&&nz<length-3.65);
+    }
+    function move(action,amount=1){
+      clearSelection();
+      if(action==='left')yaw-=.22*amount;if(action==='right')yaw+=.22*amount;
+      if(action==='reset'){x=0;z=2;yaw=0;pitch=0;}
+      const forward=(action==='forward'?1:action==='back'?-1:0)*.75*amount;
+      const side=(action==='strafe-right'?1:action==='strafe-left'?-1:0)*.75*amount;
+      const nx=x+Math.sin(yaw)*forward+Math.cos(yaw)*side,nz=z+Math.cos(yaw)*forward-Math.sin(yaw)*side;
+      if(valid(nx,z))x=nx;if(valid(x,nz))z=nz;
+      draw();
+    }
+    const held=new Set();let frame=0,last=0;
+    function tick(time){
+      if(!canvas.isConnected){held.clear();frame=0;return;}
+      const dt=Math.min((time-last)/1000,.04);last=time;
+      held.forEach(action=>move(action,dt*5));
+      frame=held.size?requestAnimationFrame(tick):0;
+    }
+    function start(action){held.add(action);if(!frame){last=performance.now();frame=requestAnimationFrame(tick);}}
+    function stop(){held.clear();if(frame)cancelAnimationFrame(frame);frame=0;}
+    section.querySelectorAll('[data-walk]').forEach(b=>{
+      b.onclick=()=>move(b.dataset.walk);
+      b.onpointerdown=e=>{if(b.dataset.walk==='reset')return;e.preventDefault();b.setPointerCapture(e.pointerId);start(b.dataset.walk);};
+      b.onpointerup=b.onpointercancel=b.onlostpointercapture=stop;
+    });
+    const keyAction=e=>({ArrowUp:'forward',w:'forward',ArrowDown:'back',s:'back',ArrowLeft:'left',a:'strafe-left',ArrowRight:'right',d:'strafe-right'})[e.key.toLowerCase()]||({ArrowUp:'forward',ArrowDown:'back',ArrowLeft:'left',ArrowRight:'right'})[e.key];
+    canvas.onkeydown=e=>{const action=keyAction(e);if(action){e.preventDefault();e.stopPropagation();if(!e.repeat)move(action,.3);start(action);}};
+    canvas.onkeyup=e=>{const action=keyAction(e);if(action){e.preventDefault();e.stopPropagation();held.delete(action);}};
+    canvas.onblur=stop;
+    canvas.onpointerdown=e=>{drag=[e.clientX,e.clientY];canvas.setPointerCapture(e.pointerId);canvas.focus({preventScroll:true});};
+    canvas.onpointermove=e=>{if(!drag)return;yaw-=(e.clientX-drag[0])*.007;pitch=Math.max(-150,Math.min(150,pitch+(e.clientY-drag[1])*1.2));drag=[e.clientX,e.clientY];draw();};
+    canvas.onpointerup=canvas.onpointercancel=()=>{drag=null;};
+    section.querySelectorAll('[data-room]').forEach((b,i)=>b.addEventListener('click',()=>{stop();const place=locations[i];if(place){x=place.x;z=place.z;yaw=place.yaw;}pitch=0;draw();}));
+    draw();
+  }
+
+  function walkOriginalInterior(section,names){
     const canvas=section.querySelector('canvas');if(!canvas)return;
     const ctx=canvas.getContext('2d');if(!ctx)return;
     const length=Math.max(14,Math.ceil(names.length/2)*4+4);

@@ -74,3 +74,8 @@ test('recorrido continuo desde B hasta cafetería sin teletransporte',()=>{
  assert.ok(h.state().x>12&&h.state().z>108,'conexión lateral al patio de cafetería');
  for(let i=0;i<12;i++)h.buttons.forward.onclick();assert.ok(h.state().z>117,'entra por puerta');
 });
+test('joystick scene adapter preserves collision limits and normalized speed',()=>{
+ const h=setup();const before=h.state();h.canvas.cmWalk.walk(0,1,1);assert.ok(h.state().z>before.z);assert.ok(h.state().z-before.z<=2.5);
+ for(let i=0;i<20;i++)h.canvas.cmWalk.walk(-1,0,1);assert.ok(h.state().x>=-1.5);
+ h.canvas.cmWalk.look(Math.PI/2,.2);assert.ok(Math.abs(h.state().yaw-Math.PI/2)<1e-9);
+});

@@ -1,13 +1,14 @@
 /* App shell sin conexión. Las respuestas /api nunca se guardan aquí. */
 importScripts('/push-worker.js?v=3');
-const CACHE = "guia-fit-shell-styles-20260930-immersive360-v1";
+const CACHE = "guia-fit-shell-styles-20260930-joystick-ar2";
 const SHELL = [
+  '/js/campus-controls.js?v=20260930-joystick-ar2',
   "/js/food-delivery.js?v=20260926b",
   "/js/live-location.js?v=20260926b",
   '/assets/guia-fit-mascota.png',
   '/assets/guia-fit-mascota.png',
   '/styles.css?v=20260926b',
-  '/campus-map.css?v=20260930-immersive360-v1',
+  '/campus-map.css?v=20260930-joystick-ar2',
   '/offline-game.css?v=20260918b',
   '/config.js',
   '/js/api.js',
@@ -32,7 +33,7 @@ const SHELL = [
   '/js/presence.js?v=20260923c',
   '/chat-presence.css?v=20260923c',
   '/js/academic-chat.js?v=20260926b',
-  '/js/campus-map.js?v=20260930-immersive360-v1',
+  '/js/campus-map.js?v=20260930-joystick-ar2',
   '/js/audit.js?v=20260918c',
   '/js/app.js?v=20260926b',
   '/contrast-fix.css?v=1',

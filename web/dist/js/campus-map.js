@@ -195,14 +195,14 @@
     const rooms=FLOORS[id];
     floor=floor==='upper'?'upper':'ground';
     const names=rooms?rooms[floor]:[];
-    return '<section class="cm-floors cm-interior"><h4>Recorrido en primera persona · 360°</h4><div class="cm-explore-actions"><button type="button" data-expand="walk">⛶ Expandir recorrido</button><button type="button" data-camera>Cámara de referencia</button></div>'+(rooms?'<div class="cm-floor-tabs">'+['ground','upper'].map(key=>'<button type="button" data-floor="'+key+'" aria-pressed="'+(floor===key)+'">'+(key==='ground'?'Planta baja':'Planta alta')+'</button>').join('')+'</div>':'')+'<canvas class="cm-walk" width="900" height="560" tabindex="0" aria-label="Recorrido interior. Flechas o WASD para caminar; arrastra para mirar."></canvas><div class="cm-walk-controls"><button type="button" data-walk="left" aria-label="Mirar a la izquierda">↶</button><button type="button" data-walk="forward">Avanzar</button><button type="button" data-walk="back">Retroceder</button><button type="button" data-walk="right" aria-label="Mirar a la derecha">↷</button><button type="button" data-walk="reset">Entrada</button></div><p class="cm-small">Arrastra para mirar alrededor. Usa los botones o las flechas / WASD para caminar.</p><div class="cm-walk-rooms">'+names.map(name=>'<button type="button" data-room="'+esc(name)+'">'+esc(name)+'</button>').join('')+'</div><p data-room-selection role="status">Entrada · '+esc(byId(id).name)+'</p><p class="cm-small">Recorrido ilustrativo: pasillos, puertas y distancias aproximados. No representa una ruta interior verificada.</p></section>';
+    return '<section class="cm-floors cm-interior"><h4>Recorrido en primera persona · 360°</h4><div class="cm-explore-actions"><button type="button" data-expand="walk">⛶ Expandir recorrido</button><button type="button" data-camera>Cámara / caminar con AR</button></div>'+(rooms?'<div class="cm-floor-tabs">'+['ground','upper'].map(key=>'<button type="button" data-floor="'+key+'" aria-pressed="'+(floor===key)+'">'+(key==='ground'?'Planta baja':'Planta alta')+'</button>').join('')+'</div>':'')+'<canvas class="cm-walk" width="900" height="560" tabindex="0" aria-label="Recorrido interior. Flechas o WASD para caminar; arrastra para mirar."></canvas><div class="cm-walk-controls"><button type="button" data-walk="left" aria-label="Mirar a la izquierda">↶</button><button type="button" data-walk="forward">Avanzar</button><button type="button" data-walk="back">Retroceder</button><button type="button" data-walk="right" aria-label="Mirar a la derecha">↷</button><button type="button" data-walk="reset">Entrada</button></div><p class="cm-small">Arrastra para mirar alrededor. Usa los botones o las flechas / WASD para caminar.</p><div class="cm-walk-rooms">'+names.map(name=>'<button type="button" data-room="'+esc(name)+'">'+esc(name)+'</button>').join('')+'</div><p data-room-selection role="status">Entrada · '+esc(byId(id).name)+'</p><p class="cm-small">Recorrido ilustrativo: pasillos, puertas y distancias aproximados. No representa una ruta interior verificada.</p></section>';
   }
   function floorMarkup(id,floor='ground'){
     if(!['edificio-b','edificio-c','cafeteria'].includes(id))return originalFloorMarkup(id,floor);
     const rooms=FLOORS[id];
     floor=floor==='upper'?'upper':'ground';
     const names=rooms?rooms[floor]:[];
-    return '<section class="cm-floors cm-interior"><h4>Recorrido en primera persona · 360°</h4><div class="cm-explore-actions"><button type="button" data-expand="walk">⛶ Expandir recorrido</button><button type="button" data-camera>Cámara de referencia</button></div>'+(rooms?'<div class="cm-floor-tabs">'+['ground','upper'].map(key=>'<button type="button" data-floor="'+key+'" aria-pressed="'+(floor===key)+'">'+(key==='ground'?'Planta baja':'Planta alta')+'</button>').join('')+'</div>':'')+'<canvas class="cm-walk" width="900" height="560" tabindex="0" aria-label="Recorrido al aire libre. Flechas o WASD para caminar; arrastra para mirar."></canvas><div class="cm-walk-controls"><button type="button" data-walk="left" aria-label="Mirar a la izquierda">↶</button><button type="button" data-walk="forward">Avanzar</button><button type="button" data-walk="back">Retroceder</button><button type="button" data-walk="right" aria-label="Mirar a la derecha">↷</button><button type="button" data-walk="strafe-left">Paso izquierdo</button><button type="button" data-walk="strafe-right">Paso derecho</button><button type="button" data-walk="turn">Dar la vuelta</button><button type="button" data-walk="reset">Entrada</button></div><p class="cm-small">Arrastra para mirar alrededor. Mantén pulsados los botones o W/S para caminar; A/D para moverte de lado y las flechas para girar. Usa Dar la vuelta para regresar. En ambos extremos hay conexiones B–C; las escaleras están junto a ellas.</p><div class="cm-walk-rooms">'+names.map(name=>'<button type="button" data-room="'+esc(name)+'">'+esc(name)+'</button>').join('')+'</div><p data-room-selection role="status">Entrada · '+esc(byId(id).name)+'</p><p class="cm-small">Recorre B, C, el patio y la cafetería. Las escaleras conectan ambas plantas. Los botones de salón te llevan al edificio y planta seleccionados. Recreación basada en los videos; distancias aproximadas.</p></section>';
+    return '<section class="cm-floors cm-interior"><h4>Recorrido en primera persona · 360°</h4><div class="cm-explore-actions"><button type="button" data-expand="walk">⛶ Expandir recorrido</button><button type="button" data-camera>Cámara / caminar con AR</button></div>'+(rooms?'<div class="cm-floor-tabs">'+['ground','upper'].map(key=>'<button type="button" data-floor="'+key+'" aria-pressed="'+(floor===key)+'">'+(key==='ground'?'Planta baja':'Planta alta')+'</button>').join('')+'</div>':'')+'<canvas class="cm-walk" width="900" height="560" tabindex="0" aria-label="Recorrido al aire libre. Flechas o WASD para caminar; arrastra para mirar."></canvas><div class="cm-walk-controls"><button type="button" data-walk="left" aria-label="Mirar a la izquierda">↶</button><button type="button" data-walk="forward">Avanzar</button><button type="button" data-walk="back">Retroceder</button><button type="button" data-walk="right" aria-label="Mirar a la derecha">↷</button><button type="button" data-walk="strafe-left">Paso izquierdo</button><button type="button" data-walk="strafe-right">Paso derecho</button><button type="button" data-walk="turn">Dar la vuelta</button><button type="button" data-walk="reset">Entrada</button></div><p class="cm-small">Arrastra para mirar alrededor. Mantén pulsados los botones o W/S para caminar; A/D para moverte de lado y las flechas para girar. Usa Dar la vuelta para regresar. En ambos extremos hay conexiones B–C; las escaleras están junto a ellas.</p><div class="cm-walk-rooms">'+names.map(name=>'<button type="button" data-room="'+esc(name)+'">'+esc(name)+'</button>').join('')+'</div><p data-room-selection role="status">Entrada · '+esc(byId(id).name)+'</p><p class="cm-small">Recorre B, C, el patio y la cafetería. Las escaleras conectan ambas plantas. Los botones de salón te llevan al edificio y planta seleccionados. Recreación basada en los videos; distancias aproximadas.</p></section>';
   }
   function walkInterior(section,names,selectedId){
     if(!names.some(name=>/^Salón [1-4]\d{2}$/.test(name))&&selectedId!=='cafeteria')return walkOriginalInterior(section,names);
@@ -485,6 +485,12 @@
       for(let i=0;i<steps;i++){step(x+dx/steps,z);step(x,z+dz/steps);}
       draw();
     }
+    canvas.cmWalk={
+      getPose:()=>({x,z,yaw,elevation:-pitch/280,level,campus:true}),
+      look:(heading,elevation)=>{yaw=heading;pitch=-Math.max(-.65,Math.min(.65,elevation))*280;draw();},
+      walk:(side,forward,dt)=>{const speed=2.5*dt,dx=(Math.sin(yaw)*forward+Math.cos(yaw)*side)*speed,dz=(Math.cos(yaw)*forward-Math.sin(yaw)*side)*speed,n=Math.max(1,Math.ceil(Math.hypot(dx,dz)/.12));clearSelection();for(let i=0;i<n;i++){step(x+dx/n,z);step(x,z+dz/n);}draw();},
+      track:p=>{if([p.x,p.z,p.yaw,p.elevation].every(Number.isFinite)){x=p.x;z=p.z;yaw=p.yaw;pitch=-Math.max(-.65,Math.min(.65,p.elevation))*280;draw();}}
+    };
     const held=new Set();let frame=0,last=0;
     function tick(time){
       if(!canvas.isConnected){held.clear();frame=0;return;}
@@ -545,6 +551,12 @@
       ctx.fillStyle='#ffffffdd';ctx.fillRect(12,12,225,32);ctx.fillStyle='#243244';ctx.font='16px sans-serif';ctx.textAlign='left';ctx.fillText('Pasillo · '+Math.round(z)+' m desde entrada',22,34);
     }
     function move(action){section.querySelectorAll("[data-room]").forEach(b=>b.setAttribute("aria-pressed","false"));section.querySelector("[data-room-selection]").textContent="Recorriendo el pasillo";if(action==='left')yaw-=.22;if(action==='right')yaw+=.22;if(action==='reset'){x=0;z=1.8;yaw=0;pitch=0;}if(action==='forward'||action==='back'){const step=action==='forward'?.75:-.75;x=Math.max(-2.4,Math.min(2.4,x+Math.sin(yaw)*step));z=Math.max(.6,Math.min(length-.6,z+Math.cos(yaw)*step));}draw();}
+    canvas.cmWalk={
+      getPose:()=>({x,z,yaw,elevation:pitch/480,level:0,campus:false}),
+      look:(heading,elevation)=>{yaw=heading;pitch=Math.max(-.65,Math.min(.65,elevation))*480;draw();},
+      walk:(side,forward,dt)=>{const speed=2.5*dt;x=Math.max(-2.4,Math.min(2.4,x+(Math.sin(yaw)*forward+Math.cos(yaw)*side)*speed));z=Math.max(.6,Math.min(length-.6,z+(Math.cos(yaw)*forward-Math.sin(yaw)*side)*speed));draw();},
+      track:p=>{if([p.x,p.z,p.yaw,p.elevation].every(Number.isFinite)){x=p.x;z=p.z;yaw=p.yaw;pitch=Math.max(-.65,Math.min(.65,p.elevation))*480;draw();}}
+    };
     section.querySelectorAll('[data-walk]').forEach(b=>b.onclick=()=>move(b.dataset.walk));
     canvas.onkeydown=e=>{const action={ArrowUp:'forward',w:'forward',ArrowDown:'back',s:'back',ArrowLeft:'left',a:'left',ArrowRight:'right',d:'right'}[e.key];if(action){e.preventDefault();e.stopPropagation();move(action);}};
     canvas.onpointerdown=e=>{drag=[e.clientX,e.clientY];canvas.setPointerCapture(e.pointerId);canvas.focus({preventScroll:true});};
@@ -570,36 +582,42 @@
 
   // Native fullscreen with a viewport fallback (including mobile Safari).
   function immersive(host, campus) {
+    const input=window.FIT_CAMPUS_CONTROLS?.mount(host,campus);
     let mode='', previousFocus=null, overflow='', stream=null, request=0, disposed=false;
     const bar=document.createElement('div');bar.className='cm-immersive-bar';bar.hidden=true;
     bar.innerHTML='<strong data-immersive-title>Explorar</strong><button type="button" data-immersive-close>Salir ✕</button>';
     campus.prepend(bar);
     const cameraPanel=document.createElement('section');cameraPanel.className='cm-camera-panel';cameraPanel.hidden=true;
-    cameraPanel.innerHTML='<video autoplay muted playsinline aria-label="Vista en vivo de tu cámara"></video><div class="cm-camera-card"><strong>Destino de referencia</strong><p data-camera-destination></p><p>Compara los letreros con tu destino. Esta vista no detecta tu posición ni calcula una ruta al salón.</p><button type="button" data-camera-stop>Apagar cámara</button><p data-camera-status role="status"></p></div>';
+    cameraPanel.innerHTML='<video autoplay muted playsinline aria-label="Vista en vivo de tu cámara"></video><div class="cm-camera-card"><strong>Recorrido con cámara y AR</strong><p data-camera-destination></p><canvas data-ar-map width="320" height="220" aria-label="Posición relativa en el esquema"></canvas><p>Para seguir tus pasos, selecciona antes tu ubicación actual y alinea el teléfono con la vista 3D. La planta se elige manualmente.</p><label class="cm-ar-check"><input type="checkbox" data-ar-origin> Estoy en el origen seleccionado, mirando en la dirección del recorrido.</label><button type="button" data-ar-start>Seguir mis pasos con AR</button><button type="button" data-ar-confirm hidden>Confirmar origen / recalibrar</button><p data-ar-status role="status">Sin seguimiento de posición. Activa AR si tu dispositivo es compatible.</p><button type="button" data-camera-stop>Apagar cámara</button><p data-camera-status role="status"></p></div>';
     campus.append(cameraPanel);
     const video=cameraPanel.querySelector('video'), status=cameraPanel.querySelector('[data-camera-status]');
+    cameraPanel.addEventListener('cm-release-video',()=>{request++;stream?.getTracks().forEach(t=>t.stop());stream=null;video.srcObject=null;status.textContent='La cámara pasa al modo AR.';});
     function stopCamera(){
-      request++; stream?.getTracks().forEach(t=>t.stop());stream=null;video.srcObject=null;
+      input?.stopAR();request++; stream?.getTracks().forEach(t=>t.stop());stream=null;video.srcObject=null;
       cameraPanel.hidden=true;campus.classList.remove('cm-camera-active');
     }
     function leave(){
-      stopCamera();if(!mode)return;mode='';campus.classList.remove('cm-immersive','cm-immersive-map','cm-immersive-walk');bar.hidden=true;
-      document.body.style.overflow=overflow;
+      input?.stop();stopCamera();if(!mode)return;mode='';campus.classList.remove('cm-immersive','cm-immersive-map','cm-immersive-walk');bar.hidden=true;
+      document.body.style.overflow=overflow;document.body.classList?.remove('cm-has-immersive');
       if(document.fullscreenElement===campus)document.exitFullscreen().catch(()=>{});
       if(previousFocus?.isConnected)previousFocus.focus({preventScroll:true});
       window.dispatchEvent(new Event('resize'));
     }
     function enter(next){
       if(!mode){previousFocus=document.activeElement;overflow=document.body.style.overflow;document.body.style.overflow='hidden';}
-      mode=next;campus.classList.add('cm-immersive');campus.classList.toggle('cm-immersive-map',next==='map');campus.classList.toggle('cm-immersive-walk',next==='walk');
+      mode=next;document.body.classList?.add('cm-has-immersive');campus.classList.add('cm-immersive');campus.classList.toggle('cm-immersive-map',next==='map');campus.classList.toggle('cm-immersive-walk',next==='walk');
       bar.hidden=false;bar.querySelector('strong').textContent=next==='walk'?'Recorrido 360°':'Mapa del campus · 360°';
       if(!document.fullscreenElement && campus.requestFullscreen)campus.requestFullscreen().catch(()=>{});
       bar.querySelector('button').focus({preventScroll:true});window.dispatchEvent(new Event('resize'));
+      if(next==='walk')input?.enableGyro();
     }
     async function openCamera(){
       if(cameraPanel.hidden===false){stopCamera();return;}
       enter('walk');cameraPanel.hidden=false;campus.classList.add('cm-camera-active');
       cameraPanel.querySelector('[data-camera-destination]').textContent=host.querySelector('[data-room-selection]')?.textContent||host.querySelector('[data-detail] h3')?.textContent||'Elige un edificio';
+      input?.miniMap();
+      const arStatus=cameraPanel.querySelector('[data-ar-status]');if(arStatus)arStatus.textContent='Sin seguimiento de posición. Activa AR si tu dispositivo es compatible.';
+      const originCheck=cameraPanel.querySelector('[data-ar-origin]');if(originCheck)originCheck.checked=false;
       const token=++request;status.textContent='Solicitando permiso para usar la cámara…';
       if(!window.isSecureContext||!navigator.mediaDevices?.getUserMedia){status.textContent='La cámara requiere HTTPS y un navegador compatible. Puedes continuar con el recorrido 3D.';return;}
       try {
@@ -622,10 +640,10 @@
     function key(e){if(!mode)return;if(e.key==='Escape'){e.preventDefault();leave();}
       if(e.key==='Tab'){const list=[...campus.querySelectorAll('button,input,[tabindex="0"]')].filter(el=>!el.disabled&&el.getClientRects().length&&getComputedStyle(el).visibility!=='hidden');const first=list[0],last=list.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last?.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first?.focus();}}
     }
-    const fullscreen=()=>{if(!document.fullscreenElement)leave();else if(!mode&&document.fullscreenElement===campus)document.exitFullscreen().catch(()=>{});};
+    const fullscreen=()=>{if(input?.arActive)return;if(!document.fullscreenElement)leave();else if(!mode&&document.fullscreenElement===campus)document.exitFullscreen().catch(()=>{});};
     const pause=()=>{if(document.hidden)stopCamera();};
     campus.addEventListener('click',click);document.addEventListener('keydown',key);document.addEventListener('fullscreenchange',fullscreen);document.addEventListener('visibilitychange',pause);window.addEventListener('pagehide',stopCamera);
-    return {leave,stopCamera,destroy(){disposed=true;leave();campus.removeEventListener('click',click);document.removeEventListener('keydown',key);document.removeEventListener('fullscreenchange',fullscreen);document.removeEventListener('visibilitychange',pause);window.removeEventListener('pagehide',stopCamera);}};
+    return {leave,stopCamera,refresh:()=>input?.attach(),destroy(){disposed=true;leave();input?.destroy();campus.removeEventListener('click',click);document.removeEventListener('keydown',key);document.removeEventListener('fullscreenchange',fullscreen);document.removeEventListener('visibilitychange',pause);window.removeEventListener('pagehide',stopCamera);}};
   }
 
   function mount(host, options = {}) {
@@ -669,6 +687,7 @@
       immersion.stopCamera();disposeWalk?.();disposeWalk=null;
       q("[data-detail]").innerHTML=detailMarkup(selected,places,origin,typeof options.onDetails==="function",floor);
       disposeWalk=walkInterior(q("[data-detail]"),FLOORS[selected]?.[floor]||[],selected);
+      immersion.refresh?.();
       q("[data-location]").textContent=origin?"Referencia indicada por ti: "+byId(origin).name+". No es una posición GPS.":"Puedes indicar en qué edificio estás desde su ficha.";
     }
     function choose(id,keyboard) {

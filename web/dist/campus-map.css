@@ -224,3 +224,52 @@
  .cm-camera-card{width:40%;max-height:100%}
 }
 .cm-immersive-walk .cm-layout{display:flex;flex-direction:column}
+
+/* Rojo institucional; joystick sobre la escena y cámara AR. */
+.cm-campus.cm-immersive{background:#85000e!important;color:#fff!important;border:0!important;border-radius:0!important;box-shadow:none!important}
+.cm-campus.cm-immersive .cm-immersive-bar{background:#ce0018;color:#fff;border-bottom:1px solid #ffffff38;min-height:56px}
+.cm-campus.cm-immersive .cm-sidebar,.cm-campus.cm-immersive .cm-detail,.cm-campus.cm-immersive .cm-interior{background:#85000e!important;color:#fff!important;border:0!important;border-radius:0!important;box-shadow:none!important;padding:0!important}
+.cm-campus.cm-immersive .cm-interior{margin:0!important}
+.cm-campus.cm-immersive button{background:#fff;color:#990016;border:1px solid #ffd2d8;box-shadow:none}
+.cm-campus.cm-immersive button[aria-pressed=true]{background:#ed0018;color:#fff;border-color:#fff}
+.cm-campus.cm-immersive button:focus-visible{outline:3px solid #ffc3c9}
+.cm-campus.cm-immersive .cm-explore-actions{position:static!important;display:flex;flex-shrink:0;margin:0;padding:6px 10px!important;min-height:48px}
+.cm-campus.cm-immersive .cm-floor-tabs{position:static!important;flex-shrink:0;padding:4px 10px!important;justify-content:flex-start}
+.cm-campus.cm-immersive .cm-walk{border-radius:0!important;margin:0!important;max-width:none!important;box-shadow:none}
+.cm-has-joystick .cm-walk-controls{display:none!important}
+.cm-mobile-controls{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px}
+.cm-joystick{width:116px;height:116px;flex:0 0 116px;display:grid;place-items:center;border:2px solid #ffb9c3;border-radius:50%;background:radial-gradient(circle,#ed001877,#72000ed9);box-shadow:0 4px 18px #32000055;touch-action:none;user-select:none;-webkit-user-select:none;cursor:grab}
+.cm-joystick-knob{display:block;width:48px;height:48px;border-radius:50%;background:#fff;box-shadow:0 2px 7px #52000077;pointer-events:none;border:5px solid #ffd1d6}
+.cm-look-actions{display:flex;flex-direction:column;align-items:flex-end;gap:6px;max-width:200px}
+.cm-look-actions button{padding:8px 10px;font-size:13px!important;min-height:44px}
+.cm-look-actions small{font-size:12px;color:#6e0010;line-height:1.35}
+.cm-campus.cm-immersive .cm-mobile-controls{position:absolute;z-index:3;bottom:90px;left:0;right:0;pointer-events:none}
+.cm-campus.cm-immersive .cm-mobile-controls>*{pointer-events:auto}
+.cm-campus.cm-immersive .cm-look-actions small{background:#75000edd;color:#fff;padding:4px;border-radius:5px}
+.cm-campus.cm-immersive [data-input-status]{flex-shrink:0;background:#85000e;color:#fff!important;font-size:12px!important;line-height:1.4;min-height:36px;margin:0!important;padding:5px 10px!important}
+.cm-campus.cm-immersive [data-room-selection]{color:#fff!important;font-size:13px!important;max-height:40px;overflow:auto}
+.cm-campus.cm-immersive .cm-walk-rooms{max-height:54px;padding:3px 10px!important;margin:0!important}
+.cm-campus .cm-camera-panel{top:56px;background:#85000e!important;box-shadow:none;border:0;border-radius:0;padding:0;margin:0}
+.cm-campus .cm-camera-card{background:#85000e!important;color:#fff!important;max-height:55%;padding:10px 12px;border-radius:0}
+.cm-camera-card p{font-size:13px;line-height:1.4}
+.cm-camera-card>button{font-size:13px;margin:4px 4px 4px 0}
+.cm-ar-check{display:flex;align-items:flex-start;gap:8px;font-size:13px;line-height:1.4;margin:8px 0}
+.cm-ar-check input{width:22px;height:22px;flex-shrink:0;accent-color:#ed0018}
+[data-ar-map]{float:right;width:140px;height:96px;background:#fff;border:2px solid #ffb3bf;border-radius:10px;margin:0 0 8px 10px}
+.cm-ar-active .cm-camera-panel{position:fixed;inset:0;background:transparent!important;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);justify-content:flex-end;pointer-events:none}
+.cm-ar-active .cm-camera-panel video{display:none}
+.cm-ar-active .cm-camera-card{background:#85000eee!important;pointer-events:auto;max-height:45%;width:100%}
+.cm-ar-active [data-ar-start],.cm-ar-active .cm-ar-check{display:none}
+body.cm-has-immersive .fit-chatbot{display:none!important}
+@media(max-height:500px){
+ .cm-campus.cm-immersive .cm-mobile-controls{bottom:50px;padding:6px 10px}
+ .cm-joystick{width:90px;height:90px;flex-basis:90px}
+ .cm-joystick-knob{width:40px;height:40px}
+ .cm-campus.cm-immersive .cm-floor-tabs{position:absolute!important;top:4px;right:6px;z-index:2}
+ .cm-campus.cm-immersive [data-input-status]{display:none}
+ .cm-look-actions small{display:none}
+ .cm-campus .cm-camera-card{max-height:100%}
+ .cm-ar-active .cm-camera-panel{flex-direction:column;align-items:flex-end}
+ .cm-ar-active .cm-camera-card{width:45%;max-height:100%}
+}
+.cm-campus .cm-camera-panel video{background:#4e000a}

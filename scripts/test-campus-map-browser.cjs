@@ -82,7 +82,8 @@ const server = http.createServer((req,res) => {
       assert.match(await page.locator('.cm-walk-rooms').textContent(),/Salón 5.*Salón 6.*Salón 7.*Salón 8/);
       const canvas=page.locator('canvas.cm-walk');
       const entrance=await canvas.evaluate(el=>el.toDataURL());
-      await page.locator('[data-walk="forward"]').click();
+      await page.locator('.cm-joystick').focus();
+      await page.keyboard.press('ArrowUp');
       assert.notEqual(await canvas.evaluate(el=>el.toDataURL()),entrance);
       const advanced=await canvas.evaluate(el=>el.toDataURL());
       await canvas.focus();
@@ -98,6 +99,15 @@ const server = http.createServer((req,res) => {
       await page.locator('[data-select="edificio-b"]').click();
       await page.locator('[data-action="origin"]').click();
       await page.screenshot({path:path.join(output,"campus-"+viewport.width+".png"),fullPage:true});
+      await page.locator('[data-expand="walk"]').click();
+      await page.locator('.cm-immersive-walk').waitFor();
+      assert.equal(await page.locator('.cm-joystick').isVisible(),true);
+      assert.equal(await page.locator('[data-walk="forward"]').isVisible(),false);
+      const dimensions=await canvas.boundingBox();
+      assert.ok(dimensions.width>viewport.width*.8 && dimensions.height>150);
+      await page.screenshot({path:path.join(output,"joystick-"+viewport.width+".png")});
+      await page.locator('[data-immersive-close]').click();
+      assert.equal(await page.locator('.cm-immersive').count(),0);
       assert.deepEqual(errors,[]);
       console.log("Mapa: selección, búsqueda, 2D/3D, referencia, zoom, teclado, arrastre y diseño "+viewport.width+"px: OK");
       await context.close();

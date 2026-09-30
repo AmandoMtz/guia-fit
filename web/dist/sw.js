@@ -1,6 +1,6 @@
 /* App shell sin conexión. Las respuestas /api nunca se guardan aquí. */
 importScripts('/push-worker.js?v=3');
-const CACHE = "guia-fit-shell-styles-20260929-pov2";
+const CACHE = "guia-fit-shell-styles-20260929-conexiones3";
 const SHELL = [
   "/js/food-delivery.js?v=20260926b",
   "/js/live-location.js?v=20260926b",
@@ -32,7 +32,7 @@ const SHELL = [
   '/js/presence.js?v=20260923c',
   '/chat-presence.css?v=20260923c',
   '/js/academic-chat.js?v=20260926b',
-  '/js/campus-map.js?v=20260929-pov2',
+  '/js/campus-map.js?v=20260929-conexiones3',
   '/js/audit.js?v=20260918c',
   '/js/app.js?v=20260926b',
   '/contrast-fix.css?v=1',

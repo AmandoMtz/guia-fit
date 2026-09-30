@@ -202,7 +202,7 @@
     const rooms=FLOORS[id];
     floor=floor==='upper'?'upper':'ground';
     const names=rooms?rooms[floor]:[];
-    return '<section class="cm-floors cm-interior"><h4>Recorrido en primera persona</h4>'+(rooms?'<div class="cm-floor-tabs">'+['ground','upper'].map(key=>'<button type="button" data-floor="'+key+'" aria-pressed="'+(floor===key)+'">'+(key==='ground'?'Planta baja':'Planta alta')+'</button>').join('')+'</div>':'')+'<canvas class="cm-walk" width="900" height="560" tabindex="0" aria-label="Recorrido al aire libre. Flechas o WASD para caminar; arrastra para mirar."></canvas><div class="cm-walk-controls"><button type="button" data-walk="left" aria-label="Mirar a la izquierda">↶</button><button type="button" data-walk="forward">Avanzar</button><button type="button" data-walk="back">Retroceder</button><button type="button" data-walk="right" aria-label="Mirar a la derecha">↷</button><button type="button" data-walk="strafe-left">Paso izquierdo</button><button type="button" data-walk="strafe-right">Paso derecho</button><button type="button" data-walk="turn">Dar la vuelta</button><button type="button" data-walk="reset">Entrada</button></div><p class="cm-small">Arrastra para mirar alrededor. Mantén pulsados los botones o W/S para caminar; A/D para moverte de lado y las flechas para girar. Usa Dar la vuelta para regresar del salón mayor al menor.</p><div class="cm-walk-rooms">'+names.map(name=>'<button type="button" data-room="'+esc(name)+'">'+esc(name)+'</button>').join('')+'</div><p data-room-selection role="status">Entrada · '+esc(byId(id).name)+'</p><p class="cm-small">Una fila por planta, con los salones ordenados de menor a mayor. Corredor abierto inspirado en la fotografía; medidas y detalles aproximados. Cambia de planta con los botones superiores.</p></section>';
+    return '<section class="cm-floors cm-interior"><h4>Recorrido en primera persona</h4>'+(rooms?'<div class="cm-floor-tabs">'+['ground','upper'].map(key=>'<button type="button" data-floor="'+key+'" aria-pressed="'+(floor===key)+'">'+(key==='ground'?'Planta baja':'Planta alta')+'</button>').join('')+'</div>':'')+'<canvas class="cm-walk" width="900" height="560" tabindex="0" aria-label="Recorrido al aire libre. Flechas o WASD para caminar; arrastra para mirar."></canvas><div class="cm-walk-controls"><button type="button" data-walk="left" aria-label="Mirar a la izquierda">↶</button><button type="button" data-walk="forward">Avanzar</button><button type="button" data-walk="back">Retroceder</button><button type="button" data-walk="right" aria-label="Mirar a la derecha">↷</button><button type="button" data-walk="strafe-left">Paso izquierdo</button><button type="button" data-walk="strafe-right">Paso derecho</button><button type="button" data-walk="turn">Dar la vuelta</button><button type="button" data-walk="reset">Entrada</button></div><p class="cm-small">Arrastra para mirar alrededor. Mantén pulsados los botones o W/S para caminar; A/D para moverte de lado y las flechas para girar. Usa Dar la vuelta para regresar. En ambos extremos hay conexiones B–C; las escaleras están junto a ellas.</p><div class="cm-walk-rooms">'+names.map(name=>'<button type="button" data-room="'+esc(name)+'">'+esc(name)+'</button>').join('')+'</div><p data-room-selection role="status">Entrada · '+esc(byId(id).name)+'</p><p class="cm-small">Una fila por planta, con los salones ordenados de menor a mayor. Corredor abierto inspirado en la fotografía; medidas y detalles aproximados. Puedes caminar entre B y C y subir o bajar por las escaleras de los extremos. Los accesos rápidos de salones corresponden al edificio y planta seleccionados.</p></section>';
   }
   function walkInterior(section,names){
     if(!names.some(name=>/^Salón [1-4]\d{2}$/.test(name)))return walkOriginalInterior(section,names);
@@ -211,21 +211,27 @@
     const length= 15*6+8;
     let x=0,z=2,yaw=0,pitch=0,drag=null;
     const surfaces=[], locations=[];
-    const quad=(points,color,label)=>surfaces.push({points,color,label});
+    const quad=(points,color,label)=>surfaces.push({points:points.map(p=>[p[0]+offset,p[1],p[2]]),color,label});
     function box(x0,y0,z0,x1,y1,z1,color){
       quad([[x0,y0,z0],[x1,y0,z0],[x1,y1,z0],[x0,y1,z0]],color);
       quad([[x0,y0,z1],[x0,y1,z1],[x1,y1,z1],[x1,y0,z1]],color);
       quad([[x0,y0,z0],[x0,y1,z0],[x0,y1,z1],[x0,y0,z1]],color);
       quad([[x1,y0,z0],[x1,y0,z1],[x1,y1,z1],[x1,y1,z0]],color);
       quad([[x0,y1,z0],[x1,y1,z0],[x1,y1,z1],[x0,y1,z1]],'#bec1c1');
+      quad([[x0,y0,z0],[x0,y0,z1],[x1,y0,z1],[x1,y0,z0]],'#e4e2da');
     }
-    const upper=Number(names[0].split(' ').pop())>=300;
-    const level=upper?3.8:0;
+    let upper=Number(names[0].split(' ').pop())>=300;
+    let level=upper?3.8:0;
     const firstNumber=Number(names[0].split(' ').pop());
     const building=firstNumber<200||firstNumber>=400?'b':'c';
-    const allFloors=FLOORS['edificio-'+building];
+    x=building==='b'?0:32;
+    const startX=x,startLevel=level;
+    let offset=0;
+    for(const block of ['b','c']){
+    offset=block==='b'?0:32;
+    const allFloors=FLOORS['edificio-'+block];
     // Un único bloque con dos corredores superpuestos. Fachada a la izquierda (+Z).
-    for(let d=-4;d<length+4;d+=6){
+    for(let d=0;d<length;d+=6){
       quad([[-10,0,d],[26,0,d],[26,0,d+6],[-10,0,d+6]],'#859976');
       quad([[3,.015,d],[9,.015,d],[9,.015,d+6],[3,.015,d+6]],'#bb8472');
       for(const floorY of [0,3.8]){
@@ -242,9 +248,11 @@
         quad([[-1.97,floorY,depth-1],[-1.97,floorY+2.6,depth-1],[-1.97,floorY+2.6,depth+.3],[-1.97,floorY,depth+.3]],'#82484a');
         quad([[-1.94,floorY+2.7,depth-1.3],[-1.94,floorY+3.15,depth-1.3],[-1.94,floorY+3.15,depth+.7],[-1.94,floorY+2.7,depth+.7]],'#fff',name);
         quad([[-1.95,floorY+1.2,depth+1],[-1.95,floorY+2.8,depth+1],[-1.95,floorY+2.8,depth+3.5],[-1.95,floorY+1.2,depth+3.5]],'#405961');
-        if(floorKey===(upper?'upper':'ground'))locations[i]={x:0,z:depth-2,yaw:0};
+        if(block===building&&floorKey===(upper?'upper':'ground'))locations[i]={x:offset,z:depth-2,yaw:0};
       });
     }
+    }
+    offset=0;
     // Patio exterior inspirado en la fotografía: senderos, jardineras y palmeras.
     for(let d=10;d<length;d+=18){
       box(10,0,d-2,15,.5,d+2,'#ba5d4e');
@@ -255,36 +263,106 @@
       }
       quad([[3,.03,d+4],[23,.03,d+4],[23,.03,d+6],[3,.03,d+6]],'#e3cbbb');
     }
+    // Conexiones transversales en ambos extremos; escalera junto a cada conexión.
+    for(const end of [0,104]){
+      for(const y of [0,3.8]){
+        box(-2,y-.16,end-6,34,y,end,'#ddd8cf');
+        for(const railZ of [end-.1,end-6])for(const h of [.4,.8,1.1]){
+          box(2,y+h,railZ,28,y+h+.08,railZ+.08,'#f5f3e9');
+        }
+      }
+      const stairZ=end===0?-10:104;
+      // Escalera de 24 peldaños: extremo izquierdo abajo, derecho arriba.
+      box(-2,-.15,stairZ,4,0,stairZ+4,'#d8d4cb');
+      box(28,3.65,stairZ,34,3.8,stairZ+4,'#d8d4cb');
+      for(let i=0;i<24;i++){
+        const h=(i+1)*3.8/24;
+        box(4+i,-.15,stairZ,5+i,h,stairZ+4,'#c5c5bf');
+        for(const zz of [stairZ,stairZ+4])box(4+i,h+.85,zz,5+i,h+.94,zz+.07,'#f8f6ed');
+      }
+    }
+    // Edificio del fondo, ventanas, bancas y andadores del patio.
+    box(7,0,110,25,7,119,'#d6dcd8');
+    for(let xx=8;xx<25;xx+=3)for(const yy of [1.2,4.5])box(xx,yy,109.94,xx+2,yy+1.6,110,'#4d737e');
+    for(let d=14;d<95;d+=20){
+      box(18,.5,d,22,.7,d+1,'#a48766');
+      box(18,.1,d,18.3,.5,d+1,'#626566');box(21.7,.1,d,22,.5,d+1,'#626566');
+      box(7,0,d,7.12,3.1,d+.12,'#50595b');box(6.8,3,d-.2,7.3,3.3,d+.3,'#fff4c2');
+    }
+    // GPU depth buffer: las losas ocultan la planta inferior y sus rótulos.
+    const sceneCanvas=document.createElement('canvas');sceneCanvas.width=900;sceneCanvas.height=560;
+    const gl=sceneCanvas.getContext('webgl',{alpha:false,antialias:true});
+    let renderDepth=null;
+    if(gl){
+      const shader=(type,src)=>{const sh=gl.createShader(type);gl.shaderSource(sh,src);gl.compileShader(sh);return sh;};
+      const program=gl.createProgram();
+      gl.attachShader(program,shader(gl.VERTEX_SHADER,'attribute vec3 pos;attribute vec2 uv;uniform vec3 eye;uniform float yaw;uniform float pitch;varying vec2 tex;void main(){vec3 d=pos-eye;float c=cos(yaw),s=sin(yaw);float z=d.x*s+d.z*c;gl_Position=vec4((d.x*c-d.z*s)*1.0666667,d.y*1.7142857-pitch*z/280.0,1.0008*z-0.160064,z);tex=uv;}'));
+      gl.attachShader(program,shader(gl.FRAGMENT_SHADER,'precision mediump float;uniform vec4 color;uniform sampler2D label;uniform float textured;varying vec2 tex;void main(){gl_FragColor=textured>0.5?texture2D(label,tex):color;}'));
+      gl.linkProgram(program);gl.useProgram(program);
+      const buffer=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buffer);
+      const points=[],batches=[];
+      surfaces.forEach(face=>{
+        const start=points.length/5;
+        for(let i=1;i<face.points.length-1;i++)for(const j of [0,i,i+1]){
+          const uv=[[0,1],[0,0],[1,0],[1,1]][j]||[0,0];points.push(...face.points[j],...uv);
+        }
+        let texture=null;
+        if(face.label){
+          const plate=document.createElement('canvas');plate.width=512;plate.height=128;const c=plate.getContext('2d');
+          c.fillStyle='#fff';c.fillRect(0,0,512,128);c.fillStyle='#222';c.font='bold 54px sans-serif';c.textAlign='center';c.fillText(face.label,256,84);
+          texture=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,texture);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,plate);
+          gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+        }
+        const color=face.color.replace('#','');batches.push({start,count:points.length/5-start,texture,color:[0,2,4].map(i=>parseInt((color.length===3?color.split('').map(c=>c+c).join(''):color).slice(i,i+2),16)/255)});
+      });
+      gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(points),gl.STATIC_DRAW);
+      for(const [name,size,offset] of [['pos',3,0],['uv',2,12]]){const loc=gl.getAttribLocation(program,name);gl.enableVertexAttribArray(loc);gl.vertexAttribPointer(loc,size,gl.FLOAT,false,20,offset);}
+      const uniforms=Object.fromEntries(['eye','yaw','pitch','color','textured'].map(n=>[n,gl.getUniformLocation(program,n)]));
+      gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LEQUAL);gl.clearColor(.62,.80,.94,1);
+      renderDepth=()=>{
+        gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);gl.uniform3f(uniforms.eye,x,level+1.65,z);gl.uniform1f(uniforms.yaw,yaw);gl.uniform1f(uniforms.pitch,pitch);
+        for(const batch of batches){gl.uniform4f(uniforms.color,...batch.color,1);gl.uniform1f(uniforms.textured,batch.texture?1:0);if(batch.texture)gl.bindTexture(gl.TEXTURE_2D,batch.texture);gl.drawArrays(gl.TRIANGLES,batch.start,batch.count);}
+        ctx.drawImage(sceneCanvas,0,0);
+      };
+      sceneCanvas.addEventListener('webglcontextlost',e=>{e.preventDefault();renderDepth=null;draw();});
+    }
     const view=([px,py,pz])=>{const dx=px-x,dz=pz-z;return [dx*Math.cos(yaw)-dz*Math.sin(yaw),py-level-1.65,dx*Math.sin(yaw)+dz*Math.cos(yaw)];};
     function draw(){
-      const sky=ctx.createLinearGradient(0,0,0,560);sky.addColorStop(0,'#8bc4ed');sky.addColorStop(1,'#eef7fc');ctx.fillStyle=sky;ctx.fillRect(0,0,900,560);
-      const faces=surfaces.map(f=>({...f,points:f.points.map(view)})).sort((a,b)=>b.points.reduce((n,p)=>n+p[2],0)-a.points.reduce((n,p)=>n+p[2],0));
-      for(const face of faces){let clipped=[];const ps=face.points;for(let i=0;i<ps.length;i++){const a=ps[i],b=ps[(i+1)%ps.length],inside=a[2]>=.08,next=b[2]>=.08;if(inside)clipped.push(a);if(inside!==next){const t=(.08-a[2])/(b[2]-a[2]);clipped.push(a.map((v,j)=>v+(b[j]-v)*t));}}if(clipped.length<3)continue;
-        const points=clipped.map(p=>[450+p[0]*480/p[2],280+pitch-p[1]*480/p[2]]);
-        ctx.beginPath();points.forEach((p,i)=>i?ctx.lineTo(...p):ctx.moveTo(...p));ctx.closePath();ctx.fillStyle=face.color;ctx.fill();ctx.strokeStyle='#718096';ctx.lineWidth=1;ctx.stroke();
-        if(face.label&&ps.every(p=>p[2]>.2)){const center=ps.reduce((a,p)=>a.map((v,j)=>v+p[j]/4),[0,0,0]);ctx.fillStyle='#222';ctx.font='bold '+Math.max(10,Math.min(30,150/center[2]))+'px sans-serif';ctx.textAlign='center';ctx.fillText(face.label,450+center[0]*480/center[2],280+pitch-center[1]*480/center[2]);}
-      }
-      canvas.dataset.position=JSON.stringify({x,z,yaw});
+      if(renderDepth)renderDepth();
+      else {ctx.fillStyle='#eaf1f5';ctx.fillRect(0,0,900,560);ctx.fillStyle='#263442';ctx.font='20px sans-serif';ctx.fillText('Activa la aceleración gráfica para ver el recorrido 3D.',30,260);}
+      canvas.dataset.position=JSON.stringify({x,z,yaw,level});
       ctx.fillStyle='#ffffffdd';ctx.fillRect(720,12,168,108);
-      ctx.fillStyle='#44663c';ctx.font='12px sans-serif';ctx.textAlign='left';ctx.fillText(upper?'PLANTA ALTA':'PLANTA BAJA',730,29);
-      ctx.fillStyle='#b97478';ctx.fillRect(744,42,20,65);
-      ctx.fillStyle='#ff0000';ctx.beginPath();ctx.arc(778+x*5,42+z/length*65,4,0,Math.PI*2);ctx.fill();
-      ctx.strokeStyle='#ff0000';ctx.beginPath();ctx.moveTo(778+x*5,42+z/length*65);ctx.lineTo(778+x*5+Math.sin(yaw)*10,42+z/length*65+Math.cos(yaw)*10);ctx.stroke();
+      ctx.fillStyle='#44663c';ctx.font='12px sans-serif';ctx.textAlign='left';ctx.fillText((level>0&&level<3.8)?'ESCALERA':(upper?'PLANTA ALTA':'PLANTA BAJA'),730,29);
+      ctx.fillStyle='#b97478';ctx.fillRect(730,42,12,65);ctx.fillRect(826,42,12,65);ctx.fillRect(742,40,96,3);ctx.fillRect(742,106,96,3);
+      ctx.fillStyle='#ff0000';ctx.beginPath();ctx.arc(750+x*3,42+z/length*65,4,0,Math.PI*2);ctx.fill();
+      ctx.strokeStyle='#ff0000';ctx.beginPath();ctx.moveTo(750+x*3,42+z/length*65);ctx.lineTo(750+x*3+Math.sin(yaw)*10,42+z/length*65+Math.cos(yaw)*10);ctx.stroke();
       ctx.fillStyle='#ffffffdd';ctx.fillRect(12,12,345,32);ctx.fillStyle='#243244';ctx.font='16px sans-serif';ctx.textAlign='left';
       ctx.fillText(Math.cos(yaw)>=0?'Menor → mayor · salones a la izquierda':'Mayor → menor · salones a la derecha',22,34);
     }
-    function clearSelection(){section.querySelectorAll('[data-room]').forEach(b=>b.setAttribute('aria-pressed','false'));section.querySelector('[data-room-selection]').textContent='Recorriendo el corredor exterior';}
-    function valid(nx,nz){return nx>=-1.5&&nx<=1.4&&nz>=1&&nz<=length-2;}
+    function clearSelection(){section.querySelectorAll('[data-room]').forEach(b=>b.setAttribute('aria-pressed','false'));section.querySelector('[data-room-selection]').textContent='Recorrido conectado B–C · '+(level>0&&level<3.8?'Escalera':upper?'Planta alta':'Planta baja');}
+    function heightAt(nx,nz){
+      if([0,32].some(cx=>nx>=cx-1.5&&nx<=cx+1.4)&&nz>=0&&nz<=98)return level<1.9?0:3.8;
+      for(const end of [0,104]){
+        if(nx>=-1.5&&nx<=33.4&&nz>=end-6&&nz<=end)return level<1.9?0:3.8;
+        if(end===0?(nz>=-9.6&&nz< -6):(nz>104&&nz<=107.6)){
+          if(nx>=-1.5&&nx<=4)return 0;
+          if(nx>=4&&nx<=28)return (nx-4)/24*3.8;
+          if(nx>=28&&nx<=33.4)return 3.8;
+        }
+      }
+      return null;
+    }
+    function step(nx,nz){const h=heightAt(nx,nz);if(h!==null&&Math.abs(h-level)<=.2){x=nx;z=nz;level=h;upper=level>=1.9;}}
 
     function move(action,amount=1){
       clearSelection();
       if(action==='turn')yaw+=Math.PI;
       if(action==='left')yaw-=.22*amount;if(action==='right')yaw+=.22*amount;
-      if(action==='reset'){x=0;z=2;yaw=0;pitch=0;}
+      if(action==='reset'){x=startX;level=startLevel;upper=level>0;z=2;yaw=0;pitch=0;}
       const forward=(action==='forward'?1:action==='back'?-1:0)*.75*amount;
       const side=(action==='strafe-right'?1:action==='strafe-left'?-1:0)*.75*amount;
       const nx=x+Math.sin(yaw)*forward+Math.cos(yaw)*side,nz=z+Math.cos(yaw)*forward-Math.sin(yaw)*side;
-      if(valid(nx,z))x=nx;if(valid(x,nz))z=nz;
+      step(nx,z);step(x,nz);
       draw();
     }
     const held=new Set();let frame=0,last=0;
@@ -308,7 +386,7 @@
     canvas.onpointerdown=e=>{drag=[e.clientX,e.clientY];canvas.setPointerCapture(e.pointerId);canvas.focus({preventScroll:true});};
     canvas.onpointermove=e=>{if(!drag)return;yaw-=(e.clientX-drag[0])*.007;pitch=Math.max(-150,Math.min(150,pitch+(e.clientY-drag[1])*1.2));drag=[e.clientX,e.clientY];draw();};
     canvas.onpointerup=canvas.onpointercancel=()=>{drag=null;};
-    section.querySelectorAll('[data-room]').forEach((b,i)=>b.addEventListener('click',()=>{stop();const place=locations[i];if(place){x=place.x;z=place.z;yaw=place.yaw;}pitch=0;draw();}));
+    section.querySelectorAll('[data-room]').forEach((b,i)=>b.addEventListener('click',()=>{stop();const place=locations[i];if(place){x=place.x;z=place.z;yaw=place.yaw;level=startLevel;upper=level>0;}pitch=0;draw();}));
     draw();
   }
 

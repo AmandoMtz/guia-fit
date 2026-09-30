@@ -1,14 +1,15 @@
-# Recorrido POV: una fila por planta
+# Recorrido conectado B–C
 
-Edificio B: planta baja 101–115; planta alta 401–412.
-Edificio C: planta baja 201–213; planta alta 301–315.
+Una fila por planta. B: 101–115 abajo y 401–412 arriba. C: 201–213 abajo y 301–315 arriba. De menor a mayor quedan a la izquierda; Dar la vuelta permite regresar con ellos a la derecha.
 
-Cada edificio tiene un bloque con dos plantas y una fila consecutiva de salones en cada una. Al avanzar de menor a mayor los salones quedan a la izquierda. Pulsa Dar la vuelta y avanza para volver del mayor al menor, con los salones a la derecha. Retroceder camina hacia atrás sin girar la vista.
+Camina hasta cualquiera de los extremos para encontrar las conexiones entre edificios. Hay un camino abajo y una pasarela arriba. Las escaleras adyacentes ascienden de izquierda a derecha; recórrelas al revés para bajar. La cámara cambia de altura al caminar. Los botones de salón siguen siendo accesos rápidos del edificio/planta seleccionados.
 
-Arrastra para mirar; mantén W/S o los botones para caminar, A/D para desplazarte lateralmente. Las flechas izquierda/derecha giran. Seleccionar un salón te sitúa un poco antes de su puerta, mirando hacia los números mayores. El selector de planta cambia la altura de la cámara y los números disponibles. El corredor superior tiene barandal y la vista al patio está abierta. Las columnas, jardineras y palmeras se inspiran en la foto; las medidas son aproximadas. No se simulan escaleras ni seguimiento GPS.
+Se añadieron bancas, luminarias, palmeras, jardineras, andadores y un edificio de fondo. La distribución de las conexiones y sus medidas es ilustrativa y no un levantamiento arquitectónico.
 
-Validación: 13 pruebas aprobadas, incluidas las cuatro series de números, su orden, el retorno y los límites. Sin comprobación visual en navegador en este entorno.
+Se sustituyó el dibujo por orden de polígonos por WebGL con buffer de profundidad: pisos, techos y muros ocultan correctamente lo que está detrás. Se requiere WebGL/aceleración gráfica. Si no está disponible se muestra un aviso.
 
-Para subir los cambios, extrae este ZIP, abre PowerShell dentro de guia-fit-main y ejecuta:
+Validación: 14 pruebas automatizadas del mapa y navegación aprobadas, incluyendo cruce B–C en ambas plantas y subida/bajada. La instalación del navegador no estuvo disponible; queda pendiente verificar visualmente WebGL en PC y móvil.
+
+Extrae este ZIP y desde PowerShell dentro de guia-fit-main ejecuta:
 
     powershell -ExecutionPolicy Bypass -File .\ACTUALIZAR_RECORRIDO_GITHUB.ps1

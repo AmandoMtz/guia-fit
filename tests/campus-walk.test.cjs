@@ -6,7 +6,7 @@ function setup(start=101,count=15){
  const ctx=new Proxy({createLinearGradient:()=>({addColorStop(){}})},{get:(o,k)=>o[k]||(()=>{})});
  const canvas={dataset:{},getContext:()=>ctx,isConnected:true};const status={};
  const section={querySelector:q=>q==='canvas'?canvas:status,querySelectorAll:q=>q==='[data-walk]'?Object.values(buttons):rooms};
- let tick;const context={FLOORS:{'edificio-b':{ground:Array.from({length:15},(_,i)=>'Salón '+(101+i)),upper:Array.from({length:12},(_,i)=>'Salón '+(401+i))},'edificio-c':{ground:Array.from({length:13},(_,i)=>'Salón '+(201+i)),upper:Array.from({length:15},(_,i)=>'Salón '+(301+i))}},performance:{now:()=>0},requestAnimationFrame:fn=>(tick=fn,1),cancelAnimationFrame:()=>{tick=null}};
+ let tick;const context={document:{createElement:()=>({getContext:()=>null})},FLOORS:{'edificio-b':{ground:Array.from({length:15},(_,i)=>'Salón '+(101+i)),upper:Array.from({length:12},(_,i)=>'Salón '+(401+i))},'edificio-c':{ground:Array.from({length:13},(_,i)=>'Salón '+(201+i)),upper:Array.from({length:15},(_,i)=>'Salón '+(301+i))}},performance:{now:()=>0},requestAnimationFrame:fn=>(tick=fn,1),cancelAnimationFrame:()=>{tick=null}};
  vm.createContext(context);vm.runInContext(source.slice(source.indexOf('  function walkInterior('),source.indexOf('  function walkOriginalInterior('))+';this.run=walkInterior;',context);
  context.run(section,rooms.map((_,i)=>'Salón '+(start+i)));
  return {buttons,rooms,canvas,state:()=>JSON.parse(canvas.dataset.position),tick:t=>tick?.(t)};
@@ -19,14 +19,29 @@ test('exterior: movimiento continuo, desplazamiento lateral, límites, selecció
  for(let i=0;i<80;i++)h.buttons.forward.onclick();assert.ok(h.state().x>=-1.5,'no atraviesa el muro');
  h.buttons.reset.onclick();assert.equal(h.state().z,2);
  h.buttons.forward.onpointerdown({preventDefault(){},pointerId:1});h.tick(40);assert.ok(h.state().z>2);h.buttons.forward.onpointerup();
- for(let i=0;i<200;i++)h.buttons.back.onclick();assert.ok(h.state().z>=1);
+ for(let i=0;i<200;i++)h.buttons.back.onclick();assert.ok(h.state().z>=-10);
  h.rooms.forEach(b=>{b.click();assert.ok(Number.isFinite(h.state().x));assert.ok(Number.isFinite(h.state().yaw));});
 });
 
 test('B y C: una fila consecutiva en ambas plantas y retorno a la derecha',()=>{
  for(const [start,count] of [[101,15],[401,12],[201,13],[301,15]]){
   const h=setup(start,count);let previous=0;
-  h.rooms.forEach(b=>{b.click();const p=h.state();assert.equal(p.x,0);assert.equal(p.yaw,0);assert.ok(p.z>previous);previous=p.z;});
+  h.rooms.forEach(b=>{b.click();const p=h.state();assert.equal(p.x,start>=200&&start<400?32:0);assert.equal(p.yaw,0);assert.ok(p.z>previous);previous=p.z;});
   h.buttons.turn.onclick();assert.ok(Math.cos(h.state().yaw)<0);const before=h.state().z;h.buttons.forward.onclick();assert.ok(h.state().z<before);
  }
+});
+
+test('conexiones B-C en ambas plantas y escalera continua de ida y vuelta',()=>{
+ for(const start of [101,401]){
+  const h=setup(start,start===101?15:12);
+  for(let i=0;i<7;i++)h.buttons.back.onclick();
+  for(let i=0;i<43;i++)h.buttons['strafe-right'].onclick();
+  assert.ok(h.state().x>31);assert.equal(h.state().level,start===101?0:3.8);
+ }
+ const h=setup();for(let i=0;i<13;i++)h.buttons.back.onclick();
+ assert.ok(h.state().z<-6);
+ for(let i=0;i<43;i++)h.buttons['strafe-right'].onclick();
+ assert.equal(h.state().level,3.8);
+ for(let i=0;i<43;i++)h.buttons['strafe-left'].onclick();
+ assert.equal(h.state().level,0);
 });

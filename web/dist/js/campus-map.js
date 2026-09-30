@@ -195,14 +195,14 @@
     const rooms=FLOORS[id];
     floor=floor==='upper'?'upper':'ground';
     const names=rooms?rooms[floor]:[];
-    return '<section class="cm-floors cm-interior"><h4>Recorrido en primera persona</h4>'+(rooms?'<div class="cm-floor-tabs">'+['ground','upper'].map(key=>'<button type="button" data-floor="'+key+'" aria-pressed="'+(floor===key)+'">'+(key==='ground'?'Planta baja':'Planta alta')+'</button>').join('')+'</div>':'')+'<canvas class="cm-walk" width="900" height="560" tabindex="0" aria-label="Recorrido interior. Flechas o WASD para caminar; arrastra para mirar."></canvas><div class="cm-walk-controls"><button type="button" data-walk="left" aria-label="Mirar a la izquierda">↶</button><button type="button" data-walk="forward">Avanzar</button><button type="button" data-walk="back">Retroceder</button><button type="button" data-walk="right" aria-label="Mirar a la derecha">↷</button><button type="button" data-walk="reset">Entrada</button></div><p class="cm-small">Arrastra para mirar alrededor. Usa los botones o las flechas / WASD para caminar.</p><div class="cm-walk-rooms">'+names.map(name=>'<button type="button" data-room="'+esc(name)+'">'+esc(name)+'</button>').join('')+'</div><p data-room-selection role="status">Entrada · '+esc(byId(id).name)+'</p><p class="cm-small">Recorrido ilustrativo: pasillos, puertas y distancias aproximados. No representa una ruta interior verificada.</p></section>';
+    return '<section class="cm-floors cm-interior"><h4>Recorrido en primera persona · 360°</h4><div class="cm-explore-actions"><button type="button" data-expand="walk">⛶ Expandir recorrido</button><button type="button" data-camera>Cámara de referencia</button></div>'+(rooms?'<div class="cm-floor-tabs">'+['ground','upper'].map(key=>'<button type="button" data-floor="'+key+'" aria-pressed="'+(floor===key)+'">'+(key==='ground'?'Planta baja':'Planta alta')+'</button>').join('')+'</div>':'')+'<canvas class="cm-walk" width="900" height="560" tabindex="0" aria-label="Recorrido interior. Flechas o WASD para caminar; arrastra para mirar."></canvas><div class="cm-walk-controls"><button type="button" data-walk="left" aria-label="Mirar a la izquierda">↶</button><button type="button" data-walk="forward">Avanzar</button><button type="button" data-walk="back">Retroceder</button><button type="button" data-walk="right" aria-label="Mirar a la derecha">↷</button><button type="button" data-walk="reset">Entrada</button></div><p class="cm-small">Arrastra para mirar alrededor. Usa los botones o las flechas / WASD para caminar.</p><div class="cm-walk-rooms">'+names.map(name=>'<button type="button" data-room="'+esc(name)+'">'+esc(name)+'</button>').join('')+'</div><p data-room-selection role="status">Entrada · '+esc(byId(id).name)+'</p><p class="cm-small">Recorrido ilustrativo: pasillos, puertas y distancias aproximados. No representa una ruta interior verificada.</p></section>';
   }
   function floorMarkup(id,floor='ground'){
     if(!['edificio-b','edificio-c','cafeteria'].includes(id))return originalFloorMarkup(id,floor);
     const rooms=FLOORS[id];
     floor=floor==='upper'?'upper':'ground';
     const names=rooms?rooms[floor]:[];
-    return '<section class="cm-floors cm-interior"><h4>Recorrido en primera persona</h4>'+(rooms?'<div class="cm-floor-tabs">'+['ground','upper'].map(key=>'<button type="button" data-floor="'+key+'" aria-pressed="'+(floor===key)+'">'+(key==='ground'?'Planta baja':'Planta alta')+'</button>').join('')+'</div>':'')+'<canvas class="cm-walk" width="900" height="560" tabindex="0" aria-label="Recorrido al aire libre. Flechas o WASD para caminar; arrastra para mirar."></canvas><div class="cm-walk-controls"><button type="button" data-walk="left" aria-label="Mirar a la izquierda">↶</button><button type="button" data-walk="forward">Avanzar</button><button type="button" data-walk="back">Retroceder</button><button type="button" data-walk="right" aria-label="Mirar a la derecha">↷</button><button type="button" data-walk="strafe-left">Paso izquierdo</button><button type="button" data-walk="strafe-right">Paso derecho</button><button type="button" data-walk="turn">Dar la vuelta</button><button type="button" data-walk="reset">Entrada</button></div><p class="cm-small">Arrastra para mirar alrededor. Mantén pulsados los botones o W/S para caminar; A/D para moverte de lado y las flechas para girar. Usa Dar la vuelta para regresar. En ambos extremos hay conexiones B–C; las escaleras están junto a ellas.</p><div class="cm-walk-rooms">'+names.map(name=>'<button type="button" data-room="'+esc(name)+'">'+esc(name)+'</button>').join('')+'</div><p data-room-selection role="status">Entrada · '+esc(byId(id).name)+'</p><p class="cm-small">Recorre B, C, el patio y la cafetería. Las escaleras conectan ambas plantas. Los botones de salón te llevan al edificio y planta seleccionados. Recreación basada en los videos; distancias aproximadas.</p></section>';
+    return '<section class="cm-floors cm-interior"><h4>Recorrido en primera persona · 360°</h4><div class="cm-explore-actions"><button type="button" data-expand="walk">⛶ Expandir recorrido</button><button type="button" data-camera>Cámara de referencia</button></div>'+(rooms?'<div class="cm-floor-tabs">'+['ground','upper'].map(key=>'<button type="button" data-floor="'+key+'" aria-pressed="'+(floor===key)+'">'+(key==='ground'?'Planta baja':'Planta alta')+'</button>').join('')+'</div>':'')+'<canvas class="cm-walk" width="900" height="560" tabindex="0" aria-label="Recorrido al aire libre. Flechas o WASD para caminar; arrastra para mirar."></canvas><div class="cm-walk-controls"><button type="button" data-walk="left" aria-label="Mirar a la izquierda">↶</button><button type="button" data-walk="forward">Avanzar</button><button type="button" data-walk="back">Retroceder</button><button type="button" data-walk="right" aria-label="Mirar a la derecha">↷</button><button type="button" data-walk="strafe-left">Paso izquierdo</button><button type="button" data-walk="strafe-right">Paso derecho</button><button type="button" data-walk="turn">Dar la vuelta</button><button type="button" data-walk="reset">Entrada</button></div><p class="cm-small">Arrastra para mirar alrededor. Mantén pulsados los botones o W/S para caminar; A/D para moverte de lado y las flechas para girar. Usa Dar la vuelta para regresar. En ambos extremos hay conexiones B–C; las escaleras están junto a ellas.</p><div class="cm-walk-rooms">'+names.map(name=>'<button type="button" data-room="'+esc(name)+'">'+esc(name)+'</button>').join('')+'</div><p data-room-selection role="status">Entrada · '+esc(byId(id).name)+'</p><p class="cm-small">Recorre B, C, el patio y la cafetería. Las escaleras conectan ambas plantas. Los botones de salón te llevan al edificio y planta seleccionados. Recreación basada en los videos; distancias aproximadas.</p></section>';
   }
   function walkInterior(section,names,selectedId){
     if(!names.some(name=>/^Salón [1-4]\d{2}$/.test(name))&&selectedId!=='cafeteria')return walkOriginalInterior(section,names);
@@ -380,7 +380,7 @@
       try{
       const shader=(type,src)=>{const sh=gl.createShader(type);gl.shaderSource(sh,src);gl.compileShader(sh);if(!gl.getShaderParameter(sh,gl.COMPILE_STATUS))throw new Error(gl.getShaderInfoLog(sh));return sh;};
       const program=gl.createProgram();
-      const vertexSource='attribute vec3 pos;attribute vec2 uv;uniform vec3 eye;uniform float yaw;uniform float pitch;varying vec2 tex;varying vec3 world;varying float dist;void main(){vec3 d=pos-eye;float c=cos(yaw),s=sin(yaw);float z=d.x*s+d.z*c;float vy=d.y;float cp=cos(pitch),sp=sin(pitch);float depth=z*cp+vy*sp;vy=vy*cp-z*sp;gl_Position=vec4((d.x*c-d.z*s)*1.0666667,vy*1.7142857,1.002002*depth-0.4004004,depth);tex=uv;world=pos;dist=length(d);}';
+      const vertexSource='attribute vec3 pos;attribute vec2 uv;uniform vec3 eye;uniform float yaw;uniform float pitch;uniform float aspect;varying vec2 tex;varying vec3 world;varying float dist;void main(){vec3 d=pos-eye;float c=cos(yaw),s=sin(yaw);float z=d.x*s+d.z*c;float vy=d.y;float cp=cos(pitch),sp=sin(pitch);float depth=z*cp+vy*sp;vy=vy*cp-z*sp;gl_Position=vec4((d.x*c-d.z*s)*1.7142857/aspect,vy*1.7142857,1.002002*depth-0.4004004,depth);tex=uv;world=pos;dist=length(d);}';
       const fragmentSource='precision highp float;uniform vec4 color;uniform sampler2D label;uniform float textured;uniform float material;varying vec2 tex;varying vec3 world;varying float dist;void main(){vec3 col=color.rgb;if(textured>0.5){col=texture2D(label,tex).rgb;}else if(material>0.5){vec2 p=material<1.5?vec2(world.z*2.5+mod(floor(world.y*5.0),2.0)*0.5,world.y*5.0):world.xz*(material<2.5?1.65:2.8);vec2 f=fract(p);float edge=min(min(f.x,1.0-f.x),min(f.y,1.0-f.y));float fade=1.0-smoothstep(12.0,40.0,dist);float joint=1.0-smoothstep(0.015,0.04+dist*0.0015,edge);if(material<3.5){col=mix(col,col*0.64,joint*fade*0.55);}else{col*=0.97+0.03*sin(world.x*2.0)*sin(world.z*2.0);}}float fog=smoothstep(55.0,160.0,dist)*0.45;gl_FragColor=vec4(mix(col,vec3(0.76,0.82,0.82),fog),1.0);}';
       const precision=gl.getShaderPrecisionFormat(gl.FRAGMENT_SHADER,gl.HIGH_FLOAT);
       const vs=shader(gl.VERTEX_SHADER,vertexSource),fs=shader(gl.FRAGMENT_SHADER,precision&&precision.precision>0?fragmentSource:fragmentSource.replace('precision highp float','precision mediump float'));
@@ -416,12 +416,16 @@
       groups.forEach(batch=>{batch.start=points.length/5;batch.count=batch.vertices.length/5;for(const n of batch.vertices)points.push(n);delete batch.vertices;batches.push(batch);});
       gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(points),gl.STATIC_DRAW);
       for(const [name,size,offset] of [['pos',3,0],['uv',2,12]]){const loc=gl.getAttribLocation(program,name);gl.enableVertexAttribArray(loc);gl.vertexAttribPointer(loc,size,gl.FLOAT,false,20,offset);}
-      const uniforms=Object.fromEntries(['eye','yaw','pitch','color','textured','material'].map(n=>[n,gl.getUniformLocation(program,n)]));
+      const uniforms=Object.fromEntries(['eye','yaw','pitch','aspect','color','textured','material'].map(n=>[n,gl.getUniformLocation(program,n)]));
       gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LESS);gl.clearColor(.70,.80,.84,1);gl.viewport(0,0,900,560);
       renderDepth=()=>{
+        const rect=canvas.getBoundingClientRect(), ratio=rect.width/Math.max(1,rect.height);
+        const width=Math.max(1,Math.min(1600,Math.round(rect.width*(window.devicePixelRatio||1)))),height=Math.max(1,Math.round(width/ratio));
+        if(sceneCanvas.width!==width||sceneCanvas.height!==height){sceneCanvas.width=width;sceneCanvas.height=height;gl.viewport(0,0,width,height);}
+        gl.uniform1f(uniforms.aspect,ratio);
         gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);gl.uniform3f(uniforms.eye,x,level+1.65,z);gl.uniform1f(uniforms.yaw,yaw);gl.uniform1f(uniforms.pitch,-pitch/280);
         for(const batch of batches){gl.uniform4f(uniforms.color,...batch.color,1);gl.uniform1f(uniforms.textured,batch.texture?1:0);gl.uniform1f(uniforms.material,batch.material);if(batch.texture)gl.bindTexture(gl.TEXTURE_2D,batch.texture);gl.drawArrays(gl.TRIANGLES,batch.start,batch.count);}
-        ctx.drawImage(sceneCanvas,0,0);
+        ctx.drawImage(sceneCanvas,0,0,900,560);
       };
       releaseGraphics=()=>{textures.forEach(t=>gl.deleteTexture(t));gl.deleteBuffer(buffer);gl.deleteProgram(program);gl.deleteShader(vs);gl.deleteShader(fs);gl.getExtension('WEBGL_lose_context')?.loseContext();};
       sceneCanvas.addEventListener('webglcontextlost',()=>{renderDepth=null;if(canvas.isConnected)draw();});
@@ -505,9 +509,10 @@
     canvas.onpointerup=canvas.onpointercancel=canvas.onlostpointercapture=()=>{drag=null;};
     section.querySelectorAll('[data-room]').forEach((b,i)=>b.addEventListener('click',()=>{stop();const place=locations[i];if(place){x=place.x;z=place.z;yaw=place.yaw;level=startLevel;upper=level>0;}pitch=0;draw();}));
     const pause=()=>{stop();drag=null;};
-    window.addEventListener('blur',pause);document.addEventListener('visibilitychange',pause);
+    const resize=()=>draw();const observer=typeof ResizeObserver!=='undefined'?new ResizeObserver(resize):null;observer?.observe(canvas);
+    window.addEventListener('resize',resize);window.addEventListener('blur',pause);document.addEventListener('visibilitychange',pause);
     draw();
-    return ()=>{stop();window.removeEventListener('blur',pause);document.removeEventListener('visibilitychange',pause);renderDepth=null;releaseGraphics();};
+    return ()=>{observer?.disconnect();window.removeEventListener('resize',resize);stop();window.removeEventListener('blur',pause);document.removeEventListener('visibilitychange',pause);renderDepth=null;releaseGraphics();};
   }
 
   function walkOriginalInterior(section,names){
@@ -529,12 +534,13 @@
     for(let d=2;d<length;d+=4)quad([[-.6,3.48,d],[.6,3.48,d],[.6,3.48,d+1],[-.6,3.48,d+1]],'#ffffff');
     const view=([px,py,pz])=>{const dx=px-x,dz=pz-z;return [dx*Math.cos(yaw)-dz*Math.sin(yaw),py-1.65,dx*Math.sin(yaw)+dz*Math.cos(yaw)];};
     function draw(){
+      const rect=canvas.getBoundingClientRect(),fx=480*(900/560)/(rect.width/Math.max(1,rect.height));
       ctx.fillStyle='#e6edf3';ctx.fillRect(0,0,900,560);
       const faces=surfaces.map(f=>({...f,points:f.points.map(view)})).sort((a,b)=>b.points.reduce((n,p)=>n+p[2],0)-a.points.reduce((n,p)=>n+p[2],0));
       for(const face of faces){let clipped=[];const ps=face.points;for(let i=0;i<ps.length;i++){const a=ps[i],b=ps[(i+1)%ps.length],inside=a[2]>=.08,next=b[2]>=.08;if(inside)clipped.push(a);if(inside!==next){const t=(.08-a[2])/(b[2]-a[2]);clipped.push(a.map((v,j)=>v+(b[j]-v)*t));}}if(clipped.length<3)continue;
-        const points=clipped.map(p=>[450+p[0]*480/p[2],280+pitch-p[1]*480/p[2]]);
+        const points=clipped.map(p=>[450+p[0]*fx/p[2],280+pitch-p[1]*480/p[2]]);
         ctx.beginPath();points.forEach((p,i)=>i?ctx.lineTo(...p):ctx.moveTo(...p));ctx.closePath();ctx.fillStyle=face.color;ctx.fill();ctx.strokeStyle='#718096';ctx.lineWidth=1;ctx.stroke();
-        if(face.label&&ps.every(p=>p[2]>.2)){const center=ps.reduce((a,p)=>a.map((v,j)=>v+p[j]/4),[0,0,0]);ctx.fillStyle='#222';ctx.font='bold '+Math.max(10,Math.min(30,150/center[2]))+'px sans-serif';ctx.textAlign='center';ctx.fillText(face.label,450+center[0]*480/center[2],280+pitch-center[1]*480/center[2]);}
+        if(face.label&&ps.every(p=>p[2]>.2)){const center=ps.reduce((a,p)=>a.map((v,j)=>v+p[j]/4),[0,0,0]);ctx.fillStyle='#222';ctx.font='bold '+Math.max(10,Math.min(30,150/center[2]))+'px sans-serif';ctx.textAlign='center';ctx.fillText(face.label,450+center[0]*fx/center[2],280+pitch-center[1]*480/center[2]);}
       }
       ctx.fillStyle='#ffffffdd';ctx.fillRect(12,12,225,32);ctx.fillStyle='#243244';ctx.font='16px sans-serif';ctx.textAlign='left';ctx.fillText('Pasillo · '+Math.round(z)+' m desde entrada',22,34);
     }
@@ -545,7 +551,9 @@
     canvas.onpointermove=e=>{if(!drag)return;yaw-=(e.clientX-drag[0])*.007;pitch=Math.max(-150,Math.min(150,pitch+(e.clientY-drag[1])*1.2));drag=[e.clientX,e.clientY];draw();};
     canvas.onpointerup=canvas.onpointercancel=()=>{drag=null;};
     section.querySelectorAll('[data-room]').forEach((b,i)=>b.addEventListener('click',()=>{z=4+Math.floor(i/2)*4;x=0;yaw=i%2?Math.PI/2:-Math.PI/2;pitch=0;draw();}));
+    const resize=()=>draw();const observer=typeof ResizeObserver!=='undefined'?new ResizeObserver(resize):null;observer?.observe(canvas);window.addEventListener('resize',resize);
     draw();
+    return ()=>{observer?.disconnect();window.removeEventListener('resize',resize);};
   }
 
   function detailMarkup(id, places, origin, canOpen, floor='ground') {
@@ -559,6 +567,67 @@
         '<li>'+(canOpen?'<button type="button" data-place="'+esc(p.id)+'">'+esc(p.name)+' <span aria-hidden="true">↗</span></button>':'<span>'+esc(p.name)+'</span>')+'</li>').join("")+'</ul>' :
         '<p class="cm-small">Aún no hay fichas del directorio vinculadas a este lugar.</p>');
   }
+
+  // Native fullscreen with a viewport fallback (including mobile Safari).
+  function immersive(host, campus) {
+    let mode='', previousFocus=null, overflow='', stream=null, request=0, disposed=false;
+    const bar=document.createElement('div');bar.className='cm-immersive-bar';bar.hidden=true;
+    bar.innerHTML='<strong data-immersive-title>Explorar</strong><button type="button" data-immersive-close>Salir ✕</button>';
+    campus.prepend(bar);
+    const cameraPanel=document.createElement('section');cameraPanel.className='cm-camera-panel';cameraPanel.hidden=true;
+    cameraPanel.innerHTML='<video autoplay muted playsinline aria-label="Vista en vivo de tu cámara"></video><div class="cm-camera-card"><strong>Destino de referencia</strong><p data-camera-destination></p><p>Compara los letreros con tu destino. Esta vista no detecta tu posición ni calcula una ruta al salón.</p><button type="button" data-camera-stop>Apagar cámara</button><p data-camera-status role="status"></p></div>';
+    campus.append(cameraPanel);
+    const video=cameraPanel.querySelector('video'), status=cameraPanel.querySelector('[data-camera-status]');
+    function stopCamera(){
+      request++; stream?.getTracks().forEach(t=>t.stop());stream=null;video.srcObject=null;
+      cameraPanel.hidden=true;campus.classList.remove('cm-camera-active');
+    }
+    function leave(){
+      stopCamera();if(!mode)return;mode='';campus.classList.remove('cm-immersive','cm-immersive-map','cm-immersive-walk');bar.hidden=true;
+      document.body.style.overflow=overflow;
+      if(document.fullscreenElement===campus)document.exitFullscreen().catch(()=>{});
+      if(previousFocus?.isConnected)previousFocus.focus({preventScroll:true});
+      window.dispatchEvent(new Event('resize'));
+    }
+    function enter(next){
+      if(!mode){previousFocus=document.activeElement;overflow=document.body.style.overflow;document.body.style.overflow='hidden';}
+      mode=next;campus.classList.add('cm-immersive');campus.classList.toggle('cm-immersive-map',next==='map');campus.classList.toggle('cm-immersive-walk',next==='walk');
+      bar.hidden=false;bar.querySelector('strong').textContent=next==='walk'?'Recorrido 360°':'Mapa del campus · 360°';
+      if(!document.fullscreenElement && campus.requestFullscreen)campus.requestFullscreen().catch(()=>{});
+      bar.querySelector('button').focus({preventScroll:true});window.dispatchEvent(new Event('resize'));
+    }
+    async function openCamera(){
+      if(cameraPanel.hidden===false){stopCamera();return;}
+      enter('walk');cameraPanel.hidden=false;campus.classList.add('cm-camera-active');
+      cameraPanel.querySelector('[data-camera-destination]').textContent=host.querySelector('[data-room-selection]')?.textContent||host.querySelector('[data-detail] h3')?.textContent||'Elige un edificio';
+      const token=++request;status.textContent='Solicitando permiso para usar la cámara…';
+      if(!window.isSecureContext||!navigator.mediaDevices?.getUserMedia){status.textContent='La cámara requiere HTTPS y un navegador compatible. Puedes continuar con el recorrido 3D.';return;}
+      try {
+        const media=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}},audio:false});
+        if(disposed||token!==request){media.getTracks().forEach(t=>t.stop());return;}
+        stream=media;video.srcObject=media;await video.play();
+        if(token!==request)return;
+        status.textContent='Cámara activa · No se graba ni se envía video.';
+        media.getVideoTracks().forEach(t=>t.addEventListener('ended',()=>{if(stream===media){stopCamera();}}));
+      } catch(error){
+        if(token!==request)return;stream?.getTracks().forEach(t=>t.stop());stream=null;video.srcObject=null;
+        status.textContent=error.name==='NotAllowedError'?'Permiso denegado. Activa la cámara en los permisos del navegador y vuelve a intentarlo.':error.name==='NotFoundError'?'No se encontró una cámara en este dispositivo.':'No se pudo abrir la cámara. Cierra otras aplicaciones que la estén usando y vuelve a intentarlo.';
+      }
+    }
+    function click(e){const b=e.target.closest('[data-expand],[data-camera],[data-immersive-close],[data-camera-stop]');if(!b)return;
+      if(b.hasAttribute('data-expand'))enter(b.dataset.expand);
+      else if(b.hasAttribute('data-camera'))openCamera();
+      else if(b.hasAttribute('data-camera-stop'))stopCamera();else leave();
+    }
+    function key(e){if(!mode)return;if(e.key==='Escape'){e.preventDefault();leave();}
+      if(e.key==='Tab'){const list=[...campus.querySelectorAll('button,input,[tabindex="0"]')].filter(el=>!el.disabled&&el.getClientRects().length&&getComputedStyle(el).visibility!=='hidden');const first=list[0],last=list.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last?.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first?.focus();}}
+    }
+    const fullscreen=()=>{if(!document.fullscreenElement)leave();else if(!mode&&document.fullscreenElement===campus)document.exitFullscreen().catch(()=>{});};
+    const pause=()=>{if(document.hidden)stopCamera();};
+    campus.addEventListener('click',click);document.addEventListener('keydown',key);document.addEventListener('fullscreenchange',fullscreen);document.addEventListener('visibilitychange',pause);window.addEventListener('pagehide',stopCamera);
+    return {leave,stopCamera,destroy(){disposed=true;leave();campus.removeEventListener('click',click);document.removeEventListener('keydown',key);document.removeEventListener('fullscreenchange',fullscreen);document.removeEventListener('visibilitychange',pause);window.removeEventListener('pagehide',stopCamera);}};
+  }
+
   function mount(host, options = {}) {
     if(!host || typeof host.querySelector !== "function") throw new TypeError("Se necesita un contenedor HTML.");
     const places=Array.isArray(options.places)?options.places:[];
@@ -566,9 +635,9 @@
     host.innerHTML='<section class="cm-campus" aria-label="Explorador del campus">'+
       '<div class="cm-heading"><div><p class="cm-kicker">Conoce tu facultad</p><h2>Explora el campus</h2><p>Encuentra un edificio y reconoce los espacios que lo rodean.</p></div><span class="cm-version">Basado en tu plano</span></div>'+
       '<div class="cm-toolbar"><div class="cm-modes" role="group" aria-label="Vista del mapa"><button type="button" data-mode="3d" aria-pressed="true">Vista 3D</button><button type="button" data-mode="2d" aria-pressed="false">Plano 2D</button></div>'+
-      '<div class="cm-controls" role="group" aria-label="Controles del mapa"><button type="button" data-action="left" aria-label="Girar a la izquierda">↶</button><button type="button" data-action="right" aria-label="Girar a la derecha">↷</button><button type="button" data-action="out" aria-label="Alejar">−</button><span data-zoom>100%</span><button type="button" data-action="in" aria-label="Acercar">+</button><button type="button" data-action="reset">Restablecer</button></div></div>'+
+      '<button type="button" data-expand="map">⛶ Pantalla completa</button><div class="cm-controls" role="group" aria-label="Controles del mapa"><button type="button" data-action="left" aria-label="Girar a la izquierda">↶</button><button type="button" data-action="right" aria-label="Girar a la derecha">↷</button><button type="button" data-action="out" aria-label="Alejar">−</button><span data-zoom>100%</span><button type="button" data-action="in" aria-label="Acercar">+</button><button type="button" data-action="reset">Restablecer</button></div></div>'+
       '<div class="cm-layout"><div class="cm-map-column"><div class="cm-viewport" data-scene tabindex="0" aria-label="Mapa. Usa las flechas para desplazarlo al acercar; más y menos cambian el zoom."></div>'+
-      '<p class="cm-caption">Selecciona un número para ver el edificio. Acerca y arrastra para explorar.</p>'+
+      '<p class="cm-caption">Arrastra para girar 360°. Al acercar, arrastra para desplazar. Selecciona un edificio para recorrerlo.</p>'+
       '<div class="cm-legend"><span><i class="cm-dot cm-dot-selected"></i>Selección</span><span><i class="cm-dot cm-dot-building"></i>Edificio</span><span><i class="cm-dot cm-dot-sport"></i>Cancha</span><span><i class="cm-dot cm-dot-unknown"></i>Sin identificar</span></div>'+
       '<p class="cm-disclaimer">Esquema del plano de planta alta, conjunto oriente. Los contornos son aproximados y las alturas ilustrativas. Selecciona un edificio para abrir su recorrido interior ilustrativo.</p></div>'+
       '<aside class="cm-sidebar"><label class="cm-search-label">Buscar edificio o espacio<input type="search" data-search placeholder="Edificio B, cafetería…" maxlength="100" autocomplete="off"></label>'+
@@ -577,6 +646,7 @@
       (typeof options.onOriginal==="function"?'<button type="button" class="cm-link" data-action="original">Ver croquis anterior</button>':'')+
       '</div><div class="cm-sr-only" data-status role="status" aria-live="polite"></div></section>';
     const q=(s)=>host.querySelector(s), viewport=q("[data-scene]");
+    const immersion=immersive(host,q(".cm-campus"));
     function announce(message) { q("[data-status]").textContent=message; }
     function drawScene() {
       viewport.innerHTML=scene(c,selected,origin,floor);
@@ -596,14 +666,14 @@
     }
     let disposeWalk=null;
     function drawDetail() {
-      disposeWalk?.();disposeWalk=null;
+      immersion.stopCamera();disposeWalk?.();disposeWalk=null;
       q("[data-detail]").innerHTML=detailMarkup(selected,places,origin,typeof options.onDetails==="function",floor);
       disposeWalk=walkInterior(q("[data-detail]"),FLOORS[selected]?.[floor]||[],selected);
       q("[data-location]").textContent=origin?"Referencia indicada por ti: "+byId(origin).name+". No es una posición GPS.":"Puedes indicar en qué edificio estás desde su ficha.";
     }
     function choose(id,keyboard) {
       if(!byId(id)) return;
-      host.classList.add("cm-walking"); selected=id; floor="ground"; drawScene(); drawList(); drawDetail(); q(".cm-interior")?.scrollIntoView({block:"center",behavior:"smooth"}); announce("Seleccionaste "+byId(id).name+".");
+      immersion.leave();host.classList.add("cm-walking"); selected=id; floor="ground"; drawScene(); drawList(); drawDetail(); q(".cm-interior")?.scrollIntoView({block:"center",behavior:"smooth"}); announce("Seleccionaste "+byId(id).name+".");
       if(keyboard) {
         const target=viewport.querySelector('[data-building="'+id+'"]');
         if(target) target.focus({preventScroll:true});
@@ -668,17 +738,17 @@
     });
     viewport.addEventListener("pointerdown",(event)=>{
       suppressClick=false;
-      if(c.zoom<=1 || event.button!==0 || !event.isPrimary) return;
+      if((c.zoom<=1 && c.mode!=="3d") || event.button!==0 || !event.isPrimary) return;
       const svg=viewport.querySelector("svg"), matrix=svg.getScreenCTM();
       if(!matrix) return;
-      gesture={id:event.pointerId,x:event.clientX,y:event.clientY,panX:c.panX,panY:c.panY,scale:matrix.a,moved:false};
+      gesture={rotate:c.zoom<=1,angle:c.angle,id:event.pointerId,x:event.clientX,y:event.clientY,panX:c.panX,panY:c.panY,scale:matrix.a,moved:false};
     });
     viewport.addEventListener("pointermove",(event)=>{
       if(!gesture || gesture.id!==event.pointerId) return;
       const dx=event.clientX-gesture.x, dy=event.clientY-gesture.y;
       if(!gesture.moved && Math.hypot(dx,dy)<6) return;
       if(!gesture.moved) { gesture.moved=true; viewport.setPointerCapture(event.pointerId); }
-      c=camera({...c,panX:gesture.panX-dx/gesture.scale,panY:gesture.panY-dy/gesture.scale}); drawScene();
+      c=gesture.rotate?camera({...c,angle:((gesture.angle+dx*.45+540)%360)-180}):camera({...c,panX:gesture.panX-dx/gesture.scale,panY:gesture.panY-dy/gesture.scale}); drawScene();
     });
     function endGesture(event) {
       if(!gesture || gesture.id!==event.pointerId) return;
@@ -689,7 +759,7 @@
     viewport.addEventListener("pointercancel",endGesture);
     viewport.addEventListener("lostpointercapture",()=>{gesture=null;});
     drawScene(); drawList(); drawDetail();
-    return { destroy() { disposeWalk?.();host.replaceChildren(); } };
+    return { destroy() { immersion.destroy();disposeWalk?.();host.replaceChildren(); } };
   }
   return Object.freeze({ BUILDINGS, FLOORS, project, viewBox, camera, placesFor, searchBuildings, scene, floorMarkup, detailMarkup, mount });
 });

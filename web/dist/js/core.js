@@ -133,7 +133,14 @@
       return "";
     }
   }
+  function identityHtml(value) {
+    const escape=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    const text=String(value??''),split=text.lastIndexOf(' · @');
+    if(split<0)return escape(text);
+    return '<span class="fit-identity">'+escape(text.slice(0,split))+'<small class="fit-handle">@'+escape(text.slice(split+4))+'</small></span>';
+  }
   const api = {
+    identityHtml,
     validate,
     normalize,
     findRoute,

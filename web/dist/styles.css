@@ -5294,3 +5294,8 @@ body.fit-force-motion:not(.fit-no-motion) .fit-particle-host::after{animation:fi
 body.fit-force-motion:not(.fit-no-motion)[data-fitframe=""] .profile-avatar{animation:none!important}
 .delivery-dialog{max-width:480px}.delivery-dialog video{width:100%;max-height:280px;object-fit:cover}.delivery-dialog label{display:block;margin:14px 0}.delivery-dialog input:not([type=checkbox]){width:100%;min-width:0}.delivery-qr{display:grid;place-items:center;background:white;margin:18px 0}.delivery-qr svg{width:min(100%,280px);height:auto}.delivery-dialog .check input{width:auto}
 .live-location{margin-bottom:24px}.live-location label{display:grid;gap:8px;margin:12px 0}.live-location select{max-width:100%}.live-location [data-gps-map]{max-width:650px;margin:16px auto}.live-location svg{width:100%;background:#eef1f4;border-radius:16px;display:block}.live-location small{display:block;margin:8px 0}
+
+/* Separate public name and handle without overflowing mobile headers. */
+.top-identity{display:block;max-width:180px;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px}.top-identity small{display:block;color:#686868}.user-handle{color:#686868;overflow-wrap:anywhere}@media(max-width:540px){.top-identity{max-width:90px;font-size:10px}}
+
+.fit-identity{display:inline-block;overflow-wrap:anywhere;max-width:100%}.fit-identity .fit-handle{display:block;font-size:.8em;color:#686868;font-weight:400;line-height:1.4}

@@ -387,7 +387,7 @@ test("Comidas: permisos, dinero, pedidos y notificaciones persistentes", async (
         await req(seller, "get", "/orders/" + order.id).expect(200)
       ).body.data;
       assert.equal(detail.order_role, "seller");
-      assert.equal(detail.buyer_name, "Comprador Uno");
+      assert.match(detail.buyer_name, /^Comprador Uno · @fit_[a-f0-9]{16}$/);
       assert.equal(
         (await req(buyer, "get", "/orders/" + order.id).expect(200)).body.data
           .order_role,
@@ -427,10 +427,10 @@ test("Comidas: permisos, dinero, pedidos y notificaciones persistentes", async (
         (await req(seller2, "get", "/orders?role=seller")).body.data.length,
         0,
       );
-      assert.equal(
+      assert.match(
         (await req(seller, "get", "/orders?role=seller")).body.data[0]
           .buyer_name,
-        "Comprador Uno",
+        /^Comprador Uno · @fit_[a-f0-9]{16}$/,
       );
       await req(stranger, "patch", "/orders/" + order.id, {
         status: "cancelled",

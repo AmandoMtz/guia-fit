@@ -36,11 +36,12 @@ function createPushService({db,siteUrl,transport,logger=console}) {
   async function run() {
     if (working) return;working=true;
     try {
+      try { await require('./class-reminders.cjs').queueClassReminders(db); } catch(e) { logger.warn('No se pudieron programar los avisos de clase:',e.message); }
       await db.query(`with removed as (delete from fit_push_outbox where (expires_at<=now() or attempts>=5) and (lease_until is null or lease_until<now()) returning *) insert into fit_push_delivery_log(job_id,user_id,outcome,attempts) select id,user_id,'expired_or_exhausted',attempts from removed`);
       const jobs=(await db.query(`update fit_push_outbox set lease_until=now()+interval '10 minutes',attempts=attempts+1
         where id in (select id from fit_push_outbox where next_attempt<=now() and (lease_until is null or lease_until<now())
-        order by next_attempt for update skip locked limit 5) returning *`)).rows;
-      for (const job of jobs) {
+        order by next_attempt for update skip locked limit 25) returning *`)).rows;
+      await Promise.all(jobs.map(async job => {
         let retry=false, delivered=0, deviceCount=0;
         try {
           const devices=(await db.query(`select p.* from fit_push_subscriptions p join sessions s on s.token_hash=p.session_hash
@@ -58,17 +59,43 @@ function createPushService({db,siteUrl,transport,logger=console}) {
         } catch { retry=true; }
         if (retry) await db.query("update fit_push_outbox set lease_until=null,next_attempt=now()+($2 * interval '1 second') where id=$1",[job.id,Math.min(300,15*2**job.attempts)]);
         else await db.query(`with removed as (delete from fit_push_outbox where id=$1 returning *) insert into fit_push_delivery_log(job_id,user_id,outcome,attempts) select id,user_id,$2,attempts from removed`,[job.id,delivered?'accepted_by_provider':deviceCount?'rejected_or_expired':'no_active_subscription']);
-      }
+      }));
     } finally {working=false;}
   }
-  function start() {if(!timer){timer=setInterval(()=>run().catch(()=>logger.warn('Push: reintentando entrega pendiente.')),15000);timer.unref?.();}}
+  function start({keepAlive=false}={}) {if(!timer){timer=setInterval(()=>run().catch(()=>logger.warn('Push: reintentando entrega pendiente.')),15000);if(!keepAlive)timer.unref?.();}}
   async function enqueue({id,userId,chatId,expiresAt}) {
     await db.query('insert into fit_push_outbox(id,user_id,chat_id,expires_at) values($1,$2,$3,$4) on conflict(id) do nothing',[id,userId,chatId,expiresAt]);
     start();run().catch(()=>logger.warn('Push pendiente; se reintentara.'));
   }
-  function router(limit) {
+  function router(limit, administrator) {
     const r=require('express').Router();
     r.use(async(req,res,next)=>{await limit(req,'push:'+req.user.id,60);next();});
+    r.get('/preferences',async(req,res)=>res.json({data:(await db.query('select class_reminders from fit_push_preferences where user_id=$1',[req.user.id])).rows[0]||{class_reminders:true}}));
+    r.patch('/preferences',async(req,res)=>{
+      if(typeof req.body?.class_reminders!=='boolean')throw fail(400,'Selecciona si quieres avisos de clases.');
+      await db.query('insert into fit_push_preferences(user_id,class_reminders) values($1,$2) on conflict(user_id) do update set class_reminders=excluded.class_reminders',[req.user.id,req.body.class_reminders]);
+      res.json({data:{class_reminders:req.body.class_reminders}});
+    });
+    if(administrator){
+      r.get('/admin/status',administrator,async(req,res)=>{
+        const stats=(await db.query(`select count(*)::int devices,count(distinct p.user_id)::int users
+          from fit_push_subscriptions p join sessions s on s.token_hash=p.session_hash and s.user_id=p.user_id where s.expires_at>now()`)).rows[0];
+        const queue=(await db.query('select count(*)::int pending from fit_push_outbox')).rows[0];
+        const outcomes=(await db.query(`select outcome,count(*)::int count from fit_push_delivery_log where created_at>now()-interval '24 hours' group by outcome`)).rows;
+        res.json({data:{...stats,...queue,outcomes}});
+      });
+      r.post('/admin/test',administrator,async(req,res)=>{
+        await limit(req,'push-admin-test:'+req.user.id,2);
+        const result=await db.query(`insert into fit_activity_notifications(user_id,kind,title,body,view_name)
+          select distinct p.user_id,'admin_push_test','Prueba de notificaciones · Guía FIT',
+          'Esta es una prueba enviada por administración. Las notificaciones están llegando a este dispositivo.','profile'
+          from fit_push_subscriptions p join sessions s on s.token_hash=p.session_hash and s.user_id=p.user_id
+          where s.expires_at>now() returning id`);
+        await db.query(`update fit_push_outbox set expires_at=now()+interval '10 minutes' where id=any($1::uuid[])`,[result.rows.map(x=>x.id)]);
+        start();
+        res.json({data:{queued:result.rows.length}});
+      });
+    }
     r.get('/activity',async(req,res)=>res.json({data:(await db.query('select id,kind,title,body,view_name,created_at,read_at from fit_activity_notifications where user_id=$1 order by created_at desc limit 100',[req.user.id])).rows}));
     r.patch('/activity/read',async(req,res)=>{await db.query('update fit_activity_notifications set read_at=now() where user_id=$1 and read_at is null',[req.user.id]);res.json({data:{}});});
     r.get('/config',async(req,res)=>res.json({data:{publicKey:(await keys()).public_key}}));

@@ -172,7 +172,7 @@ function createGamificationRouter({db,limit}) {
  r.get('/community-ranking',async(req,res)=>{
   const sort=req.query.sort||'xp',role=req.query.role||'all';
   if(!['xp','coins'].includes(sort)||!['all','student','teacher'].includes(role))throw fail(400,'Filtro inválido.');
-  const rows=(await db.query(`select u.id,p.full_name,u.email,u.role,coalesce(g.xp,0)::int xp,coalesce(g.coins,0)::int coins
+  const rows=(await db.query(`select u.id,concat_ws(' · @',p.full_name,p.username) as full_name,u.email,u.role,coalesce(g.xp,0)::int xp,coalesce(g.coins,0)::int coins
    from users u join profiles p on p.id=u.id left join fit_progress g on g.user_id=u.id
    where u.email_confirmed_at is not null and u.role<>'admin'
    and (u.email ~* '^a[0-9]+@alumnos\\.uat\\.edu\\.mx$' or u.email ~* '@(docentes\\.)?uat\\.edu\\.mx$')

@@ -1,6 +1,6 @@
 'use strict';
 const test=require('node:test'),assert=require('node:assert/strict');
-const {orientation,joystick,trackedPose,xrPose,angle}=require('../web/dist/js/campus-controls.js');
+const {orientation,joystick,angle}=require('../web/dist/js/campus-controls.js');
 const close=(a,b)=>assert.ok(Math.abs(a-b)<1e-8,`${a} != ${b}`);
 test('joystick has a dead zone, proportional speed and bounded diagonals',()=>{
  assert.deepEqual(joystick(2,2,40),{side:0,forward:0});
@@ -14,19 +14,6 @@ test('orientation follows optical direction in portrait and landscape',()=>{
  close(orientation(90,0,-90).yaw,0);close(orientation(90,0,-90).elevation,0);
  assert.equal(orientation(null,90,0),null);assert.equal(orientation(0,0,0),null);
  close(angle((359-1)*Math.PI/180),-2*Math.PI/180);
-});
-test('AR translation maps forward/right motion to the calibrated model heading',()=>{
- const b={x:4,z:8,yaw:0},a={x:10,z:20,yaw:0};
- let p=trackedPose({x:4,z:6,yaw:0,elevation:0},b,a);close(p.x,10);close(p.z,22);
- p=trackedPose({x:5,z:8,yaw:0,elevation:0},b,a);close(p.x,11);close(p.z,20);
- p=trackedPose({x:4,z:6,yaw:0,elevation:0},b,{...a,yaw:Math.PI/2});close(p.x,12);close(p.z,20);
- // Moving backward reverses travel instead of accumulating artificial steps.
- p=trackedPose({x:4,z:10,yaw:0,elevation:0},b,a);close(p.z,18);
-});
-test('XR camera orientation uses the viewing direction rather than screen tilt',()=>{
- const identity=[1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1];
- let p=xrPose({matrix:identity,position:{x:1,z:2}});close(p.yaw,0);close(p.elevation,0);assert.equal(p.x,1);
- const right=[...identity];right[8]=-1;right[10]=0;p=xrPose({matrix:right,position:{x:0,z:0}});close(p.yaw,Math.PI/2);
 });
 const vm=require('node:vm'),fs=require('node:fs'),path=require('node:path');
 function harness({permission,requestSession}={}){
@@ -49,9 +36,4 @@ test('sensor permission resolved after leaving never reattaches listeners',async
 test('orientation updates scene, and disabling removes the sensor listener',async()=>{
  const h=harness();await h.controller.enableGyro();h.listeners.get('deviceorientation')({alpha:0,beta:90,gamma:0});h.listeners.get('deviceorientation')({alpha:270,beta:90,gamma:0});assert.equal(h.looks,2);h.controller.stop();assert.equal(h.listeners.has('deviceorientation'),false);h.controller.destroy();
 });
-test('late AR permission after stop ends the session without starting tracking',async()=>{
- let resolve,ended=0;const h=harness({requestSession:()=>new Promise(r=>resolve=r)});h.campus.emit('click','[data-ar-start]');assert.equal(h.controller.arActive,true);h.controller.stopAR();resolve({end:async()=>ended++});await new Promise(r=>setImmediate(r));assert.equal(ended,1);assert.equal(h.controller.arActive,false);h.controller.destroy();
-});
-test('AR requires an explicit origin and never claims tracking on unsupported devices',()=>{
- const h=harness();h.el('[data-ar-origin]').checked=false;h.campus.emit('click','[data-ar-start]');assert.match(h.el('[data-ar-status]').textContent,/confirma/);h.el('[data-ar-origin]').checked=true;h.campus.emit('click','[data-ar-start]');assert.match(h.el('[data-ar-status]').textContent,/no ofrece seguimiento AR/);assert.equal(h.controller.arActive,false);h.controller.destroy();
-});
+test('removed AR controls cannot request an XR session',()=>{let calls=0;const h=harness({requestSession:()=>calls++});h.campus.emit('click','[data-ar-start]');assert.equal(calls,0);assert.equal(h.controller.arActive,undefined);h.controller.destroy();});

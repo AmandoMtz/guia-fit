@@ -31,7 +31,7 @@ function createAuditRouter({db}) {
    values.push('%'+q.search.replace(/[\\%_]/g,'\\$&')+'%');const n='$'+values.length;
    where.push(`(coalesce(p.full_name,'') ilike ${n} or coalesce(u.email,'') ilike ${n} or coalesce(a.actor_id::text,'') ilike ${n} or coalesce(a.record_id,'') ilike ${n} or coalesce(a.after_data::text,'') ilike ${n} or coalesce(a.before_data::text,'') ilike ${n})`);
   }
-  const result=await db.query(`select a.*,p.full_name as actor_name,u.email as actor_email,u.role as actor_role
+  const result=await db.query(`select a.*,concat_ws(' · @',p.full_name,p.username) as actor_name,u.email as actor_email,u.role as actor_role
    from audit_log a left join users u on u.id=a.actor_id left join profiles p on p.id=a.actor_id
    ${where.length?'where '+where.join(' and '):''} order by a.id desc limit 51`,values);
   const rows=result.rows.slice(0,50);

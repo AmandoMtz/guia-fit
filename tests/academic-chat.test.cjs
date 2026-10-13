@@ -45,7 +45,7 @@ test('chat alumno-docente: busca, persiste 7 días, aísla participantes y encol
   assert.equal(contacts.body.data[0].identity,'maria.garcia@uat.edu.mx');
   const studentContact=await api.get('/api/academic-chat/contacts?q=2213332176').set(auth(teacher)).expect(200);
   assert.equal(studentContact.body.data[0].identity,'2213332176');
-  assert.equal(studentContact.body.data[0].full_name,'José Amando Martínez Hernández');
+  assert.match(studentContact.body.data[0].full_name,/^José Amando Martínez Hernández · @fit_[a-f0-9]{16}$/); 
 
   const created = await api.post('/api/academic-chat/chats').set(auth(student)).send({ counterpart_id: teacher }).expect(201);
   const chatId = created.body.data.id;

@@ -63,7 +63,7 @@ function createFoodRouter({ db, siteUrl, administrator, limit, push = null }) {
   async function orderDetails(client, orderId) {
     return (
       await client.query(
-        "select o.*,v.business_name,p.full_name as buyer_name from food_orders o join food_vendors v on v.id=o.vendor_id join profiles p on p.id=o.buyer_id where o.id=$1",
+        "select o.*,v.business_name,concat_ws(' · @',p.full_name,p.username) as buyer_name from food_orders o join food_vendors v on v.id=o.vendor_id join profiles p on p.id=o.buyer_id where o.id=$1",
         [orderId],
       )
     ).rows[0];
@@ -360,7 +360,7 @@ function createFoodRouter({ db, siteUrl, administrator, limit, push = null }) {
     const role = req.query.role === "seller" ? "seller" : "buyer";
     const rows = (
       await db.query(
-        `select o.*,v.business_name,p.full_name as buyer_name from food_orders o join food_vendors v on v.id=o.vendor_id join profiles p on p.id=o.buyer_id where ${role === "seller" ? "v.user_id" : "o.buyer_id"}=$1 order by o.created_at desc limit 300`,
+        `select o.*,v.business_name,concat_ws(' · @',p.full_name,p.username) as buyer_name from food_orders o join food_vendors v on v.id=o.vendor_id join profiles p on p.id=o.buyer_id where ${role === "seller" ? "v.user_id" : "o.buyer_id"}=$1 order by o.created_at desc limit 300`,
         [req.user.id],
       )
     ).rows;
@@ -369,7 +369,7 @@ function createFoodRouter({ db, siteUrl, administrator, limit, push = null }) {
   router.get("/orders/:id", async (req, res) => {
     const row = (
       await db.query(
-        "select o.*,v.business_name,p.full_name as buyer_name,case when o.buyer_id=$2 then 'buyer' else 'seller' end as order_role from food_orders o join food_vendors v on v.id=o.vendor_id join profiles p on p.id=o.buyer_id where o.id=$1 and (o.buyer_id=$2 or v.user_id=$2)",
+        "select o.*,v.business_name,concat_ws(' · @',p.full_name,p.username) as buyer_name,case when o.buyer_id=$2 then 'buyer' else 'seller' end as order_role from food_orders o join food_vendors v on v.id=o.vendor_id join profiles p on p.id=o.buyer_id where o.id=$1 and (o.buyer_id=$2 or v.user_id=$2)",
         [id(req.params.id), req.user.id],
       )
     ).rows[0];
@@ -626,7 +626,7 @@ function createFoodRouter({ db, siteUrl, administrator, limit, push = null }) {
     res.json({
       data: (
         await db.query(
-          "select v.*,p.full_name,u.email from food_vendors v join profiles p on p.id=v.user_id join users u on u.id=v.user_id where v.deleted_at is null order by case when v.status='pending' then 0 else 1 end,v.updated_at desc",
+          "select v.*,concat_ws(' · @',p.full_name,p.username) as full_name,u.email from food_vendors v join profiles p on p.id=v.user_id join users u on u.id=v.user_id where v.deleted_at is null order by case when v.status='pending' then 0 else 1 end,v.updated_at desc",
         )
       ).rows,
     });

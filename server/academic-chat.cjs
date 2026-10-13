@@ -43,7 +43,7 @@ function createAcademicChatRouter({ db, limit }) {
   async function ownChat(userId, chatId) {
     const row = (await db.query(`select c.*,
       case when c.student_id=$1 then c.teacher_id else c.student_id end as counterpart_id,
-      case when c.student_id=$1 then tp.full_name else sp.full_name end as counterpart_name,
+      case when c.student_id=$1 then concat_ws(' · @',tp.full_name,tp.username) else concat_ws(' · @',sp.full_name,sp.username) end as counterpart_name,
       case when c.student_id=$1 then 'teacher' else 'student' end as counterpart_type,
       case when c.student_id=$1 then tu.email else substring(su.email from '^a([0-9]+)@') end as counterpart_identity,
       case when c.student_id=$1 then c.student_read_at else c.teacher_read_at end as my_read_at
@@ -65,7 +65,7 @@ function createAcademicChatRouter({ db, limit }) {
   async function summaryRows(userId) {
     return (await db.query(`select c.id,
       case when c.student_id=$1 then c.teacher_id else c.student_id end as counterpart_id,
-      case when c.student_id=$1 then tp.full_name else sp.full_name end as counterpart_name,
+      case when c.student_id=$1 then concat_ws(' · @',tp.full_name,tp.username) else concat_ws(' · @',sp.full_name,sp.username) end as counterpart_name,
       case when c.student_id=$1 then 'teacher' else 'student' end as counterpart_type,
       case when c.student_id=$1 then tu.email else substring(su.email from '^a([0-9]+)@') end as counterpart_identity,
       c.created_at,c.updated_at,
@@ -104,10 +104,10 @@ function createAcademicChatRouter({ db, limit }) {
     const roleFilter = target === 'teacher'
       ? `u.role='user' and (u.email like '%@docentes.uat.edu.mx' or (u.email like '%@uat.edu.mx' and u.email not like '%@alumnos.uat.edu.mx'))`
       : `u.role='user' and u.email ~ '^a[0-9]+@alumnos\\.uat\\.edu\\.mx$'`;
-    const rows = (await db.query(`select u.id,p.full_name,p.career,case when u.email ~ '^a[0-9]+@alumnos\\.uat\\.edu\\.mx$' then substring(u.email from '^a([0-9]+)@') else u.email end as identity
+    const rows = (await db.query(`select u.id,concat_ws(' · @',p.full_name,p.username) as full_name,p.career,case when u.email ~ '^a[0-9]+@alumnos\\.uat\\.edu\\.mx$' then substring(u.email from '^a([0-9]+)@') else u.email end as identity
       from users u join profiles p on p.id=u.id
       where u.id<>$1 and u.email_confirmed_at is not null and ${roleFilter}
-        and (translate(lower(p.full_name),'áéíóúüñ','aeiouun') like $2 or lower(u.email) like $2)
+        and (translate(lower(p.full_name),'áéíóúüñ','aeiouun') like $2 or lower(p.username) like $2 or lower(u.email) like $2)
       order by p.full_name asc limit 30`, [req.user.id, pattern])).rows.map(r => ({...r, account_type: target}));
     res.json({ data: rows });
   });
@@ -177,7 +177,7 @@ function createAcademicChatRouter({ db, limit }) {
     const body = cleanText(req.body.text);
     const active = Number((await db.query('select count(*)::int as count from academic_chat_messages where chat_id=$1 and expires_at>now()', [chat.id])).rows[0]?.count || 0);
     if (active >= 1000) throw fail(409, 'Esta conversación alcanzó temporalmente su límite de mensajes. Espera a que venzan mensajes antiguos.', 'conflict');
-    const sender = (await db.query('select full_name from profiles where id=$1', [req.user.id])).rows[0];
+    const sender = (await db.query("select concat_ws(' · @',full_name,username) as full_name from profiles where id=$1", [req.user.id])).rows[0];
     const recipientId = chat.student_id === req.user.id ? chat.teacher_id : chat.student_id;
     const row = await transaction(db, async client => {
       const message = (await client.query(`insert into academic_chat_messages(chat_id,sender_id,body)

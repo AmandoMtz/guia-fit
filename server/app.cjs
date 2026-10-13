@@ -442,7 +442,7 @@ function createApp({
         });
       const sql =
         table === "profiles"
-          ? "select p.id,p.full_name,p.student_id,p.career,p.updated_at,f.updated_at as photo_updated_at,u.food_seller_intent from profiles p join users u on u.id=p.id left join profile_photos f on f.user_id=p.id where p.id=$1"
+          ? "select p.id,p.full_name,p.username,p.student_id,p.career,p.updated_at,f.updated_at as photo_updated_at,u.food_seller_intent from profiles p join users u on u.id=p.id left join profile_photos f on f.user_id=p.id where p.id=$1"
           : "select user_id,status,verified_at from institutional_verifications where user_id=$1";
       return res.json({ data: (await db.query(sql, [req.user.id])).rows });
     }
@@ -461,12 +461,13 @@ function createApp({
   app.patch("/api/data/profiles", async (req, res) => {
     if (req.query.id && req.query.id !== req.user.id)
       throw fail(403, "forbidden", "No puedes modificar ese perfil.");
-    const { full_name, student_id, career } = req.body || {};
+    const { full_name, student_id, career, username } = req.body || {};
     if (
       Object.keys(req.body || {}).some(
-        (k) => !["full_name", "student_id", "career"].includes(k),
+        (k) => !["full_name", "student_id", "career", "username"].includes(k),
       ) ||
       !S.nameValid(full_name) ||
+      (username !== undefined && (typeof username !== "string" || !/^[A-Za-z0-9_]{3,40}$/.test(username))) ||
       (student_id !== null &&
         (typeof student_id !== "string" ||
           student_id.trim().length < 1 ||
@@ -475,15 +476,16 @@ function createApp({
         (typeof career !== "string" || career.trim().length < 2 || career.trim().length > 160))
     )
       throw fail(400, "validation_error", "Revisa el nombre y la matrícula.");
-    const { rows } = career === undefined
-      ? await db.query(
-          "update profiles set full_name=$1,student_id=$2 where id=$3 returning id,full_name,student_id,career",
-          [full_name.trim(), student_id, req.user.id],
-        )
-      : await db.query(
-          "update profiles set full_name=$1,student_id=$2,career=$3 where id=$4 returning id,full_name,student_id,career",
-          [full_name.trim(), student_id, career == null ? null : career.trim(), req.user.id],
-        );
+    let rows;
+    try {
+      ({rows}=await db.query(`update profiles set full_name=$1,student_id=$2,
+        career=case when $3 then $4 else career end,username=coalesce($5,username)
+        where id=$6 returning id,full_name,username,student_id,career`,
+        [full_name.trim(),student_id,career!==undefined,career==null?null:career.trim(),username,req.user.id]));
+    } catch(e) {
+      if(e.code==='23505')throw fail(409,'username_taken','Ese nombre de usuario ya está en uso. Elige otro.');
+      throw e;
+    }
     res.json({ data: rows });
   });
   const columns = {
@@ -589,7 +591,7 @@ function createApp({
     async (req, res) => {
       const { rows } = await db.query(`select
         u.id,u.email,u.role,u.email_confirmed_at,u.created_at,u.food_seller_intent,
-        p.full_name,p.student_id,p.career,
+        concat_ws(' · @',p.full_name,p.username) as full_name,p.student_id,p.career,
         coalesce(iv.status,'pending') as verification_status,
         coalesce(fp.xp,0)::int as xp,coalesce(fp.coins,0)::int as coins,
         (select count(*)::int from fit_inventory fi where fi.user_id=u.id) as reward_count
@@ -737,7 +739,7 @@ function createApp({
   app.use("/api/events", createPublicEventsRouter({ db, limit }));
   app.use("/api/chatbot/public", createPublicChatbotRouter({ db, limit, chatbot }));
   app.use("/api/attendance-security",authenticate,securityRouter({db,limit}));
-  if (push) app.use("/api/push", authenticate, push.router(limit));
+  if (push) app.use("/api/push", authenticate, push.router(limit, administrator));
   app.use("/api/campus-locations", authenticate, require("./campus-location.cjs").createCampusLocationRouter({db,administrator,limit}));
   app.use("/api/gamification", authenticate, createGamificationRouter({ db, limit }));
   app.use("/api/schedule", authenticate, require("./schedules.cjs").createScheduleRouter({db}));

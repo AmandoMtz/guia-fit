@@ -111,8 +111,8 @@ test('recompensas, canjes, categorías y valoraciones se validan en servidor',as
   await query("update users set email='a123@alumnos.uat.edu.mx' where id=$1",[buyer]);
   await query('update fit_progress set xp=500,coins=20 where user_id=$1',[buyer]);
   await query('update fit_progress set xp=100,coins=300 where user_id=$1',[seller]);
-  const xp=(await api.get('/g/community-ranking?sort=xp').expect(200)).body.data;assert.equal(xp[0].name,'Alumna');assert.equal(xp[0].account_type,'student');assert.ok(!JSON.stringify(xp).includes('@'));assert.ok(!JSON.stringify(xp).includes(buyer));
-  const coins=(await api.get('/g/community-ranking?sort=coins').expect(200)).body.data;assert.equal(coins[0].name,'Docente');
+  const xp=(await api.get('/g/community-ranking?sort=xp').expect(200)).body.data;assert.match(xp[0].name,/^Alumna · @fit_[a-f0-9]{16}$/);assert.equal(xp[0].account_type,'student');assert.ok(!JSON.stringify(xp).includes('@alumnos.uat.edu.mx'));assert.ok(!JSON.stringify(xp).includes(buyer));
+  const coins=(await api.get('/g/community-ranking?sort=coins').expect(200)).body.data;assert.match(coins[0].name,/^Docente · @fit_[a-f0-9]{16}$/);
   assert.equal((await api.get('/g/community-ranking?role=teacher').expect(200)).body.data.length,1);
   await api.get('/g/community-ranking?sort=coins;drop').expect(400);
  });

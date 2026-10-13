@@ -2,7 +2,7 @@
   "name": "guia-fit",
   "version": "5.0.0",
   "private": true,
-  "description": "Guía FIT: Render, Aiven PostgreSQL, Git y Flutter",
+  "description": "Gu\u00eda FIT: Render, Aiven PostgreSQL, Git y Flutter",
   "scripts": {
     "start": "node --env-file-if-exists=.env server/index.cjs",
     "dev": "node --env-file-if-exists=.env --watch server/index.cjs",
@@ -10,7 +10,8 @@
     "db:migrate": "node --env-file-if-exists=.env server/migrate.cjs",
     "admin": "node --env-file-if-exists=.env server/admin.cjs",
     "assets:pdf": "node scripts/copy_pdfjs.cjs",
-    "assets:ocr": "node scripts/copy_ocr.cjs"
+    "assets:ocr": "node scripts/copy_ocr.cjs",
+    "notifications:worker": "node --env-file-if-exists=.env server/notification-worker.cjs"
   },
   "devDependencies": {
     "@electric-sql/pglite": "0.3.14",

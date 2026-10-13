@@ -7,6 +7,7 @@ function clean(value,userId){
   if(value[key]!=null&&typeof value[key]!=='string')throw fail(400,'Datos del horario inválidos.');
   out[key]=String(value[key]||'').slice(0,240);
  }
+ if(out.studentName && !require('./security.cjs').nameValid(out.studentName))throw fail(400,'Revisa el nombre del alumno (2 a 100 caracteres).');
  out.classes=value.classes.map(row=>{
   if(!row||typeof row!=='object')throw fail(400,'Clase inválida.');
   const c={};for(const key of ['id','subject','teacher','classroom','group','day','start','end','place_id']){

@@ -7,6 +7,9 @@ function createTemporaryFoodChat({db,onMessage=null}){
  const streams=new Map();
  async function hydrate(row,client=db){
   if(!row)return null;
+  const people=(await client.query("select id,concat_ws(' · @',full_name,username) as label from profiles where id=any($1::uuid[])",[[row.buyer_id,row.seller_user_id]])).rows;
+  row.buyer_name=people.find(x=>x.id===row.buyer_id)?.label||row.buyer_name;
+  row.seller_name=people.find(x=>x.id===row.seller_user_id)?.label||row.business_name;
   row.messages=(await client.query('select id,sender_id,kind,text,created_at from food_chat_messages where chat_id=$1 order by created_at,id',[row.id])).rows;
   row.read_at=new Map([[row.buyer_id,new Date(row.buyer_read_at).getTime()],[row.seller_user_id,new Date(row.seller_read_at).getTime()]]);
   return row;
@@ -46,7 +49,7 @@ function createTemporaryFoodChat({db,onMessage=null}){
       id: chat.id,
       role: seller ? "seller" : "buyer",
       counterpart_id: seller ? chat.buyer_id : chat.seller_user_id,
-      counterpart_name: seller ? chat.buyer_name : chat.business_name,
+      counterpart_name: seller ? chat.buyer_name : chat.seller_name,
       business_name: chat.business_name,
       buyer_name: chat.buyer_name,
       product_id: chat.product_id,
@@ -126,7 +129,7 @@ function createTemporaryFoodChat({db,onMessage=null}){
    // Serializa aperturas para que dos solicitudes no creen la misma conversación activa.
    await client.query('select pg_advisory_xact_lock(746203)');
    await client.query('delete from food_chats where expires_at<=now()');
-   const product=(await client.query("select p.id,p.vendor_id,p.name as product_name,v.user_id as seller_user_id,v.business_name,v.pickup_location,pr.full_name as buyer_name from food_products p join food_vendors v on v.id=p.vendor_id join profiles pr on pr.id=$2 where p.id=$1 and p.deleted_at is null and p.available=true and v.status='approved' and v.is_active=true and v.deleted_at is null",[productId,userId])).rows[0];
+   const product=(await client.query("select p.id,p.vendor_id,p.name as product_name,v.user_id as seller_user_id,v.business_name,v.pickup_location,concat_ws(' · @',pr.full_name,pr.username) as buyer_name from food_products p join food_vendors v on v.id=p.vendor_id join profiles pr on pr.id=$2 where p.id=$1 and p.deleted_at is null and p.available=true and v.status='approved' and v.is_active=true and v.deleted_at is null",[productId,userId])).rows[0];
    if(!product)throw chatError(409,'El producto ya no está disponible.','conflict');
    if(product.seller_user_id===userId)throw chatError(400,'No puedes abrir un chat con tu propio puesto.');
    const prior=(await client.query('select * from food_chats where buyer_id=$1 and product_id=$2 and seller_user_id=$3 and expires_at>now()',[userId,productId,product.seller_user_id])).rows[0];

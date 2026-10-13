@@ -114,7 +114,7 @@ async function decorate(db, rows, user) {
   const managedIds = rows.filter(row => user.role === "admin" || (row.audience === "teachers" && row.created_by === user.id && accountType(user.email, user.role) === "teacher")).map(row => row.id);
   const [careers, invites, attend] = await Promise.all([
     db.query("select event_id,career from event_careers where event_id=any($1::uuid[]) order by career", [ids]),
-    db.query("select i.event_id,i.user_id,p.full_name,u.email from event_teacher_invites i join users u on u.id=i.user_id join profiles p on p.id=i.user_id where i.event_id=any($1::uuid[]) order by p.full_name", [managedIds]),
+    db.query("select i.event_id,i.user_id,concat_ws(' · @',p.full_name,p.username) as full_name,u.email from event_teacher_invites i join users u on u.id=i.user_id join profiles p on p.id=i.user_id where i.event_id=any($1::uuid[]) order by p.full_name", [managedIds]),
     db.query("select event_id from event_attendance where user_id=$1 and event_id=any($2::uuid[])", [user.id, ids]),
   ]);
   const attended = new Set(attend.rows.map((x) => x.event_id));
@@ -155,14 +155,14 @@ function createEventsRouter({ db, limit, siteUrl }) {
       data.careers = (await db.query("select distinct career from profiles p join users u on u.id=p.id where career is not null and u.email ~* '^a[0-9]+@alumnos\\.uat\\.edu\\.mx$' order by career")).rows.map((x) => x.career);
     }
     if (req.user.role === "admin" || type === "teacher") {
-      data.teachers = (await db.query("select u.id,p.full_name,u.email from users u join profiles p on p.id=u.id where u.email_confirmed_at is not null and (u.email ~* '@docentes\\.uat\\.edu\\.mx$' or (u.email ~* '@uat\\.edu\\.mx$' and u.email !~* '@alumnos\\.uat\\.edu\\.mx$')) order by p.full_name,u.email")).rows;
+      data.teachers = (await db.query("select u.id,concat_ws(' · @',p.full_name,p.username) as full_name,u.email from users u join profiles p on p.id=u.id where u.email_confirmed_at is not null and (u.email ~* '@docentes\\.uat\\.edu\\.mx$' or (u.email ~* '@uat\\.edu\\.mx$' and u.email !~* '@alumnos\\.uat\\.edu\\.mx$')) order by p.full_name,u.email")).rows;
     }
     res.json({ data });
   });
 
   router.get("/", async (req, res) => {
     const type = accountType(req.user.email, req.user.role);
-    let sql = `select e.*,p.full_name as creator_name,
+    let sql = `select e.*,concat_ws(' · @',p.full_name,p.username) as creator_name,
       to_char(e.starts_at at time zone 'America/Monterrey','YYYY-MM-DD') as event_day,
       (now() between e.starts_at and e.ends_at and e.latitude is not null and e.longitude is not null) as checkin_open,
       (select count(*)::int from event_attendance a where a.event_id=e.id) as attendance_count
@@ -297,7 +297,7 @@ function createEventsRouter({ db, limit, siteUrl }) {
     const event = (await db.query("select * from events where id=$1", [req.params.id])).rows[0];
     if (!event) throw fail(404, "not_found", "Evento no encontrado.");
     if (!(await canManage(db, event, req.user))) throw fail(403, "forbidden", "No puedes consultar esta lista.");
-    const rows = (await db.query(`select p.full_name,u.email,p.student_id,p.career,a.checked_in_at from event_attendance a join users u on u.id=a.user_id join profiles p on p.id=a.user_id where a.event_id=$1 order by p.full_name`, [event.id])).rows;
+    const rows = (await db.query(`select concat_ws(' · @',p.full_name,p.username) as full_name,u.email,p.student_id,p.career,a.checked_in_at from event_attendance a join users u on u.id=a.user_id join profiles p on p.id=a.user_id where a.event_id=$1 order by p.full_name`, [event.id])).rows;
     res.json({ data: rows });
   });
 

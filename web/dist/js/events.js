@@ -147,7 +147,7 @@
   }
   async function attendees(c, event) {
     const rows = await api(c, `/api/events/${encodeURIComponent(event.id)}/attendees`);
-    const d = c.dialog(`<div class="dialog-content event-attendees"><span class="eyebrow">ASISTENCIA VERIFICADA</span><h2>${c.esc(event.title)}</h2><p>${rows.length} persona(s) escanearon el QR.</p><div class="attendee-list">${rows.length ? rows.map((x, i) => `<div><b>${i + 1}. ${c.esc(x.full_name)}</b><span>${c.esc(x.email)}${x.student_id ? ` · ${c.esc(x.student_id)}` : ""}${x.career ? ` · ${c.esc(x.career)}` : ""}</span><small>${c.esc(fmt(x.checked_in_at))}</small></div>`).join("") : '<div class="empty">Todavía no hay asistencias verificadas.</div>'}</div><button class="btn full" id="download-attendees">Generar PDF con código de validación</button></div>`);
+    const d = c.dialog(`<div class="dialog-content event-attendees"><span class="eyebrow">ASISTENCIA VERIFICADA</span><h2>${c.esc(event.title)}</h2><p>${rows.length} persona(s) escanearon el QR.</p><div class="attendee-list">${rows.length ? rows.map((x, i) => `<div><b>${i + 1}. ${(window.FIT_CORE?.identityHtml || c.esc)(x.full_name)}</b><span>${c.esc(x.email)}${x.student_id ? ` · ${c.esc(x.student_id)}` : ""}${x.career ? ` · ${c.esc(x.career)}` : ""}</span><small>${c.esc(fmt(x.checked_in_at))}</small></div>`).join("") : '<div class="empty">Todavía no hay asistencias verificadas.</div>'}</div><button class="btn full" id="download-attendees">Generar PDF con código de validación</button></div>`);
     d.querySelector("#download-attendees").onclick = async (ev) => {
       ev.currentTarget.disabled = true;
       try { await download(c, `/api/events/${encodeURIComponent(event.id)}/attendees.pdf`, "asistentes-evento-fit.pdf"); }

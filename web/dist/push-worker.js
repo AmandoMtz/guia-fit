@@ -3,11 +3,12 @@ self.addEventListener('push',event=>{
   let data;try{data=event.data?.json();}catch{return;}
   if(!data||typeof data.recipientId!=='string')return;
   const valid=v=>typeof v==='string'&&/^[a-f0-9-]{36}$/i.test(v);
-  event.waitUntil(self.registration.showNotification('Guía FIT',{
+  event.waitUntil(self.registration.showNotification(String(data.title||'Guía FIT').slice(0,100),{
     body:valid(data.chatId)&&data.view!=='messages'?'Tienes un mensaje nuevo en Comidas. Toca para abrir el chat.':String(data.body||'Tienes una actualización en Guía FIT.').slice(0,250),
     icon:'/assets/push-icon-192.png',
+    badge:'/assets/push-icon-192.png',renotify:true,vibrate:[200,100,200],
     tag:valid(data.chatId)?(data.view==='messages'?'fit-academic-chat-':'fit-chat-')+data.chatId:String(data.tag||'fit-push-test').slice(0,100),
-    data:{view:['food','events','profile','messages'].includes(data.view)?data.view:'profile',chatId:valid(data.chatId)?data.chatId:null,recipientId:data.recipientId},
+    data:{view:['food','events','profile','messages','schedule'].includes(data.view)?data.view:'profile',chatId:valid(data.chatId)?data.chatId:null,recipientId:data.recipientId},
   }));
 });
 self.addEventListener('notificationclick',event=>{

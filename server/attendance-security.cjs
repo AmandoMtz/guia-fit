@@ -54,7 +54,7 @@ function securityRouter({db,limit}){
  res.json({data:row});
  });
  r.use((req,res,next)=>req.user.role==='admin'?next():next(fail('forbidden','Solo administración puede consultar este panel.')));
- r.get('/devices',async(req,res)=>res.json({data:(await db.query(`select d.id,d.label,d.status,d.created_at,d.reason,p.full_name,u.email from attendance_devices d join users u on u.id=d.user_id join profiles p on p.id=d.user_id order by d.created_at desc limit 300`)).rows}));
+ r.get('/devices',async(req,res)=>res.json({data:(await db.query(`select d.id,d.label,d.status,d.created_at,d.reason,concat_ws(' · @',p.full_name,p.username) as full_name,u.email from attendance_devices d join users u on u.id=d.user_id join profiles p on p.id=d.user_id order by d.created_at desc limit 300`)).rows}));
  r.patch('/devices/:id',async(req,res)=>{
  const status=req.body?.status,reason=String(req.body?.reason||'').trim();
  if(!UUID.test(req.params.id)||!['approved','revoked'].includes(status)||reason.length<8||reason.length>500)throw fail('validation_error','Indica aprobar/revocar y un motivo de 8 a 500 caracteres.',400);

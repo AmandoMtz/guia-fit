@@ -57,7 +57,7 @@
   async function settings(c,host){
     const token=revision,id=c.state.user.id;
     const current=()=>host.isConnected&&token===revision&&c.state.user?.id===id;
-    host.innerHTML='<h2>Notificaciones en tu dispositivo</h2><p>Permite las notificaciones para recibir mensajes, cambios de pedidos, eventos, asistencias, autorizaciones y recompensas aunque no tengas abierta la página. Debes conservar la sesión iniciada.</p><p class="hint">En iPhone o iPad, agrega Guía FIT a la pantalla de inicio y ábrela desde su ícono. El navegador siempre conserva el control final del permiso.</p><p data-push-status role="status">Comprobando disponibilidad…</p><div class="button-row"><button type="button" class="btn" data-push-enable disabled>Permitir notificaciones</button><button type="button" class="btn secondary" data-push-disable hidden>Desactivar notificaciones</button><button type="button" class="btn secondary" data-push-test hidden>Enviar prueba</button></div>';
+    host.innerHTML='<h2>Notificaciones en tu dispositivo</h2><p>Permite las notificaciones para recibir avisos de clase, mensajes, cambios de pedidos, eventos, asistencias, autorizaciones y recompensas aunque no tengas abierta la página. Debes conservar la sesión iniciada.</p><p class="hint">En iPhone o iPad, agrega Guía FIT a la pantalla de inicio y ábrela desde su ícono. El navegador siempre conserva el control final del permiso.</p><p data-push-status role="status">Comprobando disponibilidad…</p><div class="button-row"><button type="button" class="btn" data-push-enable disabled>Permitir notificaciones</button><button type="button" class="btn secondary" data-push-disable hidden>Desactivar notificaciones</button><button type="button" class="btn secondary" data-push-test hidden>Enviar prueba</button></div>';
     const status=host.querySelector('[data-push-status]'),enable=host.querySelector('[data-push-enable]'),disable=host.querySelector('[data-push-disable]'),test=host.querySelector('[data-push-test]');
     if(!supported()){status.textContent='En iPhone o iPad (iOS 16.4 o posterior): Compartir → Agregar a pantalla de inicio; abre el ícono y vuelve a Mi cuenta. En otros equipos usa HTTPS y un navegador con notificaciones push.';enable.disabled=false;enable.textContent='Cómo activar notificaciones';enable.onclick=()=>c.toast(status.textContent);return;}
     let prepared=null,sub=null,enabled=false;
@@ -117,28 +117,51 @@
     if(recipientId&&recipientId!==c.state.user.id){if(wrongAccount!==recipientId){wrongAccount=recipientId;c.toast('Este aviso pertenece a otra cuenta. Inicia sesión con la cuenta que recibió el mensaje.');}return;}
     if(chatId&&!/^[a-f0-9-]{36}$/i.test(chatId))return;
     const u=new URL(location.href);u.searchParams.delete('fitChat');u.searchParams.delete('fitUser');u.searchParams.delete('fitPush');u.searchParams.delete('fitView');history.replaceState(null,'',u);
-    const target=['food','events','profile','messages'].includes(view)?view:'profile';c.state.view=chatId?'messages':target;if(chatId)c.state.messagesFocusChat=target==='messages'?chatId:'food:'+chatId;c.render();
+    const target=['food','events','profile','messages','schedule'].includes(view)?view:'profile';c.state.view=chatId?'messages':target;if(chatId)c.state.messagesFocusChat=target==='messages'?chatId:'food:'+chatId;c.render();
   }
   async function activity(c,view){
     const panel=document.createElement('section');panel.className='panel';panel.style.marginTop='24px';view.append(panel);
     const user=c.state.user.id;
     try{const rows=await api(c,'/activity');if(!panel.isConnected||c.state.user?.id!==user)return;
-      const allowed=new Set(['food','events','profile','messages']);
+      const allowed=new Set(['food','events','profile','messages','schedule']);
       panel.innerHTML='<h2>Mis avisos</h2><button class="btn secondary" data-read>Marcar como leídos</button>'+ (rows.map(n=>`<article><p><strong>${c.esc(n.title)}${n.read_at?'':' · Nuevo'}</strong><br>${c.esc(n.body)}<br><small>${c.esc(new Date(n.created_at).toLocaleString())}</small></p>${allowed.has(n.view_name)?`<button type="button" class="btn secondary small" data-activity-view="${c.esc(n.view_name)}">Abrir</button>`:''}</article>`).join('')||'<p>No tienes avisos recientes.</p>');
       panel.querySelector('[data-read]').onclick=async()=>{try{await api(c,'/activity/read','PATCH',{});panel.remove();activity(c,view);}catch(e){c.toast(e.message);}};
       panel.querySelectorAll('[data-activity-view]').forEach(b=>b.onclick=()=>{c.state.view=b.dataset.activityView;c.render();});
     }catch(e){panel.textContent=e.message;}
+  }
+  let installPrompt=null;
+  root.addEventListener('beforeinstallprompt',e=>{e.preventDefault();installPrompt=e;const button=document.querySelector('[data-fit-install]');if(button)button.hidden=false;});
+  function mobileSettings(c,view){
+    const panel=document.createElement('section');panel.className='panel';view.append(panel);
+    panel.innerHTML='<h2>Guía FIT en tu celular</h2><p>Instala la aplicación y conserva tu sesión iniciada para recibir avisos.</p><button class="btn secondary" data-fit-install>Instalar aplicación</button><p class="hint">Android: menú del navegador → Instalar aplicación / Agregar a pantalla de inicio. iPhone o iPad: Compartir → Agregar a pantalla de inicio; abre la app desde su ícono y permite las notificaciones en Mi cuenta.</p><label><input type="checkbox" data-class-reminders> Avisarme al comenzar mis clases</label><p class="hint">Usa el horario revisado y sincronizado con tu cuenta, en hora del campus (Ciudad de México). Desactívalo durante vacaciones. El sonido y la visualización dependen de los ajustes del teléfono.</p><p data-mobile-status role="status"></p>';
+    const button=panel.querySelector('[data-fit-install]');
+    button.hidden=!installPrompt;
+    button.onclick=async()=>{if(!installPrompt)return;await installPrompt.prompt();await installPrompt.userChoice;installPrompt=null;button.hidden=true;};
+    const checkbox=panel.querySelector('[data-class-reminders]'),status=panel.querySelector('[data-mobile-status]');checkbox.disabled=true;
+    api(c,'/preferences').then(p=>{if(!panel.isConnected)return;checkbox.checked=p.class_reminders;checkbox.disabled=false;}).catch(e=>status.textContent=e.message);
+    checkbox.onchange=async()=>{checkbox.disabled=true;try{await api(c,'/preferences','PATCH',{class_reminders:checkbox.checked});status.textContent='Preferencia guardada.';}catch(e){checkbox.checked=!checkbox.checked;status.textContent=e.message;}finally{checkbox.disabled=false;}};
+  }
+  function adminSettings(c,view){
+    const panel=document.createElement('section');panel.className='panel';view.append(panel);
+    panel.innerHTML='<h2>Pruebas de notificaciones · Administración</h2><p>Envía un aviso de prueba a todas las cuentas con dispositivos suscritos y sesión vigente. Se respeta No molestar.</p><p data-admin-push-stats role="status">Consultando dispositivos…</p><button class="btn" data-admin-push-test>Enviar prueba a todos los dispositivos</button> <button class="btn secondary" data-admin-push-refresh>Actualizar estado</button><p class="hint">“Aceptado por proveedor” indica aceptación del servicio push; confirma la recepción mirando el teléfono. Los conteos de entrega son por cuenta y corresponden a todos los avisos de las últimas 24 horas.</p><p data-admin-push-result role="status"></p>';
+    const stats=panel.querySelector('[data-admin-push-stats]'),status=panel.querySelector('[data-admin-push-result]'),button=panel.querySelector('[data-admin-push-test]');
+    const labels={accepted_by_provider:'aceptados por proveedor',no_active_subscription:'sin suscripción activa o silenciados',rejected_or_expired:'rechazados',expired_or_exhausted:'vencidos o sin reintentos'};
+    async function refresh(){try{const s=await api(c,'/admin/status');stats.textContent=`${s.devices} dispositivos · ${s.users} cuentas · ${s.pending} avisos pendientes. `+s.outcomes.map(x=>`${x.count} ${labels[x.outcome]||x.outcome}`).join(' · ');}catch(e){stats.textContent=e.message;}}
+    panel.querySelector('[data-admin-push-refresh]').onclick=refresh;
+    button.onclick=async()=>{button.disabled=true;try{const result=await api(c,'/admin/test','POST',{});status.textContent=`Prueba en cola para ${result.queued} cuentas. Se enviará a sus dispositivos activos; actualiza el estado en unos segundos.`;await refresh();}catch(e){status.textContent=e.message;}finally{button.disabled=false;}};
+    refresh();
   }
   function mount(c){
     context=c;
     if(owner!==c.state.user?.id){owner=c.state.user?.id;revision++;wrongAccount=null;syncedOwner=null;}
     if(!eligible(c))return;
     autoEnableGranted(c);
+    if(c.state.view==='push-admin'&&c.state.admin){const view=document.querySelector('#view');if(view&&!view.querySelector('[data-admin-push-test]'))adminSettings(c,view);return;}
     const q=new URLSearchParams(location.search);
     if(q.has('fitPush')){route(q.get('fitChat'),q.get('fitUser'),q.get('fitView'));return;}
     if(['profile','notifications'].includes(c.state.view)){
       const view=document.querySelector('#view');if(!view||view.querySelector('#push-settings'))return;
-      const panel=document.createElement('section');panel.className='panel';panel.id='push-settings';panel.style.marginTop='24px';view.prepend(panel);settings(c,panel);activity(c,view);
+      const panel=document.createElement('section');panel.className='panel';panel.id='push-settings';panel.style.marginTop='24px';view.prepend(panel);settings(c,panel);mobileSettings(c,view);if(c.state.admin)adminSettings(c,view);activity(c,view);
     }
   }
   navigator.serviceWorker?.addEventListener('message',e=>{

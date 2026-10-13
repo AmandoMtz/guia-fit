@@ -1,7 +1,8 @@
 /* App shell sin conexión. Las respuestas /api nunca se guardan aquí. */
 importScripts('/push-worker.js?v=4');
-const CACHE = "guia-fit-shell-styles-20261013-login-grande";
+const CACHE = "guia-fit-shell-auth-responsive-20261013b";
 const SHELL = [
+  '/auth-responsive-fix.css?v=20261013b',
   '/js/campus-controls.js?v=20261013-mobile',
   "/js/food-delivery.js?v=20261013-mobile",
   "/js/live-location.js?v=20261013-mobile",

@@ -49,6 +49,49 @@ foreach ($item in $manifest.files) {
     if (-not $item.baseHash) { throw "GitHub ya tiene un archivo diferente en $($item.path). No se subio ningun cambio. Revisa $destino." }
     if (-not (Test-Path -LiteralPath $base)) { throw "Falta la version base de $($item.path). Extrae el ZIP completo." }
     if ((Get-TextHash $base) -ne $item.baseHash) { throw "La version base de $($item.path) fue modificada." }
+
+    # El index.html solo cambia por la version del CSS del login. Si GitHub tambien
+    # actualizo ese HTML, conserva todo el archivo remoto y modifica unicamente ese enlace.
+    if ($item.path -eq "web/dist/index.html") {
+        $sourceText = [System.IO.File]::ReadAllText($source).Replace("`r`n", "`n").Replace("`r", "`n")
+        $targetText = [System.IO.File]::ReadAllText($target).Replace("`r`n", "`n").Replace("`r", "`n")
+        $linkPattern = '(?m)^[ \t]*<link\s+rel="stylesheet"\s+href="styles\.css[^"]*"[^>]*>[ \t]*$'
+        $sourceLinks = [regex]::Matches($sourceText, $linkPattern)
+        $targetLinks = [regex]::Matches($targetText, $linkPattern)
+        if ($sourceLinks.Count -ne 1 -or $targetLinks.Count -ne 1) {
+            throw "No se pudo identificar un unico enlace a styles.css en web/dist/index.html. No se subio ningun cambio."
+        }
+        $replacement = $sourceLinks[0].Value
+        $patchedText = [regex]::Replace($targetText, $linkPattern, [System.Text.RegularExpressions.MatchEvaluator]{ param($match) $replacement }, 1)
+        New-Item -ItemType Directory -Force -Path (Split-Path $candidate -Parent) | Out-Null
+        [System.IO.File]::WriteAllText($candidate, $patchedText, (New-Object System.Text.UTF8Encoding($false)))
+        Write-Host "Conservado el index.html de GitHub; actualizado solo el enlace al CSS del login."
+        continue
+    }
+
+    # styles.css agrega un bloque al final. Anexa solo ese bloque a la version remota,
+    # preservando estilos incorporados posteriormente en GitHub.
+    if ($item.path -eq "web/dist/styles.css") {
+        $sourceText = [System.IO.File]::ReadAllText($source).Replace("`r`n", "`n").Replace("`r", "`n")
+        $baseText = [System.IO.File]::ReadAllText($base).Replace("`r`n", "`n").Replace("`r", "`n")
+        $targetText = [System.IO.File]::ReadAllText($target).Replace("`r`n", "`n").Replace("`r", "`n")
+        $loginMarker = "/* Login amplio: mapa y formulario comparten fila y ancho en escritorio. */"
+        if ($targetText.Contains($loginMarker)) {
+            Copy-Text $target $candidate
+            Write-Host "Los estilos responsivos del login ya estan presentes en GitHub."
+            continue
+        }
+        if ($sourceText.StartsWith($baseText, [System.StringComparison]::Ordinal)) {
+            $addition = $sourceText.Substring($baseText.Length).TrimStart("`r", "`n")
+            if ([string]::IsNullOrWhiteSpace($addition)) { throw "No se encontro el bloque nuevo de estilos responsivos." }
+            $mergedText = $targetText.TrimEnd() + "`n`n" + $addition + "`n"
+            New-Item -ItemType Directory -Force -Path (Split-Path $candidate -Parent) | Out-Null
+            [System.IO.File]::WriteAllText($candidate, $mergedText, (New-Object System.Text.UTF8Encoding($false)))
+            Write-Host "Conservados los estilos de GitHub y agregado el bloque responsivo del login."
+            continue
+        }
+    }
+
     Copy-Text $target $candidate
     $baseTemporal = Join-Path $preparados ("base-" + [guid]::NewGuid().ToString("N"))
     $nuevaTemporal = Join-Path $preparados ("nueva-" + [guid]::NewGuid().ToString("N"))

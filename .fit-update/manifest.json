@@ -9,17 +9,17 @@
     {
       "path": "ACTUALIZAR_RECORRIDO_GITHUB.ps1",
       "baseHash": "009d590bdb76d35680b71a24a8ed9a7c6489b3f1e1953ac5f5793de96b19fd82",
-      "newHash": "a274b3051ac313059f72399eaaef9ab8fc3bd511ffb61b1c37501a7c9f2beed1"
+      "newHash": "a8b6de5145c86efe5fc07fdc33570a497212f14088da94f436ca43f468a503e9"
     },
     {
       "path": "web/dist/index.html",
       "baseHash": "1dcc3895421074b49468adcc5c02745848616880fb0aaa672fb33bb62286a56b",
-      "newHash": "7ac96b591face3897c9995ff669b4ea34e04e3352417c70c7fe4b18cd7414df1"
+      "newHash": "571da12918c4104f53f65bca36b5f4c74f3b83193096d1517e2896e6d046159b"
     },
     {
       "path": "web/dist/styles.css",
       "baseHash": "d90d53e68775b1724229f3fdbf53b35e07456ce376ad16a98edf097656b958d1",
-      "newHash": "343fa118ee60a13646176bdd1d1e86e154f8ab472d8c39e2e6dd907051b3de7a"
+      "newHash": "bab9b7c2330ff388eb30bfc3785831183c06aeeeeccd9c9334629ad61d647aba"
     },
     {
       "path": "web/dist/sw.js",

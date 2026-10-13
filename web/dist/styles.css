@@ -5299,3 +5299,56 @@ body.fit-force-motion:not(.fit-no-motion)[data-fitframe=""] .profile-avatar{anim
 .top-identity{display:block;max-width:180px;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px}.top-identity small{display:block;color:#686868}.user-handle{color:#686868;overflow-wrap:anywhere}@media(max-width:540px){.top-identity{max-width:90px;font-size:10px}}
 
 .fit-identity{display:inline-block;overflow-wrap:anywhere;max-width:100%}.fit-identity .fit-handle{display:block;font-size:.8em;color:#686868;font-weight:400;line-height:1.4}
+
+/* Login amplio: mapa y formulario comparten fila y ancho en escritorio. */
+@media (min-width: 761px) {
+  .auth-layout {
+    grid-template-columns: repeat(2, minmax(0, 650px));
+    grid-template-rows: repeat(3, auto) auto auto;
+    justify-content: center;
+    align-content: center;
+    align-items: start;
+    column-gap: clamp(24px, 4vw, 64px);
+    row-gap: 18px;
+    padding: clamp(32px, 3.4vw, 58px) 4%;
+  }
+  .auth-aside { display: contents; }
+  .auth-aside > .eyebrow { grid-column: 1; grid-row: 1; }
+  .auth-aside > h1 { grid-column: 1; grid-row: 2; }
+  .auth-aside > .intro { grid-column: 1; grid-row: 3; }
+  .auth-aside > .login-campus-map {
+    grid-column: 1;
+    grid-row: 4;
+    align-self: stretch;
+    display: flex;
+    width: 100%;
+    max-width: none;
+    margin: 0;
+  }
+  .login-campus-map > .cm-campus { width: 100%; }
+  .auth-aside > .aside-bottom { grid-column: 1; grid-row: 5; }
+  .auth-main {
+    grid-column: 2;
+    grid-row: 4;
+    align-self: stretch;
+    align-items: stretch;
+    min-width: 0;
+    padding: 0;
+  }
+  .auth-card {
+    width: 100%;
+    max-width: none;
+    padding: clamp(28px, 3vw, 52px);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    font-size: 1.05rem;
+  }
+  .auth-card h2 { font-size: clamp(1.9rem, 2.6vw, 2.65rem); }
+  .auth-card > .icon-circle { width: 60px; height: 60px; }
+  .auth-card .field { margin: 22px 0; }
+  .auth-card .field input { min-height: 56px; font-size: 1rem; }
+  .auth-card .btn { min-height: 54px; font-size: 1rem; }
+  .auth-card .auth-tabs button { min-height: 48px; }
+  .auth-card .text-button { align-self: flex-start; }
+}

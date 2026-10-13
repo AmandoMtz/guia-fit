@@ -1,200 +1,30 @@
 {
-  "version": "20261013-mobile",
+  "version": "20261013-login-grande",
   "files": [
     {
       "path": "ACTUALIZACION_MOVIL_NOTIFICACIONES.md",
-      "baseHash": null,
-      "newHash": "4e4ac88636d937a8e50ff67114438a27c2baa2fd940016d2abf7a702df627e3c"
+      "baseHash": "4e4ac88636d937a8e50ff67114438a27c2baa2fd940016d2abf7a702df627e3c",
+      "newHash": "2b4b6a535f00ea550f2689a10551a125088ad67543cb1fe75956ec812f9763a2"
     },
     {
       "path": "ACTUALIZAR_RECORRIDO_GITHUB.ps1",
-      "baseHash": "cc3983564def824998453ed0a474b2d21f715289d7ea97cd62da555dd8c75c10",
-      "newHash": "009d590bdb76d35680b71a24a8ed9a7c6489b3f1e1953ac5f5793de96b19fd82"
-    },
-    {
-      "path": "backend/migrations/021_mobile_identity.sql",
-      "baseHash": null,
-      "newHash": "e220189eeecd7d8659f43ce251012e97bce974efd4f31f051486c85854f4d832"
-    },
-    {
-      "path": "package.json",
-      "baseHash": "83bb101c04ccd3ee66a6a0f45c4ef9a0a5e3d89c6d4290b13760d7378fe01e93",
-      "newHash": "9495993606cf16230fde69322221363ef5514202448ff5461727e4b498f947c0"
-    },
-    {
-      "path": "server/academic-chat.cjs",
-      "baseHash": "f57b06c1228b2d22988fdc3499db5ee48d88e2d10940e6d6aa2fcf01575855c9",
-      "newHash": "255d79360fb4c9d6e543a25fc60d8090f4df5d410e5ef3eeb76199a197bd071b"
-    },
-    {
-      "path": "server/app.cjs",
-      "baseHash": "284f2eb69e59cef241aa20d75152a887b8a2e7c5af72e1936259387f321a7aef",
-      "newHash": "4baffb8fd7d6479095db58d6cb6d0e9c893a0ffa76b74693879e41a1033602f1"
-    },
-    {
-      "path": "server/attendance-security.cjs",
-      "baseHash": "f6e924138b367b2809d4bc42576da4ecd6cf9d671ec2ec41f70e8d056d7eae52",
-      "newHash": "124f6e9d3471519577f71e85e6ebe82d74a7f7578f15e12d2ea7fdc912311e6d"
-    },
-    {
-      "path": "server/audit-console.cjs",
-      "baseHash": "167327df31e72ee1c925b63f82f6406277c35bc14282917e9a64d83306956326",
-      "newHash": "4a2fdb8144160bc22897f28f9470b0378dfcb2dc3a9833eb8c9c68b29e91a016"
-    },
-    {
-      "path": "server/class-reminders.cjs",
-      "baseHash": null,
-      "newHash": "e3113f501b5d1a7108038299206ee37cfbbd750ec8547adda8493e504a1638c9"
-    },
-    {
-      "path": "server/events.cjs",
-      "baseHash": "18e0c1aba4c99e5b6704765e01be298648f3846e65d7f6060c2c8f1d6677a092",
-      "newHash": "addfcd0b97e7f788cd43f4fe50c6d50d27b3e29f89798d148aa55317450e5c1c"
-    },
-    {
-      "path": "server/food-chat.cjs",
-      "baseHash": "e9fe978a869d37d01c50d47c065c364a126b474568f2fee9ad90dfcc36e3bcd8",
-      "newHash": "a37882bd1f19d46e8971ef5b12bf9903ba0f6ff53051ddcaa61853f84661381d"
-    },
-    {
-      "path": "server/food.cjs",
-      "baseHash": "916e3d0225bd787fc65b10df4dd5c83039df50e7c49b22bb367b7f8d6544d476",
-      "newHash": "14ba32a96e714e5226f120a317ca4a3eac1aedabde1423fd6d7beba95addc7b4"
-    },
-    {
-      "path": "server/gamification.cjs",
-      "baseHash": "f28a0e74a78a2fbe7009f67b7eb0d82101c2ab1a2dfc317a6224d018c4e76a2e",
-      "newHash": "8b4706a2fd0f457b4db99754207dd37de804adeb35cd99ade5d768e68b6076e9"
-    },
-    {
-      "path": "server/notification-worker.cjs",
-      "baseHash": null,
-      "newHash": "5d23a2589dcb7537bb5ddd4d38fbf1a72d64c3eeffaf4f5f2dddb957665f7542"
-    },
-    {
-      "path": "server/push.cjs",
-      "baseHash": "91d21acff69e67ac3a802b0f0af35d31a1bed8832aba80ba053554057427f018",
-      "newHash": "f8efaf3f74a080310002615a7c30848e01c1c3fff193f64aae8a082d0b7d088c"
-    },
-    {
-      "path": "server/schedules.cjs",
-      "baseHash": "0bf4786448a3084296221254450489b76afc7e710def093499aaed09dde31ce4",
-      "newHash": "8e48adf03295f29e915fa267e800396a7a862a00c97173d4d6658f78be1ad277"
-    },
-    {
-      "path": "tests/academic-chat.test.cjs",
-      "baseHash": "782388e525b7d6a969d5d12fce93b7e0291d0c47004762eeea56caf8615a4ff0",
-      "newHash": "ea70f2e2f24533341585ed4af62ba9cf535fb760a9155ad29ae6a18e12db3428"
-    },
-    {
-      "path": "tests/campus-controls.test.cjs",
-      "baseHash": "86d62a68f9c1e6d75b54e898d8a4b70ea18130d3355864e7430f05c0726185a0",
-      "newHash": "a54d7d6e323bc02d95dc3589d279ce245f99cef8d0851edd2ac808e8775a96ff"
-    },
-    {
-      "path": "tests/campus-map-cache.test.cjs",
-      "baseHash": "474f6596a9346ae4c2dd9cc1115d3709a09d26aed709f3e8b1184f28c4ba7f91",
-      "newHash": "002b03efea3bb9b503c46da6ab8031e76eb0ab58f58085c822055f444a0dd416"
-    },
-    {
-      "path": "tests/food.test.cjs",
-      "baseHash": "35688bc7ffa76646567c96a19062a33ce313949ee48e32260ea80478ab778c91",
-      "newHash": "32650bc0ebb7892ef7fe0f33d193911dae72acecca2d5c926f1a007841170fe3"
-    },
-    {
-      "path": "tests/gamification.test.cjs",
-      "baseHash": "fbea47e5c32dbf9e9e206c1ddf73abc6929313c2aa6375bd0f449e32d366af39",
-      "newHash": "29949558ca1e1aa59eaf7b94bfbef38d90656bf6142c709c808c6938056eabc3"
-    },
-    {
-      "path": "tests/mobile-identity.test.cjs",
-      "baseHash": null,
-      "newHash": "3d919ebae06820060351224f95d18333705e4768afafc1277ca652a197799aef"
-    },
-    {
-      "path": "tests/push-settings.test.cjs",
-      "baseHash": "c88ec880e7da25ec01711ea47178cbe2bef879a65c95ebd38d226447d08bab26",
-      "newHash": "039be61f479de6dd0c24530af2dc9cd7d1a679b128233a06aea9167229c12426"
+      "baseHash": "009d590bdb76d35680b71a24a8ed9a7c6489b3f1e1953ac5f5793de96b19fd82",
+      "newHash": "a274b3051ac313059f72399eaaef9ab8fc3bd511ffb61b1c37501a7c9f2beed1"
     },
     {
       "path": "web/dist/index.html",
-      "baseHash": "ecaf5574ff1dc6d057817a184b152cfa915218703c7e4ba138d57bbc6dc43df1",
-      "newHash": "1dcc3895421074b49468adcc5c02745848616880fb0aaa672fb33bb62286a56b"
-    },
-    {
-      "path": "web/dist/js/academic-chat.js",
-      "baseHash": "b5fcdb3f18112aaec34b6cf08681a403386d926108a8b4f3af9c6630372df9dd",
-      "newHash": "af2e0c234cdc0ad0d55545b0419d38e87a5881cee4f958621fca2a905fc60774"
-    },
-    {
-      "path": "web/dist/js/app.js",
-      "baseHash": "e48b06bed68ba48bf498a9530e1238a5123de874a49c4064a03cfdbf4cc49a8a",
-      "newHash": "d116460319794243db02a026e376a69538d495a63477f670706eec28aae7c8e3"
-    },
-    {
-      "path": "web/dist/js/campus-controls.js",
-      "baseHash": "c7614e8db2e7e243a91a2d36fe488abcf01da2ecd61fe9c09c8c0c2f49e97b50",
-      "newHash": "c12b78a274101f37df1bfe8703e10a49c0d044d82b52bc9f7ab21810ad3ba688"
-    },
-    {
-      "path": "web/dist/js/campus-map.js",
-      "baseHash": "5c76606d30d81b9208efad38f8034b442623b6d2777a1ae51c8741296ce073dd",
-      "newHash": "7d52dfcc129bbec979bd4cd57fbf177ecb070a7eb8c383ecdf636f6250e57ab1"
-    },
-    {
-      "path": "web/dist/js/core.js",
-      "baseHash": "be9fd20dd06d4751d3601f3bdb015750110e68cb6a080cee2589a2cc2e4cc840",
-      "newHash": "e98401bf03910b45277bf1b832edcd32c9997c44c080a7ffaec3d645e2bc4136"
-    },
-    {
-      "path": "web/dist/js/events.js",
-      "baseHash": "a288d500b9aaf2378698bc7931225d7c9940791576f2c1646c7ab673055c6c82",
-      "newHash": "283168287edc1090a4deb6bd4c36ab019cec1282f811eb9a8f8396737a0428fd"
-    },
-    {
-      "path": "web/dist/js/food.js",
-      "baseHash": "d335bc9fc7a6b8f085b113a01aae8d48d11a919b74b25061f6a8c8a46e00d21d",
-      "newHash": "cf8115037f6ef3f6d1799a641fab709050151a91e1b78d221c72c6c05321ea44"
-    },
-    {
-      "path": "web/dist/js/gamification.js",
-      "baseHash": "49fad927ff0e16f1d8e9bc35ada0351f93b94e59eebe43dee624c967e6da97cf",
-      "newHash": "12c40971e36758ea336d0edc28114b48d6f61a8dc856bf71f5b7144977d6c4d5"
-    },
-    {
-      "path": "web/dist/js/push-notifications.js",
-      "baseHash": "cc6f9027b11314bccc7909c67a9c7f367a2bb9c11b2ff715e3ff97c5ab3f9ba7",
-      "newHash": "0f0d1f5b18e228b02f2f8b6feda79b70ec405c66ae274507cfbb573abcf3e41c"
-    },
-    {
-      "path": "web/dist/js/schedule.js",
-      "baseHash": "823e66f985ffa74a25babaee06dec883c03c2dee6efcbd40c3b49c30aed7b641",
-      "newHash": "41c99cf92225516264a1375b23d4887bda75fa80a3f4c8eebf663acc726b1222"
-    },
-    {
-      "path": "web/dist/juego-castor.html",
-      "baseHash": "bb9034c7ad453a9bd728ca9ad44a72250f4583552dbb52fdfb3168df1f48b943",
-      "newHash": "14c58b98c79eac8966df05bc3bc595a271a9ddec33f4938e923cec396e5f6aba"
-    },
-    {
-      "path": "web/dist/mapa-campus-demo.html",
-      "baseHash": "7d2ba4e0897d5dd4580c105ee370c6c3ad5ebd6bff4d284df2f3b5212a4acb2c",
-      "newHash": "8f00cbf36b38a33f462bc15791a2183273e65e789c7558e7a6a6179825cc504d"
-    },
-    {
-      "path": "web/dist/push-worker.js",
-      "baseHash": "5cac2cd7e258e15f780bae93bfb380f47e886dad3ddbca25a740491026e43df5",
-      "newHash": "b10b4e3c45820cf9ddd91fdf9809020424cd00df244ac63bb18554a40173aa61"
+      "baseHash": "1dcc3895421074b49468adcc5c02745848616880fb0aaa672fb33bb62286a56b",
+      "newHash": "7ac96b591face3897c9995ff669b4ea34e04e3352417c70c7fe4b18cd7414df1"
     },
     {
       "path": "web/dist/styles.css",
-      "baseHash": "a06babd98d8f7e89794215e166970e7fe8fd7d3009f4e535cbaa0494589ac6c3",
-      "newHash": "d90d53e68775b1724229f3fdbf53b35e07456ce376ad16a98edf097656b958d1"
+      "baseHash": "d90d53e68775b1724229f3fdbf53b35e07456ce376ad16a98edf097656b958d1",
+      "newHash": "343fa118ee60a13646176bdd1d1e86e154f8ab472d8c39e2e6dd907051b3de7a"
     },
     {
       "path": "web/dist/sw.js",
-      "baseHash": "b47c2c7757d1086bedc49a7dd78e50a1206960ae39491b597d3f0c501afbb70c",
-      "newHash": "78c97de234da98d208a23ca4cceda8021cac057224023df51eb27c7211d2a141"
+      "baseHash": "78c97de234da98d208a23ca4cceda8021cac057224023df51eb27c7211d2a141",
+      "newHash": "43c99963310943272a50f09275da576aff4383d83a6b2388354cbc15b4d10377"
     }
   ]
 }

@@ -1,13 +1,13 @@
 /* App shell sin conexión. Las respuestas /api nunca se guardan aquí. */
 importScripts('/push-worker.js?v=4');
-const CACHE = "guia-fit-shell-styles-20261013-mobile";
+const CACHE = "guia-fit-shell-styles-20261013-login-grande";
 const SHELL = [
   '/js/campus-controls.js?v=20261013-mobile',
   "/js/food-delivery.js?v=20261013-mobile",
   "/js/live-location.js?v=20261013-mobile",
   '/assets/guia-fit-mascota.png',
   '/assets/guia-fit-mascota.png',
-  '/styles.css?v=20261013-mobile',
+  '/styles.css?v=20261013-login-grande',
   '/campus-map.css?v=20261013-mobile',
   '/offline-game.css?v=20260918b',
   '/config.js',

@@ -1,14 +1,14 @@
 /* App shell sin conexión. Las respuestas /api nunca se guardan aquí. */
-importScripts('/push-worker.js?v=3');
-const CACHE = "guia-fit-shell-styles-20260930-joystick-ar2";
+importScripts('/push-worker.js?v=4');
+const CACHE = "guia-fit-shell-styles-20261013-mobile";
 const SHELL = [
-  '/js/campus-controls.js?v=20260930-joystick-ar2',
-  "/js/food-delivery.js?v=20260926b",
-  "/js/live-location.js?v=20260926b",
+  '/js/campus-controls.js?v=20261013-mobile',
+  "/js/food-delivery.js?v=20261013-mobile",
+  "/js/live-location.js?v=20261013-mobile",
   '/assets/guia-fit-mascota.png',
   '/assets/guia-fit-mascota.png',
-  '/styles.css?v=20260926b',
-  '/campus-map.css?v=20260930-joystick-ar2',
+  '/styles.css?v=20261013-mobile',
+  '/campus-map.css?v=20261013-mobile',
   '/offline-game.css?v=20260918b',
   '/config.js',
   '/js/api.js',
@@ -16,26 +16,26 @@ const SHELL = [
   '/js/core.js',
   '/js/offline.js?v=20260918c',
   '/js/food-flow.js',
-  '/js/food.js?v=20260926b',
+  '/js/food.js?v=20261013-mobile',
   '/js/schedule-core.js?v=19',
   '/js/schedule-store.js',
   '/vendor/tesseract/tesseract.min.js',
   '/js/ocr.js?v=19',
   '/js/timetable.js',
-  '/js/schedule.js?v=20260918c',
+  '/js/schedule.js?v=20261013-mobile',
   '/js/attendance-security.js',
   '/js/events.js',
   '/js/chatbot.js?v=20260916d',
-  '/js/purchase-rating.js?v=20260926b',
-  '/js/gamification.js?v=20260926b',
-  '/js/push-notifications.js?v=20260926b',
-  '/js/offline-game.js?v=20260926b',
+  '/js/purchase-rating.js?v=20261013-mobile',
+  '/js/gamification.js?v=20261013-mobile',
+  '/js/push-notifications.js?v=20261013-mobile',
+  '/js/offline-game.js?v=20261013-mobile',
   '/js/presence.js?v=20260923c',
   '/chat-presence.css?v=20260923c',
-  '/js/academic-chat.js?v=20260926b',
-  '/js/campus-map.js?v=20260930-joystick-ar2',
+  '/js/academic-chat.js?v=20261013-mobile',
+  '/js/campus-map.js?v=20261013-mobile',
   '/js/audit.js?v=20260918c',
-  '/js/app.js?v=20260926b',
+  '/js/app.js?v=20261013-mobile',
   '/contrast-fix.css?v=1',
   '/photo-color-fix.css?v=1',
   '/manifest.webmanifest',
@@ -43,7 +43,7 @@ const SHELL = [
   '/assets/guia-fit-mascota.png',
   '/styles.css?v=20260917a',
   '/offline-game.css?v=20260918b',
-  '/js/offline-game.js?v=20260926b',
+  '/js/offline-game.js?v=20261013-mobile',
   '/js/offline-game-page.js?v=20260918a',
 
   "/assets/frames/halloween.svg",
@@ -68,7 +68,7 @@ const SHELL = [
   "/vendor/tesseract/tesseract.min.js",
   "/js/ocr.js?v=19",
   "/js/timetable.js",
-  "/js/schedule.js?v=20260918c",
+  "/js/schedule.js?v=20261013-mobile",
   "/js/attendance-security.js",
   "/js/events.js",
   "/js/chatbot.js?v=20260916d",
@@ -162,7 +162,7 @@ self.addEventListener("install", (event) => {
         }),
       );
       // Nunca activar una instalación incompleta del juego: conservar la versión anterior.
-      await cache.addAll(['/index.html','/juego-castor.html','/js/offline-game.js?v=20260926b','/js/offline-game-page.js?v=20260918a','/offline-game.css?v=20260918b','/assets/guia-fit-mascota.png']);
+      await cache.addAll(['/index.html','/juego-castor.html','/js/offline-game.js?v=20261013-mobile','/js/offline-game-page.js?v=20260918a','/offline-game.css?v=20260918b','/assets/guia-fit-mascota.png']);
       await self.skipWaiting();
     }),
   );

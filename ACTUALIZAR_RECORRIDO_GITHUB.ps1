@@ -7,7 +7,7 @@ param(
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 function Invoke-Git { param([string[]]$Argumentos)
-    & git @Argumentos
+    & git --no-pager @Argumentos
     if ($LASTEXITCODE -ne 0) { throw "Git fallo. No se forzaron cambios remotos." }
 }
 function Get-TextHash { param([string]$Ruta)
@@ -27,7 +27,7 @@ if (-not (Test-Path -LiteralPath $manifestPath)) { throw "Extrae el ZIP completo
 $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
 $destino = Join-Path $env:TEMP ("guia-fit-movil-" + [guid]::NewGuid().ToString("N"))
 Write-Host "1/4 Descargando la version actual de GitHub..."
-Invoke-Git -Argumentos @("-c", "core.autocrlf=false", "clone", "--branch", $Rama, "--single-branch", $Remoto, $destino)
+Invoke-Git -Argumentos @("clone", "--config", "core.autocrlf=false", "--branch", $Rama, "--single-branch", $Remoto, $destino)
 $preparados = Join-Path $env:TEMP ("guia-fit-cambios-" + [guid]::NewGuid().ToString("N"))
 New-Item -ItemType Directory -Force -Path $preparados | Out-Null
 Write-Host "2/4 Integrando todos los cambios de esta entrega..."
@@ -68,12 +68,12 @@ Push-Location $destino
 try {
     Write-Host "3/4 Preparando actualizacion..."
     Invoke-Git -Argumentos @("add", "--", ".")
-    & git diff --cached --stat
-    & git diff --cached --quiet
+    & git --no-pager diff --cached --stat
+    & git --no-pager diff --cached --quiet
     if ($LASTEXITCODE -eq 0) { Write-Host "GitHub ya tiene esta actualizacion."; return }
     if ($LASTEXITCODE -ne 1) { throw "No se pudieron revisar los cambios." }
     if ($SoloPreparar) { Write-Host "Cambios preparados sin publicar en: $destino"; return }
-    Invoke-Git -Argumentos @("commit", "-m", "Notificaciones de clases, PWA, identidades y pruebas admin; retirar AR")
+    Invoke-Git -Argumentos @("commit", "-m", "Ampliar login al ancho y alto del mapa; conservar notificaciones y recorrido")
     Write-Host "4/4 Subiendo a GitHub..."
     Invoke-Git -Argumentos @("push", "origin", $Rama)
     Write-Host "Listo. Si Render tiene despliegue automatico, iniciara el deploy."

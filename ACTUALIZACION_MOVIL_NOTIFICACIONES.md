@@ -74,3 +74,7 @@ Fuentes operativas consultadas el 13 de octubre de 2026:
 - Apple: https://developer.apple.com/documentation/usernotifications/sending-web-push-notifications-in-web-apps-and-browsers
 - Render: https://render.com/docs/free
 - Render: https://render.com/docs/background-workers
+
+## Ajuste de acceso: login del tamaño del mapa
+
+En escritorio, el formulario y el mapa ocupan columnas del mismo ancho y comparten una fila: sus bordes superior e inferior quedan alineados. El cuadro crece si cambia el contenido del mapa, sin alturas fijas ni recortes. Se ampliaron campos, botones y título. En pantallas de 760 px o menos se conserva el formulario adaptable de una columna. El actualizador muestra el resumen sin visor interactivo: ya no requiere pulsar Q.
